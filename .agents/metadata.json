@@ -1,0 +1,6 @@
+{
+  "name": "Interactive Ebook Studio",
+  "description": "Convert PDFs, images, and raw educational content into immersive, interactive ebooks featuring AI-generated narrator soundtracks, concept mind maps, interactive tests, and curated learning videos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
