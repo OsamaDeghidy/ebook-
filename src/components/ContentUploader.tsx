@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Upload, FileText, Sparkles, BookOpen, AlertCircle, RefreshCw, X, GraduationCap, Compass, BookMarked, Check, Wand2 } from 'lucide-react';
 import { BookCategory, BookTrack } from '../types';
 import { BOOK_TRACKS, SUBCATEGORIES, GRADE_LEVELS, SEMESTERS, ACADEMIC_YEARS } from './EditBookModal';
+import { supabase } from '../lib/supabase';
 
 export const ACADEMIC_SUBJECTS = [
   'الرياضيات والإحصاء',
@@ -20,6 +21,7 @@ export const ACADEMIC_SUBJECTS = [
 interface ContentUploaderProps {
   onConvert: (payload: {
     promptText: string;
+    fileUrl?: string;
     fileBase64?: string;
     fileName?: string;
     fileType?: string;
@@ -43,8 +45,15 @@ export default function ContentUploader({
 }: ContentUploaderProps) {
   const [promptText, setPromptText] = useState('');
   const [dragActive, setDragActive] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<{ name: string; size: string; type: string; base64?: string } | null>(null);
+  const [selectedFile, setSelectedFile] = useState<{ 
+    name: string; 
+    size: string; 
+    type: string; 
+    base64?: string;
+    rawFile?: File;
+  } | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isUploadingCloud, setIsUploadingCloud] = useState(false);
 
   // Main Mode: Academic Curriculum vs General Digital Library Book
   const [isAcademicMode, setIsAcademicMode] = useState<boolean>(true);
@@ -93,7 +102,8 @@ export default function ContentUploader({
         name: file.name,
         size: formatBytes(file.size),
         type: file.type,
-        base64: base64String
+        base64: base64String,
+        rawFile: file
       });
     };
     reader.onerror = () => {
@@ -140,16 +150,42 @@ export default function ContentUploader({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!promptText.trim() && !selectedFile) {
       setErrorMsg("يرجى تزويد النظام بمصدر تعليمي (رفع ملف PDF أو كتابة تعليمات/توجيه للكتاب).");
       return;
     }
 
+    let fileUrl: string | undefined = undefined;
+
+    // Direct cloud storage upload for large files or PDFs to bypass Vercel 4.5MB payload limit
+    if (selectedFile?.rawFile && (selectedFile.rawFile.size > 2 * 1024 * 1024 || selectedFile.rawFile.type === 'application/pdf')) {
+      setIsUploadingCloud(true);
+      try {
+        const cleanFileName = selectedFile.rawFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const uploadPath = `documents/${Date.now()}_${cleanFileName}`;
+        const { error: uploadErr } = await supabase.storage
+          .from('book-covers')
+          .upload(uploadPath, selectedFile.rawFile, { upsert: true });
+
+        if (!uploadErr) {
+          const { data: publicUrlData } = supabase.storage
+            .from('book-covers')
+            .getPublicUrl(uploadPath);
+          fileUrl = publicUrlData.publicUrl;
+        }
+      } catch (err) {
+        console.warn("Supabase direct upload notice:", err);
+      } finally {
+        setIsUploadingCloud(false);
+      }
+    }
+
     onConvert({
       promptText,
-      fileBase64: selectedFile?.base64,
+      fileUrl,
+      fileBase64: fileUrl ? undefined : selectedFile?.base64,
       fileName: selectedFile?.name,
       fileType: selectedFile?.type,
       category: isAcademicMode ? 'digital_book' : 'self_help',

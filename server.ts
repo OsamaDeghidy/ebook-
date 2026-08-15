@@ -16,10 +16,14 @@ const supabaseUrl = process.env.VITE_SUPABASE_URL || "https://ydlzvuutjgelpxueuf
 const supabaseAnonKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || "sb_publishable_KoXiLZfD6mIYGRRMb0gjtg_h3PkBle7";
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Ensure local audio cache directory exists
-const AUDIO_CACHE_DIR = path.join(process.cwd(), "cache", "audio");
-if (!fs.existsSync(AUDIO_CACHE_DIR)) {
-  fs.mkdirSync(AUDIO_CACHE_DIR, { recursive: true });
+// Ensure local audio cache directory exists (using os.tmpdir() for 100% Vercel / Cloud serverless write compatibility)
+const AUDIO_CACHE_DIR = path.join(os.tmpdir(), "ebook_audio_cache");
+try {
+  if (!fs.existsSync(AUDIO_CACHE_DIR)) {
+    fs.mkdirSync(AUDIO_CACHE_DIR, { recursive: true });
+  }
+} catch (e) {
+  console.warn("Audio cache dir init warning:", e);
 }
 
 // Upload Audio File directly to Supabase Storage 'book-audios' bucket
@@ -489,6 +493,7 @@ async function runBackgroundEbookConversion(
   jobId: string,
   payload: {
     promptText: string;
+    fileUrl?: string;
     fileBase64?: string;
     fileName?: string;
     fileType?: string;
@@ -499,7 +504,7 @@ async function runBackgroundEbookConversion(
     academic_year?: string;
   }
 ) {
-  const { promptText, fileBase64, fileName, fileType, category, subcategory, grade_level, semester, academic_year } = payload;
+  const { promptText, fileUrl, fileBase64, fileName, fileType, category, subcategory, grade_level, semester, academic_year } = payload;
   const job = conversionJobs[jobId];
   if (!job) return;
 
@@ -586,7 +591,37 @@ async function runBackgroundEbookConversion(
     // Set up materials for Gemini analysis
     let contents: any[] = [];
     
-    if (fileBase64 && fileType) {
+    if (fileUrl) {
+      job.progressStep = `جاري جلب وتحليل الملف السحابي (${fileName || ""})...`;
+      job.progressPercent = 25;
+      try {
+        const fileRes = await fetch(fileUrl);
+        if (fileRes.ok) {
+          const arrayBuf = await fileRes.arrayBuffer();
+          const buffer = Buffer.from(arrayBuf);
+          const tempFilePath = path.join(os.tmpdir(), `gemini_upload_${Date.now()}_${fileName || 'document.pdf'}`);
+          fs.writeFileSync(tempFilePath, buffer);
+
+          const uploadRes = await (ai.files as any).upload({
+            file: tempFilePath,
+            mimeType: fileType || "application/pdf"
+          });
+
+          contents.push({
+            fileData: {
+              fileUri: uploadRes.uri,
+              mimeType: uploadRes.mimeType
+            }
+          });
+
+          try { fs.unlinkSync(tempFilePath); } catch (e) {}
+          job.progressStep = `تم استلام وتحليل الملف بنجاح! جاري بناء الفصول والأسئلة...`;
+          job.progressPercent = 45;
+        }
+      } catch (e) {
+        console.warn("Could not fetch fileUrl for Gemini analysis:", e);
+      }
+    } else if (fileBase64 && fileType) {
       const buffer = Buffer.from(fileBase64, 'base64');
       const sizeMB = (buffer.length / (1024 * 1024)).toFixed(1);
 
@@ -794,14 +829,14 @@ Provided user guidance / request: "${promptText || 'Convert the uploaded documen
 
 // 5. Convert content or create ebook from prompt / file upload (Synchronous & Serverless Resilient)
 app.post("/api/ebooks", async (req, res) => {
-  const { promptText, fileBase64, fileName, fileType, category, subcategory, grade_level, semester, academic_year } = req.body;
+  const { promptText, fileUrl, fileBase64, fileName, fileType, category, subcategory, grade_level, semester, academic_year } = req.body;
   
-  if (!promptText && !fileBase64) {
+  if (!promptText && !fileBase64 && !fileUrl) {
     return res.status(400).json({ error: "Must provide either promptText, a file, or both to convert." });
   }
 
   const jobId = "job-" + Date.now() + "-" + Math.random().toString(36).substring(2, 7);
-  console.log(`[Task Dispatcher] Initiating ebook conversion: ${jobId}. File: ${fileName || "None"}`);
+  console.log(`[Task Dispatcher] Initiating ebook conversion: ${jobId}. File: ${fileName || "None"}, Cloud URL: ${fileUrl ? "Yes" : "No"}`);
 
   conversionJobs[jobId] = {
     id: jobId,
@@ -811,7 +846,7 @@ app.post("/api/ebooks", async (req, res) => {
   };
 
   try {
-    const finalizedEbook = await runBackgroundEbookConversion(jobId, { promptText, fileBase64, fileName, fileType, category, subcategory, grade_level, semester, academic_year });
+    const finalizedEbook = await runBackgroundEbookConversion(jobId, { promptText, fileUrl, fileBase64, fileName, fileType, category, subcategory, grade_level, semester, academic_year });
     if (!finalizedEbook) {
       const job = conversionJobs[jobId];
       return res.status(500).json({ error: job?.error || "فشل توليد الكتاب بالذكاء الاصطناعي" });

@@ -255,10 +255,12 @@ function AppContent() {
 
   const handleConvert = async (payload: {
     promptText: string;
+    fileUrl?: string;
     fileBase64?: string;
     fileName?: string;
     fileType?: string;
     category?: any;
+    track?: any;
     subcategory?: string;
     grade_level?: string;
     semester?: string;
