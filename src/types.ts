@@ -95,6 +95,8 @@ export interface Ebook {
   price?: number; // 0 = Free
   is_external?: boolean;
   external_url?: string;
+  preview_video_url?: string; // Explanatory demo video URL
+  sales_count?: number;
   is_published?: boolean;
   thumbnail_url?: string;
   rating?: number;
@@ -127,6 +129,8 @@ export interface MarketplaceBook extends Ebook {
   price: number;
   is_external: boolean;
   external_url?: string;
+  preview_video_url?: string;
+  sales_count?: number;
   is_published: boolean;
   thumbnail_url: string;
   rating: number;

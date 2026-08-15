@@ -21,6 +21,7 @@ interface AddExternalBookModalProps {
     price: number;
     externalUrl: string;
     thumbnailUrl: string;
+    previewVideoUrl?: string;
   }) => void;
 }
 
@@ -45,6 +46,7 @@ export const AddExternalBookModal: React.FC<AddExternalBookModalProps> = ({
   const [tagsInput, setTagsInput] = useState('كتاب_رقمي, مرجع_تعليمي');
   const [price, setPrice] = useState<number>(0);
   const [externalUrl, setExternalUrl] = useState('');
+  const [previewVideoUrl, setPreviewVideoUrl] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState('');
 
   if (!isOpen) return null;
@@ -67,7 +69,8 @@ export const AddExternalBookModal: React.FC<AddExternalBookModalProps> = ({
       `sub:${activeSubcategory}`,
       `grade:${activeGrade}`,
       `term:${activeSemester}`,
-      `year:${academicYear}`
+      `year:${academicYear}`,
+      ...(previewVideoUrl.trim() ? [`video:${previewVideoUrl.trim()}`] : [])
     ];
 
     onAddBook({
@@ -81,15 +84,17 @@ export const AddExternalBookModal: React.FC<AddExternalBookModalProps> = ({
       semester: activeSemester,
       academic_year: academicYear,
       tags: structuredTags,
-      price,
+      price: Number(price) || 0,
       externalUrl,
-      thumbnailUrl: thumbnailUrl || 'https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=800&q=80'
+      thumbnailUrl: thumbnailUrl || 'https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=800&q=80',
+      previewVideoUrl: previewVideoUrl.trim() || undefined
     });
 
     // Reset
     setTitle('');
     setDescription('');
     setExternalUrl('');
+    setPreviewVideoUrl('');
     onClose();
   };
 
@@ -174,6 +179,19 @@ export const AddExternalBookModal: React.FC<AddExternalBookModalProps> = ({
                 value={externalUrl}
                 onChange={(e) => setExternalUrl(e.target.value)}
                 placeholder="https://..."
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 text-xs focus:outline-none focus:border-indigo-500 focus:bg-white"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-gray-700 mb-1">رابط فيديو توضيحي / تمهيدي للمقرر (يظهر للطلاب قبل الشراء)</label>
+            <div className="relative">
+              <input
+                type="url"
+                value={previewVideoUrl}
+                onChange={(e) => setPreviewVideoUrl(e.target.value)}
+                placeholder="https://www.youtube.com/watch?v=... أو رابط مباشر"
                 className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 text-xs focus:outline-none focus:border-indigo-500 focus:bg-white"
               />
             </div>

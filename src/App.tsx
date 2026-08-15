@@ -31,8 +31,39 @@ function AppContent() {
   const [progressPercent, setProgressPercent] = useState<number>(0);
   const [progressStep, setProgressStep] = useState<string>('');
   const [hasGeminiKey, setHasGeminiKey] = useState<boolean>(false);
+  const [purchasedBookIds, setPurchasedBookIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('purchased_book_ids');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   
   const navigate = useNavigate();
+
+  const handlePurchaseBook = async (book: MarketplaceBook) => {
+    try {
+      const updated = Array.from(new Set([...purchasedBookIds, book.id]));
+      setPurchasedBookIds(updated);
+      localStorage.setItem('purchased_book_ids', JSON.stringify(updated));
+
+      if (currentUser?.id) {
+        try {
+          await supabase.from('user_purchases').upsert({
+            user_id: currentUser.id,
+            book_id: book.id,
+            amount_paid: book.price || 0,
+            purchase_date: new Date().toISOString()
+          });
+        } catch (dbErr) {
+          console.warn("Purchase database sync notice:", dbErr);
+        }
+      }
+    } catch (err) {
+      console.error("Purchase error:", err);
+    }
+  };
 
   useEffect(() => {
     fetchSupabaseCatalog();
@@ -82,16 +113,15 @@ function AppContent() {
 
   const fetchSupabaseCatalog = async () => {
     try {
-      // Supabase is the primary authoritative database
       const { data, error } = await supabase.from('books').select('*').order('created_at', { ascending: false });
       
       if (!error && data) {
         const formatted: MarketplaceBook[] = data.map((b: any) => {
-          // Extract structured academic tags if present
           let subcategory = b.subcategory;
           let grade_level = b.grade_level;
           let semester = b.semester;
           let academic_year = b.academic_year;
+          let preview_video_url = b.preview_video_url;
 
           if (Array.isArray(b.tags)) {
             b.tags.forEach((t: string) => {
@@ -99,6 +129,7 @@ function AppContent() {
               if (t.startsWith('grade:') && !grade_level) grade_level = t.replace('grade:', '');
               if (t.startsWith('term:') && !semester) semester = t.replace('term:', '');
               if (t.startsWith('year:') && !academic_year) academic_year = t.replace('year:', '');
+              if (t.startsWith('video:') && !preview_video_url) preview_video_url = t.replace('video:', '');
             });
           }
 
@@ -110,8 +141,9 @@ function AppContent() {
             grade_level,
             semester,
             academic_year,
+            preview_video_url: preview_video_url || undefined,
             tags: b.tags || ['كتاب_تفاعلي'],
-            price: b.price || 0,
+            price: Number(b.price) || 0,
             is_external: !!b.is_external,
             external_url: b.external_url,
             is_published: b.is_published !== false,
@@ -126,7 +158,6 @@ function AppContent() {
         return;
       }
 
-      // Fallback only if Supabase fails (e.g., offline)
       try {
         const res = await fetch('/api/ebooks');
         if (res.ok) {
@@ -162,17 +193,14 @@ function AppContent() {
   };
 
   const handleDeleteBook = async (bookId: string) => {
-    // 1. Remove from state immediately
     setEbooks(prev => prev.filter(b => b.id !== bookId));
     
-    // 2. Delete from Supabase
     try {
       await supabase.from('books').delete().eq('id', bookId);
     } catch (e) {
       console.warn("Supabase delete error:", e);
     }
 
-    // 3. Also delete from local server cache
     try {
       await fetch(`/api/ebooks/${bookId}`, { method: 'DELETE' });
     } catch (e) {
@@ -181,27 +209,44 @@ function AppContent() {
   };
 
   const handleUpdateBook = async (updatedBook: MarketplaceBook) => {
-    // 1. Update state
     setEbooks(prev => prev.map(b => b.id === updatedBook.id ? updatedBook : b));
 
-    // 2. Update Supabase
     try {
-      const sanitizedPayload = {
+      const basePayload: any = {
         title: updatedBook.title,
         description: updatedBook.description,
         author_name: updatedBook.author_name,
         category: updatedBook.category,
         tags: updatedBook.tags,
-        price: updatedBook.price,
+        price: Number(updatedBook.price) || 0,
         thumbnail_url: updatedBook.thumbnail_url,
-        is_published: updatedBook.is_published
+        is_published: updatedBook.is_published !== false
       };
-      await supabase.from('books').update(sanitizedPayload).eq('id', updatedBook.id);
+
+      if (updatedBook.chapters) basePayload.chapters = updatedBook.chapters;
+      if (updatedBook.mind_map) basePayload.mind_map = updatedBook.mind_map;
+      if (updatedBook.question_bank) basePayload.question_bank = updatedBook.question_bank;
+
+      const { error: err1 } = await supabase.from('books').update({
+        ...basePayload,
+        preview_video_url: updatedBook.preview_video_url || null
+      }).eq('id', updatedBook.id);
+
+      if (err1) {
+        console.warn("Retrying Supabase update with standard schema:", err1);
+        const { error: err2 } = await supabase.from('books').update(basePayload).eq('id', updatedBook.id);
+        if (err2) {
+          console.error("Supabase update error:", err2);
+        } else {
+          console.log("Book updated successfully in Supabase (standard schema)!");
+        }
+      } else {
+        console.log("Book updated successfully in Supabase (full schema)!");
+      }
     } catch (e) {
-      console.error("Supabase update error:", e);
+      console.error("Supabase update exception:", e);
     }
 
-    // 3. Update local server
     try {
       await fetch(`/api/ebooks/${updatedBook.id}`, {
         method: 'PUT',
@@ -221,9 +266,10 @@ function AppContent() {
       author_name: bookData.authorName,
       category: bookData.category,
       tags: bookData.tags,
-      price: bookData.price,
+      price: Number(bookData.price) || 0,
       is_external: true,
       external_url: bookData.externalUrl,
+      preview_video_url: bookData.previewVideoUrl || undefined,
       is_published: true,
       thumbnail_url: bookData.thumbnailUrl,
       rating: 5.0,
@@ -232,7 +278,7 @@ function AppContent() {
     };
     setEbooks(prev => [newBook, ...prev]);
     try {
-      await supabase.from('books').insert({
+      const basePayload: any = {
         id: newBook.id,
         title: newBook.title,
         description: newBook.description,
@@ -247,9 +293,19 @@ function AppContent() {
         rating: 5.0,
         reviews_count: 1,
         chapters: []
+      };
+
+      const { error: err1 } = await supabase.from('books').upsert({
+        ...basePayload,
+        preview_video_url: newBook.preview_video_url || null
       });
+
+      if (err1) {
+        console.warn("Retrying external book upsert with standard schema:", err1);
+        await supabase.from('books').upsert(basePayload);
+      }
     } catch (e) {
-      console.error("Add external book error:", e);
+      console.warn("Supabase external book insert error:", e);
     }
   };
 
@@ -265,6 +321,8 @@ function AppContent() {
     grade_level?: string;
     semester?: string;
     academic_year?: string;
+    price?: number;
+    preview_video_url?: string;
   }) => {
     setIsConverting(true);
     setProgressPercent(10);
@@ -299,14 +357,14 @@ function AppContent() {
       }
       if (!generatedEbook) throw new Error("لم يتم إرجاع بيانات الكتاب.");
 
-      // Build structured tags with academic metadata
       const academicTags = [
         'كتاب_تفاعلي',
         'ذكاء_اصطناعي',
         payload.subcategory ? `sub:${payload.subcategory}` : '',
         payload.grade_level ? `grade:${payload.grade_level}` : '',
         payload.semester ? `term:${payload.semester}` : '',
-        payload.academic_year ? `year:${payload.academic_year}` : ''
+        payload.academic_year ? `year:${payload.academic_year}` : '',
+        payload.preview_video_url ? `video:${payload.preview_video_url}` : ''
       ].filter(Boolean);
 
       const newBook: MarketplaceBook = {
@@ -319,7 +377,8 @@ function AppContent() {
         academic_year: payload.academic_year,
         source_file_name: payload.fileName,
         tags: academicTags,
-        price: 0,
+        price: Number(payload.price) || 0,
+        preview_video_url: payload.preview_video_url,
         is_external: false,
         is_published: true,
         thumbnail_url: 'https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=800&q=80',
@@ -328,12 +387,10 @@ function AppContent() {
         created_at: new Date().toISOString()
       };
 
-      // 1. Add to local state immediately
       setEbooks(prev => [newBook, ...prev]);
 
-      // 2. Insert into Supabase
       try {
-        const supabasePayload = {
+        const basePayload: any = {
           id: newBook.id,
           title: newBook.title,
           description: newBook.description,
@@ -350,9 +407,16 @@ function AppContent() {
           mind_map: newBook.mind_map || [],
           question_bank: newBook.question_bank || []
         };
-        const { error: insertError } = await supabase.from('books').upsert(supabasePayload);
+
+        const { error: insertError } = await supabase.from('books').upsert({
+          ...basePayload,
+          preview_video_url: newBook.preview_video_url || null
+        });
+
         if (insertError) {
-          console.error("Supabase upsert notice:", insertError);
+          console.warn("Retrying book insert with standard schema:", insertError);
+          const { error: retryError } = await supabase.from('books').upsert(basePayload);
+          if (retryError) console.error("Supabase upsert error:", retryError);
         } else {
           console.log("Book successfully confirmed in Supabase!");
         }
@@ -360,7 +424,6 @@ function AppContent() {
         console.error("Database save error:", dbErr);
       }
 
-      // 3. Close modal and redirect to book details route
       setIsAiCreateModalOpen(false);
       navigate(`/book/${newBook.id}`);
     } catch (err: any) {
@@ -441,6 +504,7 @@ function AppContent() {
               books={ebooks}
               userRole={userRole}
               isAdminMode={isAdminMode}
+              purchasedBookIds={purchasedBookIds}
               onLaunchBook={handleLaunchBook}
               onLaunchQuiz={handleLaunchQuiz}
               onOpenCreateModal={() => setIsAiCreateModalOpen(true)}
@@ -448,9 +512,20 @@ function AppContent() {
               onTogglePublish={handleTogglePublish}
               onDeleteBook={handleDeleteBook}
               onUpdateBook={handleUpdateBook}
+              onPurchaseBook={handlePurchaseBook}
             />
           } />
-          <Route path="/book/:id" element={<BookDetailsRoute books={ebooks} setEbooks={setEbooks} hasGeminiKey={hasGeminiKey} />} />
+          <Route path="/book/:id" element={
+            <BookDetailsRoute
+              books={ebooks}
+              setEbooks={setEbooks}
+              hasGeminiKey={hasGeminiKey}
+              purchasedBookIds={purchasedBookIds}
+              onPurchaseBook={handlePurchaseBook}
+              userRole={userRole}
+              isAdminMode={isAdminMode}
+            />
+          } />
         </Routes>
       </main>
 

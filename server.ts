@@ -461,20 +461,26 @@ app.get("/api/ebooks/:id", (req, res) => {
 
 // 3. Delete ebook
 app.delete("/api/ebooks/:id", (req, res) => {
-  const initialLength = ebooks.length;
   ebooks = ebooks.filter((e) => e.id !== req.params.id);
-  if (ebooks.length === initialLength) {
-    return res.status(404).json({ error: "Ebook not found" });
-  }
   saveEbooks(ebooks);
   res.json({ success: true, message: "Ebook deleted" });
 });
 
-// 4. Update ebook
+// 4. Update or Upsert ebook
 app.put("/api/ebooks/:id", (req, res) => {
   const index = ebooks.findIndex((e) => e.id === req.params.id);
+  
   if (index === -1) {
-    return res.status(404).json({ error: "Ebook not found" });
+    // If not found in local memory, create/upsert it directly
+    const newEbook = {
+      id: req.params.id,
+      title: req.body.title || "Untitled Book",
+      ...req.body,
+      created_at: req.body.created_at || new Date().toISOString()
+    };
+    ebooks.unshift(newEbook);
+    saveEbooks(ebooks);
+    return res.json(newEbook);
   }
   
   const updatedEbook = {
@@ -502,9 +508,11 @@ async function runBackgroundEbookConversion(
     grade_level?: string;
     semester?: string;
     academic_year?: string;
+    price?: number;
+    preview_video_url?: string;
   }
 ) {
-  const { promptText, fileUrl, fileBase64, fileName, fileType, category, subcategory, grade_level, semester, academic_year } = payload;
+  const { promptText, fileUrl, fileBase64, fileName, fileType, category, subcategory, grade_level, semester, academic_year, price, preview_video_url } = payload;
   const job = conversionJobs[jobId];
   if (!job) return;
 
@@ -789,6 +797,11 @@ User Guidance / Notes: "${promptText || `Convert ${fileName || 'the uploaded doc
         academic_year ? `year:${academic_year}` : ''
       ].filter(Boolean);
 
+      finalizedEbook.price = Number(price) || 0;
+      if (preview_video_url) {
+        finalizedEbook.preview_video_url = preview_video_url;
+      }
+
       const supabasePayload = {
         id: finalizedEbook.id,
         title: finalizedEbook.title,
@@ -796,7 +809,8 @@ User Guidance / Notes: "${promptText || `Convert ${fileName || 'the uploaded doc
         author_name: 'د. كريم كامل',
         category: category || 'digital_book',
         tags: academicTags.length > 0 ? academicTags : ['كتاب_تفاعلي', 'ذكاء_اصطناعي'],
-        price: 0,
+        price: Number(price) || 0,
+        preview_video_url: preview_video_url || null,
         is_external: false,
         is_published: true,
         thumbnail_url: 'https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=800&q=80',
@@ -834,14 +848,14 @@ User Guidance / Notes: "${promptText || `Convert ${fileName || 'the uploaded doc
 
 // 5. Convert content or create ebook from prompt / file upload (Synchronous & Serverless Resilient)
 app.post("/api/ebooks", async (req, res) => {
-  const { promptText, fileUrl, fileBase64, fileName, fileType, category, subcategory, grade_level, semester, academic_year } = req.body;
+  const { promptText, fileUrl, fileBase64, fileName, fileType, category, subcategory, grade_level, semester, academic_year, price, preview_video_url } = req.body;
   
   if (!promptText && !fileBase64 && !fileUrl) {
     return res.status(400).json({ error: "Must provide either promptText, a file, or both to convert." });
   }
 
   const jobId = "job-" + Date.now() + "-" + Math.random().toString(36).substring(2, 7);
-  console.log(`[Task Dispatcher] Initiating ebook conversion: ${jobId}. File: ${fileName || "None"}, Cloud URL: ${fileUrl ? "Yes" : "No"}`);
+  console.log(`[Task Dispatcher] Initiating ebook conversion: ${jobId}. File: ${fileName || "None"}, Cloud URL: ${fileUrl ? "Yes" : "No"}, Price: ${price || 0}`);
 
   conversionJobs[jobId] = {
     id: jobId,
@@ -851,7 +865,7 @@ app.post("/api/ebooks", async (req, res) => {
   };
 
   try {
-    const finalizedEbook = await runBackgroundEbookConversion(jobId, { promptText, fileUrl, fileBase64, fileName, fileType, category, subcategory, grade_level, semester, academic_year });
+    const finalizedEbook = await runBackgroundEbookConversion(jobId, { promptText, fileUrl, fileBase64, fileName, fileType, category, subcategory, grade_level, semester, academic_year, price, preview_video_url });
     if (!finalizedEbook) {
       const job = conversionJobs[jobId];
       return res.status(500).json({ error: job?.error || "فشل توليد الكتاب بالذكاء الاصطناعي" });

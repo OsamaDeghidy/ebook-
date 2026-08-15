@@ -80,7 +80,12 @@ export const EditBookModal: React.FC<EditBookModalProps> = ({
   const [semester, setSemester] = useState(book.semester || SEMESTERS[0]);
   const [academicYear, setAcademicYear] = useState(book.academic_year || ACADEMIC_YEARS[0]);
   const [tagsInput, setTagsInput] = useState((book.tags || []).filter(t => !t.includes(':')).join(', '));
-  const [price, setPrice] = useState(book.price || 0);
+  const [price, setPrice] = useState<number>(book.price || 0);
+  const [previewVideoUrl, setPreviewVideoUrl] = useState<string>(() => {
+    if (book.preview_video_url) return book.preview_video_url;
+    const vTag = book.tags?.find(t => t.startsWith('video:'));
+    return vTag ? vTag.replace('video:', '') : '';
+  });
   const [thumbnailUrl, setThumbnailUrl] = useState(book.thumbnail_url || '');
   const [showPodcast, setShowPodcast] = useState(book.feature_toggles?.show_podcast !== false);
   const [showFlashcards, setShowFlashcards] = useState(book.feature_toggles?.show_flashcards !== false);
@@ -107,7 +112,8 @@ export const EditBookModal: React.FC<EditBookModalProps> = ({
         `sub:${subcategory}`,
         `grade:${gradeLevel}`,
         `term:${semester}`,
-        `year:${academicYear}`
+        `year:${academicYear}`,
+        ...(previewVideoUrl.trim() ? [`video:${previewVideoUrl.trim()}`] : [])
       ];
 
       const updated: MarketplaceBook = {
@@ -123,6 +129,7 @@ export const EditBookModal: React.FC<EditBookModalProps> = ({
         academic_year: academicYear,
         tags: structuredTags,
         price: Number(price) || 0,
+        preview_video_url: previewVideoUrl.trim() || undefined,
         thumbnail_url: thumbnailUrl || book.thumbnail_url,
         feature_toggles: {
           show_podcast: showPodcast,
@@ -220,6 +227,55 @@ export const EditBookModal: React.FC<EditBookModalProps> = ({
               rows={3}
               className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:border-indigo-500 focus:bg-white leading-relaxed resize-none"
             />
+          </div>
+
+          {/* 💰 PRICE & VIDEO MONETIZATION */}
+          <div className="p-4 bg-gradient-to-r from-amber-50/60 to-indigo-50/60 border border-amber-200/60 rounded-2xl space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-black text-gray-900 flex items-center gap-1.5">
+                <DollarSign className="w-4 h-4 text-amber-600" />
+                <span>تسعير المقرر وإعدادات الشراء (ج.م)</span>
+              </label>
+              <div className="flex items-center gap-1 text-xs font-bold">
+                {[0, 50, 100, 150].map((preset) => (
+                  <button
+                    type="button"
+                    key={preset}
+                    onClick={() => setPrice(preset)}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${
+                      price === preset
+                        ? 'bg-amber-500 text-amber-950 font-black shadow-sm'
+                        : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    {preset === 0 ? 'مجاني' : `${preset} ج.م`}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-bold text-gray-600 mb-1">سعر المقرر (0 = مجاني بالكامل)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={price}
+                  onChange={(e) => setPrice(Math.max(0, Number(e.target.value)))}
+                  placeholder="0 للمجاني"
+                  className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-900 outline-none focus:border-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-gray-600 mb-1">رابط فيديو توضيحي / تمهيدي للمقرر</label>
+                <input
+                  type="url"
+                  value={previewVideoUrl}
+                  onChange={(e) => setPreviewVideoUrl(e.target.value)}
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-900 outline-none focus:border-indigo-500"
+                />
+              </div>
+            </div>
           </div>
 
           {/* DYNAMIC TAXONOMY */}

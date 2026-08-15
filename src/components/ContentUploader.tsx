@@ -31,6 +31,8 @@ interface ContentUploaderProps {
     grade_level?: string;
     semester?: string;
     academic_year?: string;
+    price?: number;
+    preview_video_url?: string;
   }) => void;
   isConverting: boolean;
   progressPercent?: number;
@@ -44,6 +46,8 @@ export default function ContentUploader({
   progressStep,
 }: ContentUploaderProps) {
   const [promptText, setPromptText] = useState('');
+  const [price, setPrice] = useState<number>(0);
+  const [previewVideoUrl, setPreviewVideoUrl] = useState<string>('');
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<{ 
     name: string; 
@@ -192,7 +196,9 @@ export default function ContentUploader({
       subcategory: isAcademicMode ? subcategory : generalSubcategory,
       grade_level: isAcademicMode ? gradeLevel : generalAudience,
       semester: isAcademicMode ? semester : 'كتاب عام مستمر',
-      academic_year: academicYear
+      academic_year: academicYear,
+      price: Number(price) || 0,
+      preview_video_url: previewVideoUrl.trim() || undefined
     });
   };
 
@@ -458,6 +464,56 @@ export default function ContentUploader({
             rows={3}
             className="w-full text-xs p-3.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 focus:bg-white transition resize-none leading-relaxed font-sans"
           />
+        </div>
+
+        {/* 💰 PRICE & MONETIZATION SETTINGS */}
+        <div className="p-4 bg-gradient-to-r from-indigo-50/70 to-purple-50/70 border border-indigo-150 rounded-2xl space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-black text-indigo-950 flex items-center gap-1.5">
+              <span>💰 تسعير المقرر / الكتاب للطلاب</span>
+            </label>
+            <div className="flex items-center gap-1.5 text-xs font-bold">
+              {[0, 50, 100, 150].map((preset) => (
+                <button
+                  type="button"
+                  key={preset}
+                  onClick={() => setPrice(preset)}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${
+                    price === preset
+                      ? 'bg-indigo-600 text-white font-black shadow-sm'
+                      : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  {preset === 0 ? 'مجاني' : `${preset} ج.م`}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <span className="text-[11px] text-gray-600 font-bold block mb-1">أو حدد سعراً مخصصاً (بالجنيه):</span>
+              <input
+                type="number"
+                min="0"
+                value={price}
+                onChange={(e) => setPrice(Math.max(0, Number(e.target.value)))}
+                disabled={isConverting}
+                placeholder="0 = مجاني"
+                className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+            <div>
+              <span className="text-[11px] text-gray-600 font-bold block mb-1">رابط فيديو توضيحي / تمهيدي (اختياري):</span>
+              <input
+                type="url"
+                value={previewVideoUrl}
+                onChange={(e) => setPreviewVideoUrl(e.target.value)}
+                disabled={isConverting}
+                placeholder="https://www.youtube.com/watch?v=..."
+                className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+          </div>
         </div>
 
         {/* ACTIVE CONVERSION PROGRESS DISPLAY */}
