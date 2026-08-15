@@ -600,7 +600,7 @@ async function runBackgroundEbookConversion(
           const tempFilePath = path.join(os.tmpdir(), `gemini_upload_${Date.now()}_${fileName || 'document.pdf'}`);
           fs.writeFileSync(tempFilePath, buffer);
 
-          const uploadRes = await ai.files.upload({
+          const uploadRes = await (ai.files as any).upload({
             file: tempFilePath,
             mimeType: fileType
           });
@@ -782,16 +782,18 @@ Provided user guidance / request: "${promptText || 'Convert the uploaded documen
     job.status = "completed";
     job.result = finalizedEbook;
     console.log(`[Job Worker] Job ${jobId} successfully completed true generation.`);
+    return finalizedEbook;
 
   } catch (error: any) {
     console.error(`[Job Worker] Job ${jobId} true generation failed:`, error);
     job.status = "failed";
     job.error = "Failed to convert ebook with AI: " + error.message;
+    return null;
   }
 }
 
-// 5. Convert content or create ebook from prompt / file upload (Async trigger)
-app.post("/api/ebooks", (req, res) => {
+// 5. Convert content or create ebook from prompt / file upload (Synchronous & Serverless Resilient)
+app.post("/api/ebooks", async (req, res) => {
   const { promptText, fileBase64, fileName, fileType, category, subcategory, grade_level, semester, academic_year } = req.body;
   
   if (!promptText && !fileBase64) {
@@ -799,20 +801,26 @@ app.post("/api/ebooks", (req, res) => {
   }
 
   const jobId = "job-" + Date.now() + "-" + Math.random().toString(36).substring(2, 7);
-  console.log(`[Task Dispatcher] Created job: ${jobId}. File name: ${fileName || "None"}`);
+  console.log(`[Task Dispatcher] Initiating ebook conversion: ${jobId}. File: ${fileName || "None"}`);
 
   conversionJobs[jobId] = {
     id: jobId,
     status: "processing",
     progressStep: "Analyzing input study materials...",
-    progressPercent: 5
+    progressPercent: 15
   };
 
-  // Run in the background without blocking the response
-  runBackgroundEbookConversion(jobId, { promptText, fileBase64, fileName, fileType, category, subcategory, grade_level, semester, academic_year });
-
-  // Return immediately with jobId
-  res.json({ success: true, jobId });
+  try {
+    const finalizedEbook = await runBackgroundEbookConversion(jobId, { promptText, fileBase64, fileName, fileType, category, subcategory, grade_level, semester, academic_year });
+    if (!finalizedEbook) {
+      const job = conversionJobs[jobId];
+      return res.status(500).json({ error: job?.error || "فشل توليد الكتاب بالذكاء الاصطناعي" });
+    }
+    res.json({ success: true, ebook: finalizedEbook, jobId });
+  } catch (err: any) {
+    console.error("Ebook generation error:", err);
+    res.status(500).json({ error: "فشل توليد الكتاب التفاعلي: " + err.message });
+  }
 });
 
 // 5b. Poll background ebook conversion tasks progress

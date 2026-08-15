@@ -444,7 +444,8 @@ export default function BookDetailsRoute({ books, setEbooks, hasGeminiKey }: { b
         {activeTab === 'mindmap' && activeChapter && (
           <MindMap
             nodes={Array.isArray(activeChapter.mindMap) ? activeChapter.mindMap : []}
-            chapterTitle={activeChapter.title}
+            ebookId={book.id}
+            chapterId={activeChapter.id}
             chapterContent={activeChapter.content}
             onUpdateNodes={handleUpdateChapterMindMap}
           />
@@ -458,7 +459,7 @@ export default function BookDetailsRoute({ books, setEbooks, hasGeminiKey }: { b
           <ChapterEditor
             chapter={activeChapter}
             onSaveChapter={handleSaveChapter}
-            onAddChapter={() => {
+            onAddChapter={async () => {
               const newChapter = {
                 id: `ch-${Date.now()}`,
                 title: `فصل جديد ${book.chapters.length + 1}`,
@@ -471,14 +472,22 @@ export default function BookDetailsRoute({ books, setEbooks, hasGeminiKey }: { b
               const updated = [...book.chapters, newChapter];
               setEbooks(prev => prev.map(b => b.id === book.id ? { ...b, chapters: updated } : b));
               setActiveChapterId(newChapter.id);
-              supabase.from('books').update({ chapters: updated }).eq('id', book.id).catch(console.warn);
+              try {
+                await supabase.from('books').update({ chapters: updated }).eq('id', book.id);
+              } catch (e) {
+                console.warn(e);
+              }
             }}
-            onDeleteChapter={() => {
+            onDeleteChapter={async () => {
               if (book.chapters.length <= 1) return;
               const updated = book.chapters.filter(c => c.id !== activeChapter.id);
               setEbooks(prev => prev.map(b => b.id === book.id ? { ...b, chapters: updated } : b));
               setActiveChapterId(updated[0]?.id || null);
-              supabase.from('books').update({ chapters: updated }).eq('id', book.id).catch(console.warn);
+              try {
+                await supabase.from('books').update({ chapters: updated }).eq('id', book.id);
+              } catch (e) {
+                console.warn(e);
+              }
             }}
             canDelete={book.chapters.length > 1}
           />
