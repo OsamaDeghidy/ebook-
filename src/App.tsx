@@ -275,10 +275,13 @@ function AppContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      if (!res.ok) throw new Error("فشل توليد الكتاب التفاعلي");
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || "فشل توليد الكتاب التفاعلي");
+      }
       const data = await res.json();
-      let generatedEbook: any = null;
-      if (data.jobId) {
+      let generatedEbook: any = data.ebook || null;
+      if (!generatedEbook && data.jobId) {
         while (!generatedEbook) {
           await new Promise(r => setTimeout(r, 2000));
           const pollRes = await fetch(`/api/ebooks/tasks/${data.jobId}`);
@@ -293,8 +296,6 @@ function AppContent() {
             }
           }
         }
-      } else if (data.ebook) {
-        generatedEbook = data.ebook;
       }
       if (!generatedEbook) throw new Error("لم يتم إرجاع بيانات الكتاب.");
 
@@ -349,11 +350,11 @@ function AppContent() {
           mind_map: newBook.mind_map || [],
           question_bank: newBook.question_bank || []
         };
-        const { error: insertError } = await supabase.from('books').insert(supabasePayload);
+        const { error: insertError } = await supabase.from('books').upsert(supabasePayload);
         if (insertError) {
-          console.error("Supabase insert error:", insertError);
+          console.error("Supabase upsert notice:", insertError);
         } else {
-          console.log("Book successfully saved to Supabase!");
+          console.log("Book successfully confirmed in Supabase!");
         }
       } catch (dbErr) {
         console.error("Database save error:", dbErr);

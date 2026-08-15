@@ -599,7 +599,7 @@ async function runBackgroundEbookConversion(
         if (fileRes.ok) {
           const arrayBuf = await fileRes.arrayBuffer();
           const buffer = Buffer.from(arrayBuf);
-          const tempFilePath = path.join(os.tmpdir(), `gemini_upload_${Date.now()}_${fileName || 'document.pdf'}`);
+          const tempFilePath = path.join(os.tmpdir(), `gemini_upload_${Date.now()}_doc.pdf`);
           fs.writeFileSync(tempFilePath, buffer);
 
           const uploadRes = await (ai.files as any).upload({
@@ -632,7 +632,7 @@ async function runBackgroundEbookConversion(
         console.log(`[Job Worker] Uploading large file (${sizeMB}MB) to Gemini Files API...`);
 
         try {
-          const tempFilePath = path.join(os.tmpdir(), `gemini_upload_${Date.now()}_${fileName || 'document.pdf'}`);
+          const tempFilePath = path.join(os.tmpdir(), `gemini_upload_${Date.now()}_doc.pdf`);
           fs.writeFileSync(tempFilePath, buffer);
 
           const uploadRes = await (ai.files as any).upload({
@@ -678,15 +678,20 @@ async function runBackgroundEbookConversion(
 
     let instructionPrompt = `
 You are the world-class Interactive Ebook Converter & Academic Curriculum Architect.
-Your primary task is to convert the provided educational input (which could be a PDF file, textbook, lecture slides, note outlines, or a general topic prompt) into an engaging, structured, interactive educational ebook.
+Your primary task is to convert the provided educational input (which is the attached document: "${fileName || 'Attached Document'}") into an engaging, structured, interactive educational ebook.
+
+CRITICAL CONTENT ACCURACY & FIDELITY MANDATE:
+- The book title, description, and ALL chapters MUST be extracted directly from the attached document and its specific subject matter (Document name: "${fileName || ''}").
+- DO NOT invent generic or unrelated topics (e.g. do NOT output generic Artificial Intelligence if the document is about Islamic studies, Self-development, Education, Law, or Mathematics).
+- Follow the actual chapters, names, and concepts of the uploaded document faithfully.
 
 FAST INITIAL CURRICULUM EXTRACTION:
-1. Extract the overall book title, comprehensive educational description, and the foundational Table of Contents.
-2. Generate the first 5 core educational chapters (Chapters 1 through 5) in rich, multi-paragraph textbook depth with theories, examples, and Arabic vowel marks (Tashkeel).
+1. Extract the authentic book title, comprehensive educational description, and the foundational Table of Contents from the document.
+2. Generate the first 5 core educational chapters (Chapters 1 through 5) in rich, multi-paragraph textbook depth with theories, examples, and Arabic vowel marks (Tashkeel) directly reflecting the document's content.
 3. If the document has more chapters, the system allows the user to easily expand and generate remaining chapters (Chapters 6-10, etc.) from inside the book.
 
 For each of the 5 chapters, generate:
-- An inspiring and clear chapter 'title'
+- An inspiring and clear chapter 'title' reflecting the document.
 - 'originalContent': Excerpt or original segment from the document for this chapter.
 - 'concepts': An array containing key concepts and their detailed explanations.
 - 'summary': A concise summary of the chapter's main points.
@@ -696,9 +701,9 @@ For each of the 5 chapters, generate:
 - A list of 'videos' with 2 YouTube search topics.
 - A 'mindMap' hierarchy of 4-6 concept nodes with 'id', 'label', 'parentId', and 'description'.
 
-If the provided input or prompt is in Arabic, you MUST output ALL generated content in high-quality, formal Arabic (Fusha) with precise terminology.
+If the provided document or prompt is in Arabic, you MUST output ALL generated content in high-quality, formal Arabic (Fusha) with precise terminology.
 
-Provided user guidance / request: "${promptText || 'Convert the uploaded document into an interactive ebook.'}"
+User Guidance / Notes: "${promptText || `Convert ${fileName || 'the uploaded document'} into a structured interactive ebook.`}"
 `;
 
     contents.push(instructionPrompt);

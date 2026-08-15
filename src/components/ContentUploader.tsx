@@ -163,8 +163,7 @@ export default function ContentUploader({
     if (selectedFile?.rawFile && (selectedFile.rawFile.size > 2 * 1024 * 1024 || selectedFile.rawFile.type === 'application/pdf')) {
       setIsUploadingCloud(true);
       try {
-        const cleanFileName = selectedFile.rawFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-        const uploadPath = `documents/${Date.now()}_${cleanFileName}`;
+        const uploadPath = `documents/${Date.now()}_file.pdf`;
         const { error: uploadErr } = await supabase.storage
           .from('book-covers')
           .upload(uploadPath, selectedFile.rawFile, { upsert: true });
@@ -475,17 +474,17 @@ export default function ContentUploader({
         {/* SUBMIT BUTTON */}
         <button
           type="submit"
-          disabled={isConverting}
+          disabled={isConverting || isUploadingCloud}
           className={`w-full py-4 rounded-2xl font-black text-sm text-white transition flex items-center justify-center gap-2.5 shadow-md ${
-            isConverting
+            isConverting || isUploadingCloud
               ? 'bg-slate-800 cursor-not-allowed'
               : 'bg-indigo-600 hover:bg-indigo-500 active:scale-95 shadow-indigo-200'
           }`}
         >
-          {isConverting ? (
+          {isConverting || isUploadingCloud ? (
             <>
               <RefreshCw className="w-5 h-5 animate-spin" />
-              <span>جاري التحليل والبناء بالذكاء الاصطناعي...</span>
+              <span>{isUploadingCloud ? 'جاري فحص ورفع الملف السحابي...' : 'جاري التحليل والبناء بالذكاء الاصطناعي...'}</span>
             </>
           ) : (
             <>
