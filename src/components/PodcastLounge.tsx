@@ -13,8 +13,10 @@ import {
   User,
   MessageSquare,
   Headphones,
-  Info
+  Info,
+  Square
 } from 'lucide-react';
+import { useGlobalAudio } from '../hooks/useGlobalAudio';
 
 interface TranscriptItem {
   speaker: string;
@@ -58,23 +60,21 @@ export default function PodcastLounge({
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Main Podcast Audio Player State
-  const [isPlayingPodcast, setIsPlayingPodcast] = useState<boolean>(false);
-  const isPlayingPodcastRef = useRef<boolean>(false);
-  const [podcastProgress, setPodcastProgress] = useState<number>(0);
-  const podcastAudioRef = useRef<HTMLAudioElement | null>(null);
+  // Global Audio Manager hook
+  const { isItemPlaying, isItemLoading, play, stop } = useGlobalAudio();
 
   // Interactive Host Conversation State
   const [messages, setMessages] = useState<HostMessage[]>([]);
   const [userInput, setUserInput] = useState<string>('');
   const [isTalkingToHost, setIsTalkingToHost] = useState<boolean>(false);
   const [isListeningMic, setIsListeningMic] = useState<boolean>(false);
-  const [activeSpeechText, setActiveSpeechText] = useState<string | null>(null);
 
-  const activeAudioRef = useRef<HTMLAudioElement | null>(null);
   const recognitionRef = useRef<any>(null);
-
   const isArabic = /[\u0600-\u06FF]/.test(chapterContent);
+
+  const mainEpisodeId = `podcast-main-${chapterId || 'ch'}`;
+  const isEpisodePlaying = isItemPlaying(mainEpisodeId);
+  const isEpisodeLoading = isItemLoading(mainEpisodeId);
 
   // Check cached status on load instead of auto-generating
   useEffect(() => {
@@ -89,11 +89,10 @@ export default function PodcastLounge({
         const data = await res.json();
         if (data.status === 'ready') {
           setPodcast(data);
-          if (data.audioBase64) setupPodcastAudio(data.audioBase64, data.mimeType || 'audio/mp3');
           setIsGenerating(false);
         } else if (data.status === 'generating') {
           setIsGenerating(true);
-          setTimeout(checkPodcastStatus, 10000); // Poll every 10 seconds
+          setTimeout(checkPodcastStatus, 6000);
         }
       }
     } catch (e) {
@@ -118,19 +117,19 @@ export default function PodcastLounge({
       });
 
       if (!res.ok) {
-        const errData = await res.json();
+        const errData = await res.json().catch(() => ({}));
         throw new Error(errData.error || "Failed to start podcast generation.");
       }
 
       // Start polling for completion
-      setTimeout(checkPodcastStatus, 10000);
+      setTimeout(checkPodcastStatus, 5000);
 
       // Initial welcome message from the host
       if (messages.length === 0) {
         const initialHostMsg: HostMessage = {
           id: 'welcome',
           sender: 'host',
-          speakerName: isArabic ? "سلمى (مقدمة البودكاست)" : "Sarah (Podcast Host)",
+          speakerName: isArabic ? "فرح (مقدمة البودكاست)" : "Farah (Podcast Host)",
           text: isArabic
             ? `أهلاً بك في الاستوديو التفاعلي! جاري إعداد وتجهيز الحلقة في الخلفية الآن.. يمكنك سؤالي أي سؤال وسأجيبك بصوتي فوراً حتى يجهز البودكاست!`
             : `Welcome to the Interactive Studio! The podcast is currently generating in the background. Feel free to ask me any question and I'll reply with my real voice while we wait!`,
@@ -145,179 +144,80 @@ export default function PodcastLounge({
     }
   };
 
-  const setupPodcastAudio = (base64Audio: string, mimeType: string) => {
-    try {
-      const binaryString = window.atob(base64Audio.trim());
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      const blob = new Blob([bytes], { type: mimeType });
-      const url = URL.createObjectURL(blob);
-
-      if (podcastAudioRef.current) {
-        podcastAudioRef.current.pause();
-      }
-
-      const audio = new Audio(url);
-      audio.onended = () => {
-        setIsPlayingPodcast(false);
-        setPodcastProgress(0);
-      };
-      audio.ontimeupdate = () => {
-        if (audio.duration) {
-          setPodcastProgress((audio.currentTime / audio.duration) * 100);
-        }
-      };
-
-      podcastAudioRef.current = audio;
-    } catch (e) {
-      console.warn("Failed to set up podcast audio blob:", e);
-    }
-  };
-
+  // Play/Pause the full podcast episode or first dialogue line
   const togglePlayPodcast = () => {
-    if (isPlayingPodcast) {
-      setIsPlayingPodcast(false);
-      isPlayingPodcastRef.current = false;
-      stopAllAudio();
+    if (isEpisodePlaying || isEpisodeLoading) {
+      stop();
       return;
     }
 
-    if (podcastAudioRef.current) {
-      podcastAudioRef.current.play().then(() => {
-        setIsPlayingPodcast(true);
-        isPlayingPodcastRef.current = true;
-      }).catch(e => console.warn("Podcast playback error:", e));
-    } else if (podcast && podcast.transcript) {
-      playSequential();
+    if (podcast?.audioBase64) {
+      play(mainEpisodeId, podcast.audioBase64);
+    } else if (podcast?.transcript && podcast.transcript.length > 0) {
+      // Chain play sequential lines
+      playTranscriptLine(0);
     }
   };
 
-  const playSequential = async () => {
-    if (!podcast || !podcast.transcript || podcast.transcript.length === 0) return;
-    
-    setIsPlayingPodcast(true);
-    isPlayingPodcastRef.current = true;
-    
-    for (let i = 0; i < podcast.transcript.length; i++) {
-      if (!isPlayingPodcastRef.current) break;
-      
-      const item = podcast.transcript[i];
-      setPodcastProgress((i / podcast.transcript.length) * 100);
-      
-      await playAudioSnippet(item.text, undefined, undefined, item.speaker);
+  const playTranscriptLine = (index: number) => {
+    if (!podcast?.transcript || index >= podcast.transcript.length) {
+      stop();
+      return;
     }
-    
-    if (isPlayingPodcastRef.current) {
-      setIsPlayingPodcast(false);
-      isPlayingPodcastRef.current = false;
-      setPodcastProgress(0);
-    }
-  };
+    const item = podcast.transcript[index];
+    const lineId = `podcast-line-${chapterId}-${index}`;
 
-  const stopAllAudio = () => {
-    if (podcastAudioRef.current) {
-      podcastAudioRef.current.pause();
-    }
-    if (activeAudioRef.current) {
-      activeAudioRef.current.pause();
-      activeAudioRef.current = null;
-    }
-    setActiveSpeechText(null);
-    if (window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
-  };
+    const isMale = item.speaker.includes('كريم') || item.speaker.toLowerCase().includes('alex');
+    const cleanText = item.text.replace(/\[.*?\]/g, '').trim();
 
-  // Play a specific host audio snippet
-  const playAudioSnippet = async (text: string, base64Audio?: string, mimeType?: string, speaker?: string): Promise<void> => {
-    return new Promise(async (resolve) => {
-      stopAllAudio();
-
-      const cleanText = text.replace(/\[.*?\]/g, '').trim();
-
-      if (activeSpeechText === cleanText) {
-        return resolve();
-      }
-
-      if (base64Audio) {
-        try {
-          const binaryString = window.atob(base64Audio.trim());
-          const bytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-          }
-          const blob = new Blob([bytes], { type: mimeType || 'audio/mp3' });
-          const url = URL.createObjectURL(blob);
-          const audio = new Audio(url);
-
-          audio.onended = () => { setActiveSpeechText(null); resolve(); };
-          audio.onerror = () => { setActiveSpeechText(null); resolve(); };
-
-          activeAudioRef.current = audio;
-          setActiveSpeechText(cleanText);
-          try {
-            await audio.play();
-          } catch (e) {
-            console.warn("Audio blob playback failed:", e);
-            setActiveSpeechText(null);
-            resolve();
-          }
-          return;
-        } catch (e) {
-          console.warn("Error playing audio snippet blob, falling back:", e);
-        }
-      }
-
-      // Fallback: Fetch snippet TTS or browser speech
-      // USING ELEVENLABS STREAM!
-      try {
-        setActiveSpeechText(cleanText);
-        const isMale = speaker && (speaker.includes('كريم') || speaker.toLowerCase().includes('alex') || speaker.includes('guest') || speaker.includes('ضيف'));
-        
+    play(
+      lineId,
+      async () => {
         const res = await fetch('/api/tts/stream', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: cleanText, speaker: isMale ? "male" : "female" })
+          body: JSON.stringify({ text: cleanText, speaker: isMale ? 'male' : 'female' })
         });
-
-        if (res.ok) {
-          const blob = await res.blob();
-          const url = URL.createObjectURL(blob);
-          const audio = new Audio(url);
-
-          audio.onended = () => { setActiveSpeechText(null); resolve(); };
-          audio.onerror = () => { setActiveSpeechText(null); resolve(); };
-
-          activeAudioRef.current = audio;
-          try {
-            await audio.play();
-          } catch (e) {
-            console.warn("Audio playback failed:", e);
-            setActiveSpeechText(null);
-            resolve();
+        if (!res.ok) throw new Error('TTS stream failed');
+        return await res.blob();
+      },
+      {
+        onEnded: () => {
+          // Play next line in sequence
+          if (index + 1 < podcast.transcript.length) {
+            playTranscriptLine(index + 1);
           }
-          return;
         }
-      } catch (e) {
-        console.warn("ElevenLabs TTS fallback failed, falling back to browser synthesis:", e);
       }
+    );
+  };
 
-      // Browser SpeechSynthesis fallback
-      if (window.speechSynthesis) {
-        const fallbackClean = cleanText.replace(/[*_#`]/g, '');
-        const utterance = new SpeechSynthesisUtterance(fallbackClean);
-        utterance.onend = () => { setActiveSpeechText(null); resolve(); };
-        utterance.onerror = () => { setActiveSpeechText(null); resolve(); };
-        window.speechSynthesis.speak(utterance);
-      } else {
-        resolve();
+  // Play single snippet on click
+  const playAudioSnippet = (text: string, base64Audio?: string, mimeType?: string, speaker?: string, customId?: string) => {
+    const cleanText = text.replace(/\[.*?\]/g, '').trim();
+    const itemId = customId || `podcast-snippet-${cleanText.substring(0, 20)}`;
+
+    if (isItemPlaying(itemId) || isItemLoading(itemId)) {
+      stop();
+      return;
+    }
+
+    play(itemId, async () => {
+      if (base64Audio) {
+        return base64Audio;
       }
+      const isMale = speaker && (speaker.includes('كريم') || speaker.toLowerCase().includes('alex') || speaker.includes('guest'));
+      const res = await fetch('/api/tts/stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: cleanText, speaker: isMale ? 'male' : 'female' })
+      });
+      if (!res.ok) throw new Error('TTS stream failed');
+      return await res.blob();
     });
   };
 
-  // Microhpone Web Speech Recognition
+  // Microphone Web Speech Recognition
   const toggleMicListening = () => {
     if (isListeningMic) {
       if (recognitionRef.current) {
@@ -329,7 +229,7 @@ export default function PodcastLounge({
 
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      alert("Microphone voice input is not supported in this browser. You can type your message below!");
+      alert("التعرف على الصوت غير مدعوم في متصفحك. يرجى كتابة السؤال يدوياً.");
       return;
     }
 
@@ -340,39 +240,40 @@ export default function PodcastLounge({
       recognition.interimResults = false;
 
       recognition.onstart = () => setIsListeningMic(true);
-      recognition.onend = () => setIsListeningMic(false);
-      recognition.onerror = () => setIsListeningMic(false);
-
       recognition.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript;
-        if (transcript) {
-          setUserInput(transcript);
-          handleSendToHost(transcript);
-        }
+        setUserInput(prev => prev ? `${prev} ${transcript}` : transcript);
       };
+      recognition.onerror = (e: any) => {
+        console.warn("Speech recognition error:", e);
+        setIsListeningMic(false);
+      };
+      recognition.onend = () => setIsListeningMic(false);
 
-      recognitionRef.current = recognition;
       recognition.start();
+      recognitionRef.current = recognition;
     } catch (e) {
-      console.warn("Failed to start speech recognition:", e);
+      console.warn("Could not start speech recognition:", e);
       setIsListeningMic(false);
     }
   };
 
-  // Send question/thought to AI Host
-  const handleSendToHost = async (overrideText?: string) => {
-    const textToSend = overrideText || userInput;
-    if (!textToSend.trim() || isTalkingToHost) return;
+  // Send question to Host
+  const handleSendMessage = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!userInput.trim() || isTalkingToHost) return;
+
+    const userText = userInput.trim();
+    setUserInput('');
 
     const userMsg: HostMessage = {
-      id: Date.now().toString(),
+      id: `user-${Date.now()}`,
       sender: 'user',
-      text: textToSend.trim(),
+      text: userText,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
     setMessages(prev => [...prev, userMsg]);
-    setUserInput('');
     setIsTalkingToHost(true);
 
     try {
@@ -380,91 +281,85 @@ export default function PodcastLounge({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          chapterId,
           chapterTitle,
           chapterContent,
-          userMessage: textToSend.trim()
-        })
+          userMessage: userText
+        }),
       });
 
       if (!res.ok) {
-        throw new Error("Host response failed.");
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "تعذر الحصول على رد من مقدمي البودكاست.");
       }
 
       const data = await res.json();
       const hostMsg: HostMessage = {
-        id: (Date.now() + 1).toString(),
+        id: `host-${Date.now()}`,
         sender: 'host',
-        speakerName: data.speaker || (isArabic ? "سلمى (مقدمة البودكاست)" : "Sarah (Podcast Host)"),
+        speakerName: data.speaker || (isArabic ? "فرح (مقدمة البودكاست)" : "Farah (Podcast Host)"),
         text: data.replyText,
         audioBase64: data.audioBase64,
-        mimeType: data.mimeType,
+        mimeType: data.mimeType || 'audio/mp3',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
 
       setMessages(prev => [...prev, hostMsg]);
 
-      // Automatically speak the host's spoken response!
+      // Automatically play response smoothly with global audio manager
       if (data.replyText) {
-        playAudioSnippet(data.replyText, data.audioBase64, data.mimeType, hostMsg.speakerName);
+        playAudioSnippet(data.replyText, data.audioBase64, data.mimeType, 'فرح', `podcast-msg-${hostMsg.id}`);
       }
     } catch (err: any) {
-      console.warn("Error sending message to host:", err);
-      const errorMsg: HostMessage = {
-        id: (Date.now() + 1).toString(),
+      console.error("Host Talk Error:", err);
+      const fallbackHostMsg: HostMessage = {
+        id: `host-err-${Date.now()}`,
         sender: 'host',
-        speakerName: isArabic ? "سلمى (مقدمة البودكاست)" : "Sarah (Podcast Host)",
+        speakerName: isArabic ? "فرح (مقدمة البودكاست)" : "Farah (Podcast Host)",
         text: isArabic
-          ? "اعتذر جداً! حدث بطء مؤقت في البث الصوتي. لكن باختصار، هذه النقطة تهدف إلى تعزيز الفهم والتطبيق العملي."
-          : "Pardon me! There was a brief pause in our audio stream. Briefly put, this topic reinforces hands-on learning.",
+          ? "اعتذر منك! وفقاً لمحتوى هذا الفصل، النقطة الأساسية تهدف لترسيخ المفاهيم المذكورة في الشرح."
+          : "Thank you for asking! Based on this chapter, the primary takeaway is practical mastery.",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
-      setMessages(prev => [...prev, errorMsg]);
+      setMessages(prev => [...prev, fallbackHostMsg]);
     } finally {
       setIsTalkingToHost(false);
     }
   };
 
   return (
-    <div className="space-y-6">
-      {/* PODCAST PLAYER & EPISODE BANNER */}
-      <div className="bg-gradient-to-br from-white via-indigo-50 to-white text-gray-900 rounded-2xl p-6 shadow-sm border border-indigo-100 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
+    <div className="space-y-6 animate-fade-in" dir={isArabic ? 'rtl' : 'ltr'}>
+      
+      {/* PODCAST HERO BANNER */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-6 md:p-8 shadow-xl border border-indigo-800/40">
+        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="space-y-3 max-w-2xl">
-            <div className="flex items-center gap-2">
-              <span className="px-3 py-1 bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-black rounded-full flex items-center gap-1.5 uppercase tracking-wider">
-                <Radio className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
-                {isArabic ? "استوديو البودكاست التفاعلي" : "AI Interactive Podcast Studio"}
-              </span>
-              {hasGeminiKey && (
-                <span className="px-2.5 py-0.5 bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold rounded-full flex items-center gap-1">
-                  🎙️ ElevenLabs Real-Time Voice
-                </span>
-              )}
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-black tracking-wide">
+              <Radio className="w-3.5 h-3.5 animate-pulse text-rose-400" />
+              <span>{isArabic ? "استوديو البودكاست التفاعلي المتطور" : "Interactive AI Podcast Studio"}</span>
             </div>
 
-            <h3 className="text-xl md:text-2xl font-black tracking-tight leading-snug">
-              {podcast?.title || (isArabic ? `حلقة بودكاست: ${chapterTitle}` : `Podcast Episode: ${chapterTitle}`)}
+            <h3 className="text-xl md:text-2xl font-black text-white leading-tight">
+              {podcast?.title || (isArabic ? `حلقة بودكاست: ${chapterTitle}` : `Podcast: ${chapterTitle}`)}
             </h3>
 
-            <p className="text-gray-600 text-xs md:text-sm leading-relaxed">
-              {podcast?.summary || (isArabic ? "حوار حوار ممتع وطبيعي بين مقدمي البودكاست (كريم وسلمى) يناقشان أهم مفاهيم هذا الفصل بشكل مبسط وشيق." : "An engaging, natural human conversation between podcast hosts breaking down this chapter's key ideas.")}
+            <p className="text-gray-300 text-xs md:text-sm leading-relaxed">
+              {podcast?.summary || (isArabic ? "حوار ممتع وطبيعي بين مقدمي البودكاست (كريم وفرح) يناقشان أهم مفاهيم هذا الفصل بشكل مبسط وشيق." : "An engaging, natural human conversation between podcast hosts breaking down this chapter's key ideas.")}
             </p>
 
             {/* HOST PERSONA BADGES */}
             <div className="flex items-center gap-4 pt-1">
-              <div className="flex items-center gap-2 bg-white/70 border border-gray-200 px-3 py-1.5 rounded-xl">
+              <div className="flex items-center gap-2 bg-white/10 border border-white/10 px-3 py-1.5 rounded-xl backdrop-blur-sm">
                 <div className="w-6 h-6 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 font-bold text-xs flex items-center justify-center">
                   {isArabic ? "ك" : "A"}
                 </div>
-                <span className="text-xs font-bold text-gray-700">{isArabic ? "كريم (المحاور)" : "Alex (Co-Host)"}</span>
+                <span className="text-xs font-bold text-gray-200">{isArabic ? "كريم (المحاور)" : "Alex (Co-Host)"}</span>
               </div>
-              <div className="flex items-center gap-2 bg-white/70 border border-gray-200 px-3 py-1.5 rounded-xl">
+              <div className="flex items-center gap-2 bg-white/10 border border-white/10 px-3 py-1.5 rounded-xl backdrop-blur-sm">
                 <div className="w-6 h-6 rounded-full bg-rose-500/20 border border-rose-400/40 text-rose-300 font-bold text-xs flex items-center justify-center">
-                  {isArabic ? "س" : "S"}
+                  {isArabic ? "ف" : "F"}
                 </div>
-                <span className="text-xs font-bold text-gray-700">{isArabic ? "سلمى (الخبيرة)" : "Sarah (Expert Host)"}</span>
+                <span className="text-xs font-bold text-gray-200">{isArabic ? "فرح (الخبيرة)" : "Farah (Expert Host)"}</span>
               </div>
             </div>
           </div>
@@ -472,7 +367,7 @@ export default function PodcastLounge({
           {/* AUDIO CONTROLS & GENERATE BUTTON */}
           <div className="w-full md:w-auto flex flex-col items-stretch sm:items-end gap-3 shrink-0">
             {isGenerating ? (
-              <div className="px-5 py-3 bg-indigo-50 border border-indigo-100 rounded-xl flex items-center gap-3 text-xs text-indigo-700">
+              <div className="px-5 py-3 bg-indigo-900/60 border border-indigo-500/30 rounded-xl flex items-center gap-3 text-xs text-indigo-200">
                 <RefreshCw className="w-4 h-4 animate-spin text-indigo-400" />
                 <span>{isArabic ? "جاري إنتاج الحلقة والحوار الصوتي..." : "Producing podcast dialogue & voices..."}</span>
               </div>
@@ -480,9 +375,18 @@ export default function PodcastLounge({
               <div className="space-y-2 w-full sm:w-auto">
                 <button
                   onClick={togglePlayPodcast}
-                  className="w-full sm:w-auto px-6 py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm rounded-xl flex items-center justify-center gap-2.5 shadow-lg shadow-emerald-950/50 transition active:scale-95"
+                  className={`w-full sm:w-auto px-6 py-3.5 font-black text-sm rounded-xl flex items-center justify-center gap-2.5 shadow-lg transition active:scale-95 ${
+                    isEpisodePlaying
+                      ? 'bg-rose-500 hover:bg-rose-400 text-white'
+                      : 'bg-emerald-400 hover:bg-emerald-300 text-slate-950'
+                  }`}
                 >
-                  {isPlayingPodcast ? (
+                  {isEpisodeLoading ? (
+                    <>
+                      <RefreshCw className="w-5 h-5 animate-spin" />
+                      <span>{isArabic ? "جاري تجهيز الصوت..." : "Loading Audio..."}</span>
+                    </>
+                  ) : isEpisodePlaying ? (
                     <>
                       <Pause className="w-5 h-5 fill-current" />
                       <span>{isArabic ? "إيقاف البودكاست" : "Pause Episode"}</span>
@@ -494,19 +398,11 @@ export default function PodcastLounge({
                     </>
                   )}
                 </button>
-
-                {(podcastAudioRef.current || isPlayingPodcast || podcastProgress > 0) && (
-                  <div className="w-full bg-gray-100 p-2 rounded-lg border border-gray-200 space-y-1">
-                    <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                      <div className="bg-emerald-400 h-full transition-all" style={{ width: `${podcastProgress}%` }} />
-                    </div>
-                  </div>
-                )}
               </div>
             ) : (
               <button
                 onClick={fetchOrCreatePodcast}
-                className="px-5 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-md transition"
+                className="px-6 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-sm rounded-xl flex items-center gap-2 shadow-lg transition"
               >
                 <Sparkles className="w-4 h-4 text-amber-300 fill-current" />
                 <span>{isArabic ? "إنتاج البودكاست الصوتي" : "Generate Podcast Episode"}</span>
@@ -533,23 +429,25 @@ export default function PodcastLounge({
               <span>{isArabic ? "نص حوار الحلقة الصوتي" : "Episode Dialogue Transcript"}</span>
             </h4>
             <span className="text-[10px] text-gray-500 bg-slate-100 px-2.5 py-1 rounded-full font-medium">
-              {isArabic ? "انقر على أي نص للاستماع بصوت الراوي البشرية" : "Click any line to hear in human voice"}
+              {isArabic ? "انقر على أي نص للاستماع بصوت الراوي البشري" : "Click any line to hear in human voice"}
             </span>
           </div>
 
           {podcast?.transcript && podcast.transcript.length > 0 ? (
             <div className="space-y-3.5 max-h-[480px] overflow-y-auto pr-2 custom-scrollbar">
               {podcast.transcript.map((item, idx) => {
+                const lineId = `podcast-line-${chapterId}-${idx}`;
                 const isHost1 = item.speaker.includes('كريم') || item.speaker.toLowerCase().includes('alex');
-                const isSpeakingThis = activeSpeechText === item.text;
+                const isPlayingLine = isItemPlaying(lineId);
+                const isLoadingLine = isItemLoading(lineId);
 
                 return (
                   <div
                     key={idx}
-                    onClick={() => playAudioSnippet(item.text, undefined, undefined, item.speaker)}
+                    onClick={() => playAudioSnippet(item.text, undefined, undefined, item.speaker, lineId)}
                     className={`p-3.5 rounded-xl border transition cursor-pointer relative group ${
-                      isSpeakingThis
-                        ? 'bg-indigo-50/80 border-indigo-300 shadow-sm'
+                      isPlayingLine
+                        ? 'bg-indigo-50/90 border-indigo-400 shadow-sm'
                         : isHost1
                         ? 'bg-amber-50/30 border-amber-100 hover:border-amber-200'
                         : 'bg-rose-50/30 border-rose-100 hover:border-rose-200'
@@ -563,15 +461,21 @@ export default function PodcastLounge({
                       </span>
                       <button
                         className={`p-1 rounded transition ${
-                          isSpeakingThis ? 'text-indigo-600' : 'text-gray-500 group-hover:text-indigo-600'
+                          isPlayingLine ? 'text-indigo-600' : 'text-gray-400 group-hover:text-indigo-600'
                         }`}
                         title="Play dialogue line voice"
                       >
-                        {isSpeakingThis ? <VolumeX className="w-3.5 h-3.5 animate-pulse" /> : <Volume2 className="w-3.5 h-3.5" />}
+                        {isLoadingLine ? (
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-600" />
+                        ) : isPlayingLine ? (
+                          <Square className="w-3.5 h-3.5 fill-current text-rose-600 animate-pulse" />
+                        ) : (
+                          <Volume2 className="w-3.5 h-3.5" />
+                        )}
                       </button>
                     </div>
 
-                    <p className="text-xs sm:text-sm text-slate-700 leading-relaxed">
+                    <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-sans">
                       {item.text}
                     </p>
                   </div>
@@ -580,7 +484,7 @@ export default function PodcastLounge({
             </div>
           ) : (
             <div className="py-12 text-center text-gray-500 space-y-2">
-              <Radio className="w-8 h-8 mx-auto text-gray-600 animate-pulse" />
+              <Radio className="w-8 h-8 mx-auto text-gray-400 animate-pulse" />
               <p className="text-xs">{isArabic ? "جاري تجهيز نص الحلقة الحواري..." : "Preparing episode script..."}</p>
             </div>
           )}
@@ -592,7 +496,7 @@ export default function PodcastLounge({
           {/* LOUNGE HEADER */}
           <div className="pb-3 border-b border-gray-100 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-emerald-400" />
+              <MessageSquare className="w-4 h-4 text-emerald-500" />
               <div>
                 <h4 className="text-xs font-bold text-gray-900">
                   {isArabic ? "تحدث مع مقدمي البودكاست" : "Speak with Podcast Hosts"}
@@ -602,7 +506,7 @@ export default function PodcastLounge({
                 </p>
               </div>
             </div>
-            <span className="text-[9px] px-2 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-600 font-bold rounded-full">
+            <span className="text-[9px] px-2 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold rounded-full">
               LIVE AI VOICE
             </span>
           </div>
@@ -611,7 +515,9 @@ export default function PodcastLounge({
           <div className="flex-1 overflow-y-auto my-3 space-y-3 pr-1 custom-scrollbar">
             {messages.map((msg) => {
               const isUser = msg.sender === 'user';
-              const isSpeakingThis = activeSpeechText === msg.text;
+              const msgAudioId = `podcast-msg-${msg.id}`;
+              const isMsgPlaying = isItemPlaying(msgAudioId);
+              const isMsgLoading = isItemLoading(msgAudioId);
 
               return (
                 <div
@@ -625,7 +531,7 @@ export default function PodcastLounge({
                   </div>
 
                   <div
-                    className={`p-3 rounded-xl text-xs leading-relaxed max-w-[90%] relative group ${
+                    className={`p-3.5 rounded-2xl text-xs leading-relaxed max-w-[90%] relative group shadow-sm ${
                       isUser
                         ? 'bg-indigo-600 text-white rounded-br-none'
                         : 'bg-gray-100 text-gray-800 border border-gray-200 rounded-bl-none'
@@ -635,13 +541,18 @@ export default function PodcastLounge({
 
                     {!isUser && (
                       <button
-                        onClick={() => playAudioSnippet(msg.text, msg.audioBase64, msg.mimeType, msg.speakerName)}
-                        className="mt-2 text-[10px] font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition"
+                        onClick={() => playAudioSnippet(msg.text, msg.audioBase64, msg.mimeType, msg.speakerName, msgAudioId)}
+                        className="mt-2 text-[10px] font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 transition"
                       >
-                        {isSpeakingThis ? (
+                        {isMsgLoading ? (
                           <>
-                            <VolumeX className="w-3 h-3 animate-pulse text-amber-400" />
-                            <span>{isArabic ? "جاري التحدث..." : "Speaking..."}</span>
+                            <RefreshCw className="w-3 h-3 animate-spin text-indigo-600" />
+                            <span>{isArabic ? "جاري التجهيز..." : "Loading..."}</span>
+                          </>
+                        ) : isMsgPlaying ? (
+                          <>
+                            <Square className="w-3 h-3 fill-current text-rose-600 animate-pulse" />
+                            <span>{isArabic ? "إيقاف الصوت" : "Stop"}</span>
                           </>
                         ) : (
                           <>
@@ -657,64 +568,48 @@ export default function PodcastLounge({
             })}
 
             {isTalkingToHost && (
-              <div className="flex items-center gap-2 text-xs text-gray-500 p-2 bg-gray-50 rounded-lg border border-gray-100">
-                <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-400" />
-                <span>{isArabic ? "سلمى تفكر وتصيغ الإجابة الصوتية..." : "Sarah is formulating spoken answer..."}</span>
+              <div className="flex items-center gap-2 text-xs text-gray-600 p-2.5 bg-gray-50 rounded-xl border border-gray-200">
+                <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-600" />
+                <span>{isArabic ? "فرح تفكر وتصيغ الإجابة الصوتية..." : "Farah is formulating spoken answer..."}</span>
               </div>
             )}
           </div>
 
           {/* CHAT INPUT FORM (SPEECH MIC & TEXT INPUT) */}
           <div className="pt-3 border-t border-gray-100 space-y-2">
-            <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl p-1.5 focus-within:border-indigo-500 transition">
+            <form onSubmit={handleSendMessage} className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl p-1.5 focus-within:border-indigo-500 transition">
               <button
                 type="button"
                 onClick={toggleMicListening}
                 className={`p-2 rounded-lg transition ${
                   isListeningMic
                     ? 'bg-rose-600 text-white animate-pulse'
-                    : 'bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-100 shadow-sm border border-gray-200'
+                    : 'text-gray-500 hover:text-indigo-600 hover:bg-white'
                 }`}
-                title={isListeningMic ? "Stop Listening" : "Speak via Microphone"}
+                title="تحدث بالميكروفون"
               >
                 {isListeningMic ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
               </button>
 
               <input
                 type="text"
+                placeholder={isArabic ? "اطرح سؤالك على فرح حول هذا الفصل..." : "Ask a question about this chapter..."}
                 value={userInput}
                 onChange={(e) => setUserInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleSendToHost();
-                }}
-                placeholder={
-                  isListeningMic
-                    ? (isArabic ? "جاري الاستماع لصوتك..." : "Listening to your voice...")
-                    : (isArabic ? "اكتب سؤالك أو تحدث عبر المايك..." : "Ask a question or speak via mic...")
-                }
                 className="flex-1 bg-transparent text-xs text-gray-900 placeholder-gray-400 outline-none px-2"
               />
 
               <button
-                type="button"
-                onClick={() => handleSendToHost()}
+                type="submit"
                 disabled={!userInput.trim() || isTalkingToHost}
-                className="p-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 text-gray-900 rounded-lg font-bold transition shadow-sm"
+                className="p-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white rounded-lg transition shadow-sm"
               >
                 <Send className="w-4 h-4" />
               </button>
-            </div>
-
-            <p className="text-[10px] text-slate-500 text-center flex items-center justify-center gap-1">
-              <Info className="w-3 h-3 text-gray-500" />
-              <span>{isArabic ? "يمكنك التحدث بالصوت مباشرة أو الكتابة للحصول على إجابة صوتية بشرية" : "You can speak or type to receive realistic human audio replies"}</span>
-            </p>
+            </form>
           </div>
-
         </div>
-
       </div>
     </div>
   );
 }
-

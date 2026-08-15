@@ -1,55 +1,43 @@
-import React, { useState, useRef } from 'react';
+import React from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Play, Square, FileText, Lightbulb, ListCollapse, BookOpen } from 'lucide-react';
+import { Play, Square, FileText, Lightbulb, ListCollapse, BookOpen, Volume2, RefreshCw } from 'lucide-react';
 import { Chapter } from '../types';
+import { useGlobalAudio } from '../hooks/useGlobalAudio';
 
 export function ReadSection({ chapter }: { chapter: Chapter }) {
-  const [activeAudioSection, setActiveAudioSection] = useState<string | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const { isItemPlaying, isItemLoading, play, stop } = useGlobalAudio();
 
-  const stopAudio = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
+  const handleToggleAudio = (id: string, text: string) => {
+    const isPlaying = isItemPlaying(id);
+    const isLoading = isItemLoading(id);
+
+    if (isPlaying || isLoading) {
+      stop();
+      return;
     }
-    setActiveAudioSection(null);
-  };
 
-  const playAudio = async (text: string, sectionId: string) => {
-    stopAudio();
-    if (!text.trim()) return;
+    const cleanText = text.replace(/[*_#`]/g, '').trim();
+    if (!cleanText) return;
 
-    setActiveAudioSection(sectionId);
-
-    try {
-      const cleanText = text.replace(/[*_#`]/g, '').trim();
+    play(id, async () => {
       const res = await fetch('/api/tts/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: cleanText, speaker: 'male' }) // use male/Hamed for narration
+        body: JSON.stringify({ text: cleanText, speaker: 'male' }) // use male neural narrator
       });
 
-      if (res.ok) {
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        
-        audio.onended = () => setActiveAudioSection(null);
-        audio.onerror = () => setActiveAudioSection(null);
-        
-        audioRef.current = audio;
-        await audio.play();
-      } else {
-        setActiveAudioSection(null);
+      if (!res.ok) {
+        throw new Error('Failed to fetch audio stream');
       }
-    } catch (e) {
-      console.error("Audio playback error:", e);
-      setActiveAudioSection(null);
-    }
+
+      const blob = await res.blob();
+      return blob;
+    });
   };
 
   const renderSection = (id: string, title: string, icon: React.ReactNode, content: React.ReactNode, textForAudio: string) => {
-    const isPlaying = activeAudioSection === id;
+    const isPlaying = isItemPlaying(id);
+    const isLoading = isItemLoading(id);
 
     return (
       <div className="bg-white border border-gray-100 shadow-sm rounded-3xl p-6 mb-6">
@@ -59,21 +47,28 @@ export function ReadSection({ chapter }: { chapter: Chapter }) {
             <h4 className="text-lg font-black">{title}</h4>
           </div>
           <button
-            onClick={() => isPlaying ? stopAudio() : playAudio(textForAudio, id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              isPlaying 
-                ? 'bg-red-50 text-red-600 hover:bg-red-100' 
-                : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
+            onClick={() => handleToggleAudio(id, textForAudio)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${
+              isPlaying
+                ? 'bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 animate-pulse'
+                : isLoading
+                ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-100'
             }`}
           >
-            {isPlaying ? (
+            {isLoading ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin text-indigo-600" />
+                <span>جاري تحميل الصوت...</span>
+              </>
+            ) : isPlaying ? (
               <>
                 <Square className="w-4 h-4 fill-current" />
                 <span>إيقاف القراءة</span>
               </>
             ) : (
               <>
-                <Play className="w-4 h-4 fill-current" />
+                <Volume2 className="w-4 h-4" />
                 <span>استماع</span>
               </>
             )}
@@ -87,7 +82,7 @@ export function ReadSection({ chapter }: { chapter: Chapter }) {
   };
 
   const conceptsArr = Array.isArray(chapter.concepts) ? chapter.concepts : [];
-  const conceptsText = conceptsArr.map(c => `${c.concept}: ${c.explanation}`).join('\n\n');
+  const conceptsText = conceptsArr.map(c => typeof c === 'string' ? c : `${(c as any).concept || (c as any).title || ''}: ${(c as any).explanation || (c as any).description || ''}`).join('\n\n');
 
   return (
     <div className="space-y-6">
@@ -95,7 +90,7 @@ export function ReadSection({ chapter }: { chapter: Chapter }) {
 
       {/* Summary Section */}
       {chapter.summary && renderSection(
-        'summary',
+        `read-summary-${chapter.id}`,
         'الملخص الميسر',
         <ListCollapse className="w-5 h-5" />,
         <ReactMarkdown>{chapter.summary}</ReactMarkdown>,
@@ -104,23 +99,27 @@ export function ReadSection({ chapter }: { chapter: Chapter }) {
 
       {/* Concepts Section */}
       {conceptsArr.length > 0 && renderSection(
-        'concepts',
+        `read-concepts-${chapter.id}`,
         'المفاهيم والشرح',
         <Lightbulb className="w-5 h-5" />,
         <div className="space-y-4">
-          {conceptsArr.map((concept, idx) => (
-            <div key={idx} className="bg-amber-50/50 p-4 rounded-xl border border-amber-100">
-              <h5 className="font-bold text-amber-900 mb-2">{concept.concept}</h5>
-              <p className="text-amber-800 text-sm">{concept.explanation}</p>
-            </div>
-          ))}
+          {conceptsArr.map((concept: any, idx: number) => {
+            const cName = typeof concept === 'string' ? concept : (concept.concept || concept.title || `مفهوم ${idx+1}`);
+            const cDesc = typeof concept === 'string' ? '' : (concept.explanation || concept.description || '');
+            return (
+              <div key={idx} className="bg-amber-50/50 p-4 rounded-xl border border-amber-100">
+                <h5 className="font-bold text-amber-900 mb-2">{cName}</h5>
+                {cDesc && <p className="text-amber-800 text-sm">{cDesc}</p>}
+              </div>
+            );
+          })}
         </div>,
         conceptsText
       )}
 
       {/* Full Content (Fallback / Advanced) */}
       {chapter.content && renderSection(
-        'content',
+        `read-content-${chapter.id}`,
         'المحتوى التعليمي الموسع',
         <BookOpen className="w-5 h-5" />,
         <ReactMarkdown>{chapter.content}</ReactMarkdown>,
@@ -129,7 +128,7 @@ export function ReadSection({ chapter }: { chapter: Chapter }) {
 
       {/* Original Content Section */}
       {chapter.originalContent && renderSection(
-        'originalContent',
+        `read-original-${chapter.id}`,
         'النص الأصلي من المذكرة',
         <FileText className="w-5 h-5" />,
         <div className="whitespace-pre-wrap bg-gray-50 p-4 rounded-xl border border-gray-100 font-serif">

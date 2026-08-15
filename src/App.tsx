@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useParams, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import {
-  BookOpen, ArrowLeft, Brain, HelpCircle, Youtube, Edit, Radio, Shield, LogOut, User
+  BookOpen, ArrowLeft, Brain, HelpCircle, Youtube, Edit, Radio, Shield, LogOut, User, X
 } from 'lucide-react';
 import { MarketplaceBook, UserRole } from './types';
 import ContentUploader from './components/ContentUploader';
@@ -15,7 +15,9 @@ import { ReadSection } from './components/ReadSection';
 import { MarketplaceView } from './components/MarketplaceView';
 import { AuthModal } from './components/AuthModal';
 import { AddExternalBookModal } from './components/AddExternalBookModal';
+import BookDetailsRoute from './routes/BookDetailsRoute';
 import { supabase } from './lib/supabase';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 function AppContent() {
   const [ebooks, setEbooks] = useState<MarketplaceBook[]>([]);
@@ -80,42 +82,59 @@ function AppContent() {
 
   const fetchSupabaseCatalog = async () => {
     try {
+      // Supabase is the primary authoritative database
       const { data, error } = await supabase.from('books').select('*').order('created_at', { ascending: false });
+      
+      if (!error && data) {
+        const formatted: MarketplaceBook[] = data.map((b: any) => {
+          // Extract structured academic tags if present
+          let subcategory = b.subcategory;
+          let grade_level = b.grade_level;
+          let semester = b.semester;
+          let academic_year = b.academic_year;
 
-      if (error || !data || data.length === 0) {
-        const res = await fetch('/api/ebooks');
-        if (res.ok) {
-          const localBooks = await res.json();
-          const mapped: MarketplaceBook[] = localBooks.map((b: any) => ({
+          if (Array.isArray(b.tags)) {
+            b.tags.forEach((t: string) => {
+              if (t.startsWith('sub:') && !subcategory) subcategory = t.replace('sub:', '');
+              if (t.startsWith('grade:') && !grade_level) grade_level = t.replace('grade:', '');
+              if (t.startsWith('term:') && !semester) semester = t.replace('term:', '');
+              if (t.startsWith('year:') && !academic_year) academic_year = t.replace('year:', '');
+            });
+          }
+
+          return {
             ...b,
             author_name: b.author_name || 'د. كريم كامل',
             category: b.category || 'digital_book',
-            tags: b.tags || ['كتاب_تفاعلي', 'كيمياء_عضوية'],
+            subcategory,
+            grade_level,
+            semester,
+            academic_year,
+            tags: b.tags || ['كتاب_تفاعلي'],
             price: b.price || 0,
-            is_external: false,
-            is_published: true,
+            is_external: !!b.is_external,
+            external_url: b.external_url,
+            is_published: b.is_published !== false,
             thumbnail_url: b.thumbnail_url || 'https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=800&q=80',
-            rating: 5.0,
-            reviews_count: 140
-          }));
-          setEbooks(mapped);
-        }
-      } else {
-        const formatted: MarketplaceBook[] = data.map((b: any) => ({
-          ...b,
-          author_name: b.author_name || 'د. كريم كامل',
-          category: b.category || 'digital_book',
-          tags: b.tags || ['كتاب_تفاعلي'],
-          price: b.price || 0,
-          is_external: !!b.is_external,
-          external_url: b.external_url,
-          is_published: b.is_published !== false,
-          thumbnail_url: b.thumbnail_url || 'https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=800&q=80',
-          rating: b.rating || 5.0,
-          reviews_count: b.reviews_count || 120,
-          chapters: b.chapters || []
-        }));
+            rating: b.rating || 5.0,
+            reviews_count: b.reviews_count || 120,
+            chapters: b.chapters || []
+          };
+        });
+
         setEbooks(formatted);
+        return;
+      }
+
+      // Fallback only if Supabase fails (e.g., offline)
+      try {
+        const res = await fetch('/api/ebooks');
+        if (res.ok) {
+          const localBooks = await res.json();
+          setEbooks(localBooks);
+        }
+      } catch (err) {
+        console.warn("Could not fetch fallback local books:", err);
       }
     } catch (err: any) {
       console.error("Catalog fetch error:", err);
@@ -137,19 +156,66 @@ function AppContent() {
     setEbooks(prev => prev.map(b => b.id === bookId ? { ...b, is_published: newPublished } : b));
     try {
       await supabase.from('books').update({ is_published: newPublished }).eq('id', bookId);
-    } catch (e) {}
+    } catch (e) {
+      console.warn("Publish toggle error:", e);
+    }
   };
 
   const handleDeleteBook = async (bookId: string) => {
+    // 1. Remove from state immediately
     setEbooks(prev => prev.filter(b => b.id !== bookId));
+    
+    // 2. Delete from Supabase
     try {
       await supabase.from('books').delete().eq('id', bookId);
-    } catch (e) {}
+    } catch (e) {
+      console.warn("Supabase delete error:", e);
+    }
+
+    // 3. Also delete from local server cache
+    try {
+      await fetch(`/api/ebooks/${bookId}`, { method: 'DELETE' });
+    } catch (e) {
+      console.warn("Server delete error:", e);
+    }
+  };
+
+  const handleUpdateBook = async (updatedBook: MarketplaceBook) => {
+    // 1. Update state
+    setEbooks(prev => prev.map(b => b.id === updatedBook.id ? updatedBook : b));
+
+    // 2. Update Supabase
+    try {
+      const sanitizedPayload = {
+        title: updatedBook.title,
+        description: updatedBook.description,
+        author_name: updatedBook.author_name,
+        category: updatedBook.category,
+        tags: updatedBook.tags,
+        price: updatedBook.price,
+        thumbnail_url: updatedBook.thumbnail_url,
+        is_published: updatedBook.is_published
+      };
+      await supabase.from('books').update(sanitizedPayload).eq('id', updatedBook.id);
+    } catch (e) {
+      console.error("Supabase update error:", e);
+    }
+
+    // 3. Update local server
+    try {
+      await fetch(`/api/ebooks/${updatedBook.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedBook)
+      });
+    } catch (e) {
+      console.warn("Server update error:", e);
+    }
   };
 
   const handleAddExternalBook = async (bookData: any) => {
     const newBook: MarketplaceBook = {
-      id: `ext-${Date.now()}`,
+      id: crypto.randomUUID(),
       title: bookData.title,
       description: bookData.description,
       author_name: bookData.authorName,
@@ -166,11 +232,38 @@ function AppContent() {
     };
     setEbooks(prev => [newBook, ...prev]);
     try {
-      await supabase.from('books').insert(newBook);
-    } catch (e) {}
+      await supabase.from('books').insert({
+        id: newBook.id,
+        title: newBook.title,
+        description: newBook.description,
+        author_name: newBook.author_name,
+        category: newBook.category,
+        tags: newBook.tags,
+        price: newBook.price,
+        is_external: true,
+        external_url: newBook.external_url,
+        is_published: true,
+        thumbnail_url: newBook.thumbnail_url,
+        rating: 5.0,
+        reviews_count: 1,
+        chapters: []
+      });
+    } catch (e) {
+      console.error("Add external book error:", e);
+    }
   };
 
-  const handleConvert = async (payload: { promptText: string; fileBase64?: string; fileName?: string; fileType?: string }) => {
+  const handleConvert = async (payload: {
+    promptText: string;
+    fileBase64?: string;
+    fileName?: string;
+    fileType?: string;
+    category?: any;
+    subcategory?: string;
+    grade_level?: string;
+    semester?: string;
+    academic_year?: string;
+  }) => {
     setIsConverting(true);
     setProgressPercent(10);
     setProgressStep("بدء فحص وتحليل الملف...");
@@ -202,22 +295,69 @@ function AppContent() {
         generatedEbook = data.ebook;
       }
       if (!generatedEbook) throw new Error("لم يتم إرجاع بيانات الكتاب.");
+
+      // Build structured tags with academic metadata
+      const academicTags = [
+        'كتاب_تفاعلي',
+        'ذكاء_اصطناعي',
+        payload.subcategory ? `sub:${payload.subcategory}` : '',
+        payload.grade_level ? `grade:${payload.grade_level}` : '',
+        payload.semester ? `term:${payload.semester}` : '',
+        payload.academic_year ? `year:${payload.academic_year}` : ''
+      ].filter(Boolean);
+
       const newBook: MarketplaceBook = {
         ...generatedEbook,
         author_name: 'د. كريم كامل',
-        category: 'digital_book',
-        tags: ['كتاب_تفاعلي', 'ذكاء_اصطناعي'],
+        category: payload.category || 'digital_book',
+        subcategory: payload.subcategory,
+        grade_level: payload.grade_level,
+        semester: payload.semester,
+        academic_year: payload.academic_year,
+        source_file_name: payload.fileName,
+        tags: academicTags,
         price: 0,
         is_external: false,
         is_published: true,
         thumbnail_url: 'https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=800&q=80',
         rating: 5.0,
-        reviews_count: 1
+        reviews_count: 1,
+        created_at: new Date().toISOString()
       };
+
+      // 1. Add to local state immediately
       setEbooks(prev => [newBook, ...prev]);
+
+      // 2. Insert into Supabase
       try {
-        await supabase.from('books').insert(newBook);
-      } catch (e) {}
+        const supabasePayload = {
+          id: newBook.id,
+          title: newBook.title,
+          description: newBook.description,
+          author_name: newBook.author_name,
+          category: newBook.category,
+          tags: newBook.tags,
+          price: newBook.price,
+          is_external: false,
+          is_published: true,
+          thumbnail_url: newBook.thumbnail_url,
+          rating: 5.0,
+          reviews_count: 1,
+          chapters: newBook.chapters,
+          mind_map: newBook.mind_map || [],
+          question_bank: newBook.question_bank || []
+        };
+        const { error: insertError } = await supabase.from('books').insert(supabasePayload);
+        if (insertError) {
+          console.error("Supabase insert error:", insertError);
+        } else {
+          console.log("Book successfully saved to Supabase!");
+        }
+      } catch (dbErr) {
+        console.error("Database save error:", dbErr);
+      }
+
+      // 3. Close modal and redirect to book details route
       setIsAiCreateModalOpen(false);
       navigate(`/book/${newBook.id}`);
     } catch (err: any) {
@@ -304,6 +444,7 @@ function AppContent() {
               onOpenExternalModal={() => setIsExternalModalOpen(true)}
               onTogglePublish={handleTogglePublish}
               onDeleteBook={handleDeleteBook}
+              onUpdateBook={handleUpdateBook}
             />
           } />
           <Route path="/book/:id" element={<BookDetailsRoute books={ebooks} setEbooks={setEbooks} hasGeminiKey={hasGeminiKey} />} />
@@ -328,20 +469,21 @@ function AppContent() {
       />
 
       {isAiCreateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
-          <div className="bg-white border border-gray-200 rounded-3xl p-6 max-w-2xl w-full shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-3 sm:p-5 overflow-y-auto" dir="rtl">
+          <div className="bg-white border border-gray-200 rounded-3xl p-5 sm:p-7 max-w-2xl w-full max-h-[92vh] overflow-y-auto shadow-2xl relative my-auto custom-scrollbar">
+            <button
+              onClick={() => setIsAiCreateModalOpen(false)}
+              className="absolute top-4 left-4 text-gray-400 hover:text-gray-700 p-2 rounded-xl hover:bg-gray-100 transition z-10"
+              title="إغلاق النافذة"
+            >
+              <X className="w-5 h-5" />
+            </button>
             <ContentUploader
               onConvert={handleConvert}
               isConverting={isConverting}
               progressPercent={progressPercent}
               progressStep={progressStep}
             />
-            <button
-              onClick={() => setIsAiCreateModalOpen(false)}
-              className="mt-4 w-full py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 font-bold text-xs rounded-xl transition"
-            >
-              إلغاء
-            </button>
           </div>
         </div>
       )}
@@ -349,196 +491,12 @@ function AppContent() {
   );
 }
 
-// Extract BookDetailsRoute logic directly to read params
-function BookDetailsRoute({ books, setEbooks, hasGeminiKey }: { books: MarketplaceBook[], setEbooks: React.Dispatch<React.SetStateAction<MarketplaceBook[]>>, hasGeminiKey: boolean }) {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const searchParams = new URLSearchParams(window.location.search);
-  const initialTab = (searchParams.get('tab') as any) || 'read';
-
-  const book = books.find(b => b.id === id);
-  const [activeChapterId, setActiveChapterId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'read' | 'podcast' | 'quiz' | 'mindmap' | 'videos' | 'editor'>(initialTab);
-  const [isGeneratingAiQuestions, setIsGeneratingAiQuestions] = useState(false);
-
-  useEffect(() => {
-    if (book && book.chapters && book.chapters.length > 0 && !activeChapterId) {
-      setActiveChapterId(book.chapters[0].id);
-    }
-  }, [book, activeChapterId]);
-
-  if (!book) {
-    return <div className="p-8 text-center text-gray-500">جاري تحميل بيانات الكتاب...</div>;
-  }
-
-  const activeChapter = book.chapters?.find(c => c.id === activeChapterId) || book.chapters?.[0];
-
-  const handleGenerateAiQuestions = async () => {
-    if (!book || !activeChapter) return;
-    setIsGeneratingAiQuestions(true);
-    try {
-      const res = await fetch(`/api/ebooks/${book.id}/generate-questions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chapterId: activeChapter.id, chapterContent: activeChapter.content })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.questions) {
-          setEbooks(prev => prev.map(b => {
-            if (b.id === book.id) {
-              const updatedChapters = b.chapters.map(ch => {
-                if (ch.id === activeChapter.id) {
-                  return { ...ch, quiz: [...(ch.quiz || []), ...data.questions] };
-                }
-                return ch;
-              });
-              return { ...b, chapters: updatedChapters };
-            }
-            return b;
-          }));
-        }
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsGeneratingAiQuestions(false);
-    }
-  };
-
-  if (!activeChapter) {
-    return (
-      <div className="p-8 text-center text-gray-500 flex flex-col items-center justify-center min-h-[400px]">
-        <BookOpen className="w-16 h-16 mb-4 text-gray-300" />
-        <h3 className="text-xl font-bold mb-2">الكتاب قيد المعالجة</h3>
-        <p>لا توجد فصول متوفرة بعد أو أن الكتاب لم يتم تحميله بالكامل.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6 animate-fade-in flex flex-col md:flex-row gap-6">
-      
-      {/* CHAPTERS SIDEBAR */}
-      <div className="w-full md:w-64 shrink-0 space-y-4">
-        <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
-          <h3 className="font-black text-gray-900 mb-3 text-sm border-b border-gray-100 pb-2">فهرس الكتاب</h3>
-          <div className="space-y-1">
-            {(book.chapters || []).map(chapter => (
-              <button
-                key={chapter.id}
-                onClick={() => setActiveChapterId(chapter.id)}
-                className={`w-full text-right p-2.5 rounded-xl text-xs font-bold transition ${
-                  activeChapterId === chapter.id
-                    ? 'bg-indigo-50 text-indigo-700'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }`}
-              >
-                {chapter.title}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="flex-1 space-y-6">
-        {/* BACK TO MARKETPLACE HEADER */}
-        <div className="flex items-center justify-between bg-white border border-gray-200 shadow-sm rounded-2xl p-4">
-          <button
-            onClick={() => navigate('/')}
-            className="flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-indigo-600 transition"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>العودة للمتجر والمكتبة الرقمية</span>
-          </button>
-
-          <h2 className="text-sm font-black text-gray-900">{book.title}</h2>
-        </div>
-
-        {/* TAB NAVIGATION BAR */}
-        <div className="flex items-center gap-2 border-b border-gray-200 pb-2 overflow-x-auto">
-          {[
-            { id: 'read', label: 'قراءة المقرر', icon: BookOpen },
-            { id: 'podcast', label: 'استوديو البودكاست التفاعلي', icon: Radio },
-            { id: 'quiz', label: 'بنك الأسئلة والاختبارات', icon: HelpCircle },
-            { id: 'mindmap', label: 'الخريطة الذهنية التفاعلية', icon: Brain },
-            { id: 'videos', label: 'المقاطع المرئية', icon: Youtube },
-            { id: 'editor', label: 'محرر الفصل', icon: Edit }
-          ].map(tab => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`px-4 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 shrink-0 transition ${
-                  isActive
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : 'bg-white border border-gray-200 text-gray-500 hover:text-gray-900 hover:bg-gray-50'
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* ACTIVE TAB CONTENT */}
-        {activeTab === 'read' && activeChapter && (
-          <ReadSection chapter={activeChapter} />
-        )}
-
-        {activeTab === 'podcast' && activeChapter && (
-          <PodcastLounge
-            bookId={book.id}
-            chapterId={activeChapter.id}
-            chapterTitle={activeChapter.title}
-            chapterContent={activeChapter.content}
-            hasGeminiKey={hasGeminiKey}
-          />
-        )}
-
-        {activeTab === 'quiz' && activeChapter && (
-          <QuizSection
-            bookId={book.id}
-            questions={Array.isArray(activeChapter.quiz) ? activeChapter.quiz : []}
-            onUpdateQuestions={(updatedQuestions) => {
-              setEbooks(prev => prev.map(b => {
-                if (b.id === book.id) {
-                  return {
-                    ...b,
-                    chapters: b.chapters.map(ch => ch.id === activeChapter.id ? { ...ch, quiz: updatedQuestions } : ch)
-                  };
-                }
-                return b;
-              }));
-            }}
-            onGenerateAiQuestions={handleGenerateAiQuestions}
-            isGeneratingAiQuestions={isGeneratingAiQuestions}
-          />
-        )}
-
-        {activeTab === 'mindmap' && activeChapter && (
-          <MindMap
-            nodes={Array.isArray(activeChapter.mindMap) ? activeChapter.mindMap : []}
-            onUpdateNodes={() => {}}
-            chapterContent={activeChapter.content}
-          />
-        )}
-
-        {activeTab === 'videos' && activeChapter && (
-          <VideoSection videos={Array.isArray(activeChapter.videos) ? activeChapter.videos : []} />
-        )}
-      </div>
-    </div>
-  );
-}
-
 export default function App() {
   return (
-    <BrowserRouter>
-      <AppContent />
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }

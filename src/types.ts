@@ -9,7 +9,11 @@ export interface UserProfile {
   created_at?: string;
 }
 
-export type BookCategory = 'all' | 'digital_book' | 'training_kit' | 'quiz_bank' | 'academic_paper';
+export type BookCategory = 'all' | 'digital_book' | 'training_kit' | 'quiz_bank' | 'academic_paper' | 'self_help' | 'business' | 'technology' | 'classics';
+
+export type BookTrack = 'academic' | 'self_help' | 'business_finance' | 'programming_tech' | 'science_math' | 'languages' | 'general_literature';
+
+export type QuestionType = 'mcq' | 'true_false' | 'fill_blank' | 'case_study';
 
 export interface QuizQuestion {
   id: string;
@@ -17,7 +21,20 @@ export interface QuizQuestion {
   options: string[];
   correctOptionIndex: number;
   explanation: string;
-  questionType?: 'mcq' | 'true_false' | 'case_study';
+  questionType?: QuestionType;
+  difficulty?: 'easy' | 'medium' | 'hard';
+  topicTag?: string;
+}
+
+export interface Flashcard {
+  id: string;
+  front: string;
+  back: string;
+  chapterTitle?: string;
+  hint?: string;
+  difficulty?: 'easy' | 'medium' | 'hard';
+  lastReviewed?: string;
+  intervalDays?: number;
 }
 
 export interface VideoLink {
@@ -45,9 +62,21 @@ export interface Chapter {
   imageUrl?: string; // Generated visual base64 or URL
   imagePrompt?: string; // Prompt used to generate visual
   audioBase64?: string; // Narrator audio tracking
+  audioUrl?: string; // Supabase CDN audio URL
+  podcastAudioUrl?: string; // Supabase CDN podcast episode URL
   videos: VideoLink[];
   quiz: QuizQuestion[];
+  flashcards?: Flashcard[];
   mindMap: MindMapNode[];
+}
+
+export interface FeatureToggles {
+  show_podcast?: boolean;
+  show_flashcards?: boolean;
+  show_sandbox?: boolean;
+  show_quiz?: boolean;
+  show_mindmap?: boolean;
+  show_videos?: boolean;
 }
 
 export interface Ebook {
@@ -56,6 +85,12 @@ export interface Ebook {
   description: string;
   author_name?: string;
   category?: BookCategory;
+  track?: BookTrack;
+  subcategory?: string;
+  grade_level?: string;
+  semester?: string;
+  academic_year?: string;
+  source_file_name?: string;
   tags?: string[];
   price?: number; // 0 = Free
   is_external?: boolean;
@@ -66,9 +101,14 @@ export interface Ebook {
   reviews_count?: number;
   sizeCategory?: 'short' | 'medium' | 'long';
   createdAt?: string;
+  created_at?: string;
   chapters: Chapter[];
   mind_map?: MindMapNode[];
   question_bank?: QuizQuestion[];
+  flashcards?: Flashcard[];
+  feature_toggles?: FeatureToggles;
+  pregeneration_status?: 'idle' | 'processing' | 'ready';
+  pregeneration_percent?: number;
 }
 
 export interface MarketplaceBook extends Ebook {
@@ -77,6 +117,12 @@ export interface MarketplaceBook extends Ebook {
   description: string;
   author_name: string;
   category: BookCategory;
+  track?: BookTrack;
+  subcategory?: string;
+  grade_level?: string;
+  semester?: string;
+  academic_year?: string;
+  source_file_name?: string;
   tags: string[];
   price: number;
   is_external: boolean;
@@ -85,20 +131,17 @@ export interface MarketplaceBook extends Ebook {
   thumbnail_url: string;
   rating: number;
   reviews_count: number;
+  feature_toggles?: FeatureToggles;
+  pregeneration_status?: 'idle' | 'processing' | 'ready';
+  pregeneration_percent?: number;
 }
 
-export interface QuizAttempt {
+export interface ConversionJob {
   id: string;
-  user_id: string;
-  book_id: string;
-  score: number;
-  total_questions: number;
-  answers_log: { questionId: string; selectedOption: number; isCorrect: boolean }[];
-  completed_at: string;
-}
-
-export interface ConversionResponse {
-  success: boolean;
-  ebook: Ebook;
-  message?: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  progressPercent: number;
+  progressStep: string;
+  resultEbook?: Ebook;
+  error?: string;
+  createdAt: string;
 }

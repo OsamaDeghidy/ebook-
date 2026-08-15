@@ -1,19 +1,51 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
+import os from "os";
 import crypto from "crypto";
 import { EdgeTTS } from "node-edge-tts";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
-
+import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
 
 dotenv.config();
+
+// Initialize backend Supabase Client
+const supabaseUrl = process.env.VITE_SUPABASE_URL || "https://ydlzvuutjgelpxueufgn.supabase.co";
+const supabaseAnonKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || "sb_publishable_KoXiLZfD6mIYGRRMb0gjtg_h3PkBle7";
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Ensure local audio cache directory exists
 const AUDIO_CACHE_DIR = path.join(process.cwd(), "cache", "audio");
 if (!fs.existsSync(AUDIO_CACHE_DIR)) {
   fs.mkdirSync(AUDIO_CACHE_DIR, { recursive: true });
+}
+
+// Upload Audio File directly to Supabase Storage 'book-audios' bucket
+async function uploadAudioFileToSupabase(filePath: string, fileName: string): Promise<string | null> {
+  try {
+    if (!fs.existsSync(filePath)) return null;
+    const fileBuffer = fs.readFileSync(filePath);
+    const { data, error } = await supabase.storage
+      .from('book-audios')
+      .upload(fileName, fileBuffer, {
+        contentType: 'audio/mpeg',
+        upsert: true
+      });
+
+    if (error) {
+      return null;
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from('book-audios')
+      .getPublicUrl(fileName);
+
+    return publicUrlData?.publicUrl || null;
+  } catch (err) {
+    return null;
+  }
 }
 
 function cleanScientificTextForSpeech(input: string): string {
@@ -36,22 +68,33 @@ function cleanScientificTextForSpeech(input: string): string {
 const app = express();
 const PORT = 3000;
 
-// Increase payload limit to support base64 uploads (PDFs, images)
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ limit: "50mb", extended: true }));
+// Increase payload limit to support large base64 uploads (PDFs, images up to 100MB)
+app.use(express.json({ limit: "100mb" }));
+app.use(express.urlencoded({ limit: "100mb", extended: true }));
 
 
+// Multi-API Key Pool Support (Load Balancing & Dynamic Key Failover)
+const getApiKeysPool = (): string[] => {
+  const envKeys = process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || "";
+  return envKeys
+    .replace(/^["']|["']$/g, "")
+    .split(",")
+    .map(k => k.trim().replace(/^["']|["']$/g, ""))
+    .filter(Boolean);
+};
 
+let currentKeyIndex = 0;
 
-// Initialize GoogleGenAI client safely
-const getGenAIClient = () => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    console.warn("WARNING: GEMINI_API_KEY environment variable is not set. AI features will fallback to simulation.");
+// Initialize GoogleGenAI client safely with round-robin / key pool
+const getGenAIClient = (keyOverride?: string) => {
+  const pool = getApiKeysPool();
+  if (pool.length === 0) {
+    console.warn("WARNING: GEMINI_API_KEY / GEMINI_API_KEYS environment variable is not set. AI features will fallback to simulation.");
     return null;
   }
+  const selectedKey = keyOverride || pool[currentKeyIndex % pool.length];
   return new GoogleGenAI({
-    apiKey,
+    apiKey: selectedKey,
     httpOptions: {
       headers: {
         "User-Agent": "aistudio-build",
@@ -61,62 +104,72 @@ const getGenAIClient = () => {
 };
 
 /**
- * Executes a Gemini API call with automatic transient error retries (503, 429)
- * and an optional list of fallback models.
+ * Executes a Gemini API call with instant failover across Multi-Keys and Lite & Fast models
+ * Prioritizes high-quota (500 RPD / 15 RPM) models: gemini-3.5-flash-lite & gemini-3.1-flash-lite
  */
 const generateContentWithRetry = async (
-  ai: any,
+  _ai: any,
   params: any,
-  modelsChain: string[] = ["gemini-3.5-flash", "gemini-flash-latest", "gemini-3.1-flash-lite"]
+  modelsChain: string[] = ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-3.7-flash"]
 ): Promise<any> => {
+  const keysPool = getApiKeysPool();
   let lastError: any = null;
 
-  for (const model of modelsChain) {
-    console.log(`[Gemini API] Trying content generation using model: ${model}`);
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        const response = await ai.models.generateContent({
-          ...params,
-          model,
-        });
-        return response;
-      } catch (err: any) {
-        lastError = err;
-        const errMessage = err?.message || String(err);
-        const errStatus = err?.status || "";
-        const errCode = err?.code || "";
-        const errStr = `${errMessage} ${errStatus} ${errCode}`.toLowerCase();
+  const totalKeys = Math.max(1, keysPool.length);
 
-        console.log(
-          `[Gemini API] Request on model ${model} (try ${attempt}/3) returned status: ${errStatus || "unsuccessful"}`
-        );
+  for (let keyStep = 0; keyStep < totalKeys; keyStep++) {
+    const keyIdx = (currentKeyIndex + keyStep) % totalKeys;
+    const activeKey = keysPool[keyIdx];
+    const client = activeKey ? getGenAIClient(activeKey) : _ai;
+    if (!client) continue;
 
-        // Check if error is transient (Service Unavailable, Too Many Requests, high demand)
-        const isTransient =
-          errStr.includes("503") ||
-          errStr.includes("429") ||
-          errStr.includes("quota") ||
-          errStr.includes("unavailable") ||
-          errStr.includes("resource_exhausted") ||
-          errStr.includes("high demand") ||
-          errStr.includes("temporarily");
+    for (const model of modelsChain) {
+      console.log(`[Gemini API] Dispatching to ${model} (Key #${keyIdx + 1}/${totalKeys})`);
+      
+      // Fast single retry for transient 503s; instant switch for 429/404
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          const response = await client.models.generateContent({
+            ...params,
+            model,
+          });
+          return response;
+        } catch (err: any) {
+          lastError = err;
+          const errMessage = err?.message || String(err);
+          const errStatus = err?.status || "";
+          const errCode = err?.code || "";
+          const errStr = `${errMessage} ${errStatus} ${errCode}`.toLowerCase();
 
-        if (isTransient && attempt < 3) {
-          const isRateLimit = errStr.includes("429") || errStr.includes("quota") || errStr.includes("resource_exhausted");
-          const delay = isRateLimit ? attempt * 4000 : attempt * 1000;
-          console.log(
-            `[Gemini API] Transient/Rate-limit condition met. Retrying ${model} in ${delay}ms...`
+          console.warn(
+            `[Gemini API] Model ${model} (Key #${keyIdx + 1}, attempt ${attempt}/2): ${errMessage.substring(0, 120)}`
           );
-          await new Promise((resolve) => setTimeout(resolve, delay));
-        } else {
-          // If not transient, or we exhausted retries, break to try the next fallback model in the chain
-          break;
+
+          // 1. If 429 (Quota exceeded on this key), rotate key pointer immediately!
+          if (errStr.includes("429") || errStr.includes("quota") || errStr.includes("resource_exhausted")) {
+            console.log(`[Gemini API] Quota limit on Key #${keyIdx + 1}. Rotating to next API key/model...`);
+            currentKeyIndex = (currentKeyIndex + 1) % totalKeys;
+            break;
+          }
+
+          // 2. If 404 (Model not found/deprecated), try next model
+          if (errStr.includes("404") || errStr.includes("not found") || errStr.includes("no longer available")) {
+            break;
+          }
+
+          // 3. If 503 (High Demand) or transient network error, quick 800ms backoff once
+          if (attempt === 1 && (errStr.includes("503") || errStr.includes("high demand") || errStr.includes("fetch failed"))) {
+            console.log(`[Gemini API] Quick 800ms retry on ${model}...`);
+            await new Promise((resolve) => setTimeout(resolve, 800));
+          } else {
+            break; // Switch to next model immediately
+          }
         }
       }
     }
   }
 
-  throw lastError || new Error("Failed to generate content after multiple models and retry attempts.");
+  throw lastError || new Error("Failed to generate content after attempting all active Gemini models and API keys.");
 };
 
 // In-memory DB with preloaded gorgeous sample ebooks to make the app alive immediately
@@ -268,19 +321,13 @@ function loadEbooks() {
       const loaded = JSON.parse(data);
       if (Array.isArray(loaded)) {
         ebooks = loaded;
-        // Ensure samples are in the list
-        for (const sample of sampleEbooks) {
-          if (!ebooks.some(e => e.id === sample.id)) {
-            ebooks.push(sample);
-          }
-        }
         return;
       }
     }
   } catch (err) {
-    console.error("Error loading persisted ebooks database, falling back to samples:", err);
+    console.error("Error loading persisted ebooks database:", err);
   }
-  ebooks = [...sampleEbooks];
+  ebooks = [];
 }
 
 function saveEbooks(data: any[]) {
@@ -440,9 +487,19 @@ app.put("/api/ebooks/:id", (req, res) => {
 // 5. Convert content or create ebook from prompt / file upload (Async Background Worker System)
 async function runBackgroundEbookConversion(
   jobId: string,
-  payload: { promptText: string; fileBase64?: string; fileName?: string; fileType?: string }
+  payload: {
+    promptText: string;
+    fileBase64?: string;
+    fileName?: string;
+    fileType?: string;
+    category?: string;
+    subcategory?: string;
+    grade_level?: string;
+    semester?: string;
+    academic_year?: string;
+  }
 ) {
-  const { promptText, fileBase64, fileName, fileType } = payload;
+  const { promptText, fileBase64, fileName, fileType, category, subcategory, grade_level, semester, academic_year } = payload;
   const job = conversionJobs[jobId];
   if (!job) return;
 
@@ -464,7 +521,7 @@ async function runBackgroundEbookConversion(
       job.progressPercent = 80;
       await new Promise(r => setTimeout(r, 1200));
 
-      const fallbackId = "fallback-" + Math.random().toString(36).substring(2, 9);
+      const fallbackId = crypto.randomUUID();
       const mockEbook = {
         id: fallbackId,
         title: "Interactive Ebook: " + (promptText || fileName || "Untitled Subject"),
@@ -530,48 +587,83 @@ async function runBackgroundEbookConversion(
     let contents: any[] = [];
     
     if (fileBase64 && fileType) {
-      contents.push({
-        inlineData: {
-          mimeType: fileType,
-          data: fileBase64
+      const buffer = Buffer.from(fileBase64, 'base64');
+      const sizeMB = (buffer.length / (1024 * 1024)).toFixed(1);
+
+      // If file > 5MB, upload via Files API to prevent HTTP payload connection resets
+      if (buffer.length > 5 * 1024 * 1024) {
+        job.progressStep = `رفع الملف السحابي (${sizeMB} ميجابايت) عبر Gemini Cloud Files API...`;
+        job.progressPercent = 25;
+        console.log(`[Job Worker] Uploading large file (${sizeMB}MB) to Gemini Files API...`);
+
+        try {
+          const tempFilePath = path.join(os.tmpdir(), `gemini_upload_${Date.now()}_${fileName || 'document.pdf'}`);
+          fs.writeFileSync(tempFilePath, buffer);
+
+          const uploadRes = await ai.files.upload({
+            file: tempFilePath,
+            mimeType: fileType
+          });
+
+          contents.push({
+            fileData: {
+              fileUri: uploadRes.uri,
+              mimeType: uploadRes.mimeType
+            }
+          });
+
+          try { fs.unlinkSync(tempFilePath); } catch (e) {}
+          job.progressStep = `تم رفع الملف بنجاح (${sizeMB}MB)! جاري التحليل الأكاديمي الشامل...`;
+          job.progressPercent = 40;
+        } catch (uploadErr: any) {
+          console.warn("[Job Worker] Files API fallback to inlineData:", uploadErr);
+          contents.push({
+            inlineData: {
+              mimeType: fileType,
+              data: fileBase64
+            }
+          });
+          job.progressStep = `معالجة مستند (${fileName || ""})...`;
+          job.progressPercent = 30;
         }
-      });
-      job.progressStep = `Processing uploaded document file ${fileName || ""}...`;
-      job.progressPercent = 30;
+      } else {
+        contents.push({
+          inlineData: {
+            mimeType: fileType,
+            data: fileBase64
+          }
+        });
+        job.progressStep = `معالجة مستند (${fileName || ""})...`;
+        job.progressPercent = 30;
+      }
     } else {
-      job.progressStep = "Deconstructing prompt guidelines and topics...";
+      job.progressStep = "تحليل التوجيهات وموضوعات المقرر المطلوبة...";
       job.progressPercent = 35;
     }
 
     let instructionPrompt = `
-You are the world-class Interactive Ebook Converter.
-Your primary task is to convert the provided educational input (which could be a PDF file, an image, a blog post, note outlines, or a general topic prompt) into a highly structured, interactive educational ebook.
+You are the world-class Interactive Ebook Converter & Academic Curriculum Architect.
+Your primary task is to convert the provided educational input (which could be a PDF file, textbook, lecture slides, note outlines, or a general topic prompt) into an engaging, structured, interactive educational ebook.
 
-Analyze the size, depth, and chapter structure requested or present in the provided input:
-1. Determine the sizeCategory of the input:
-   - 'short': If it is a simple outline, a single image, or a brief text block. (Generate 2 to 3 chapters)
-   - 'medium': If it is a moderate article, lecture notes, or short paper. (Generate 4 to 8 chapters)
-   - 'long': If it is a full PDF book, multi-chapter textbook, course syllabus, or detailed subject. (Generate 10 to 30 chapters as required! DO NOT CAP AT 5 CHAPTERS! If the user or document contains 10, 12, 15, 20, or 30 topics/chapters, generate ALL of them!)
+FAST INITIAL CURRICULUM EXTRACTION:
+1. Extract the overall book title, comprehensive educational description, and the foundational Table of Contents.
+2. Generate the first 5 core educational chapters (Chapters 1 through 5) in rich, multi-paragraph textbook depth with theories, examples, and Arabic vowel marks (Tashkeel).
+3. If the document has more chapters, the system allows the user to easily expand and generate remaining chapters (Chapters 6-10, etc.) from inside the book.
 
-CRITICAL CONTENT DEPTH INSTRUCTION:
-- DO NOT SUMMARIZE OR TRUNCATE THE EDUCATIONAL CONTENT into brief bullet points!
-- Write full, exhaustive, comprehensive, multi-paragraph textbook chapters in Markdown.
-- Preserve all theories, names of pioneers (e.g., Watson, Pavlov, Skinner, Piaget, Ausubel, Vygotsky, Gardner), definitions, mathematical/logical steps, and examples from the source material.
-
-For each chapter, generate:
+For each of the 5 chapters, generate:
 - An inspiring and clear chapter 'title'
-- 'originalContent': Extract and provide the original, unaltered text segment directly from the source document that corresponds to this chapter. Do not summarize or alter this.
-- 'concepts': An array containing key concepts and their detailed educational explanations.
+- 'originalContent': Excerpt or original segment from the document for this chapter.
+- 'concepts': An array containing key concepts and their detailed explanations.
 - 'summary': A concise summary of the chapter's main points.
-- 'content': An extremely thorough, high-quality, deep educational content field in Markdown format.
-- A descriptive 'imagePrompt' that vividly describes an educational, elegant minimalist illustration of the chapter's core concept, suited for text-to-image generators.
-- An interactive 'quiz' containing 3 multiple-choice questions. Each question must have exactly 4 diverse options, the correctOptionIndex, and a detailed educational explanation.
-- A list of 'videos' containing 2 curated video searches with targeted YouTube URLs and descriptions.
-- A 'mindMap' containing a structured hierarchy of 5-8 key concept nodes with 'id', 'label', 'parentId', and 'description'.
+- 'content': Full educational textbook markdown content with clear headers and examples.
+- A descriptive 'imagePrompt' representing the chapter's core concept.
+- An interactive 'quiz' with 3 multiple-choice questions with 4 diverse options and detailed educational explanations.
+- A list of 'videos' with 2 YouTube search topics.
+- A 'mindMap' hierarchy of 4-6 concept nodes with 'id', 'label', 'parentId', and 'description'.
 
-If the provided input or prompt is in Arabic, you MUST output ALL generated content ('title', 'concepts', 'summary', 'content', 'quiz', 'mindMap') in high-quality, formal Arabic (Fusha) using precise educational terminology.
+If the provided input or prompt is in Arabic, you MUST output ALL generated content in high-quality, formal Arabic (Fusha) with precise terminology.
 
-Provided user guidance / request: "${promptText || 'Convert the uploaded document into a full, unabridged interactive ebook.'}"
+Provided user guidance / request: "${promptText || 'Convert the uploaded document into an interactive ebook.'}"
 `;
 
     contents.push(instructionPrompt);
@@ -587,7 +679,7 @@ Provided user guidance / request: "${promptText || 'Convert the uploaded documen
         responseSchema: ebookResponseSchema,
         temperature: 0.2,
       },
-    }, ["gemini-3.5-flash", "gemini-flash-latest", "gemini-3.1-flash-lite"]);
+    }, ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-3.7-flash"]);
 
     const resultText = response.text;
     if (!resultText) {
@@ -601,7 +693,7 @@ Provided user guidance / request: "${promptText || 'Convert the uploaded documen
     const parsedEbook = JSON.parse(resultText);
 
     // Formulate a clean Ebook object with IDs
-    const ebookId = "eb-" + Math.random().toString(36).substring(2, 9);
+    const ebookId = crypto.randomUUID();
     
     const finalizedEbook: any = {
       id: ebookId,
@@ -646,6 +738,45 @@ Provided user guidance / request: "${promptText || 'Convert the uploaded documen
     ebooks.push(finalizedEbook);
     saveEbooks(ebooks); // Persist to JSON db
 
+    // Also persist directly to Supabase from the backend
+    try {
+      const academicTags = [
+        'كتاب_تفاعلي',
+        'ذكاء_اصطناعي',
+        subcategory ? `sub:${subcategory}` : '',
+        grade_level ? `grade:${grade_level}` : '',
+        semester ? `term:${semester}` : '',
+        academic_year ? `year:${academic_year}` : ''
+      ].filter(Boolean);
+
+      const supabasePayload = {
+        id: finalizedEbook.id,
+        title: finalizedEbook.title,
+        description: finalizedEbook.description,
+        author_name: 'د. كريم كامل',
+        category: category || 'digital_book',
+        tags: academicTags.length > 0 ? academicTags : ['كتاب_تفاعلي', 'ذكاء_اصطناعي'],
+        price: 0,
+        is_external: false,
+        is_published: true,
+        thumbnail_url: 'https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=800&q=80',
+        rating: 5.0,
+        reviews_count: 1,
+        chapters: finalizedEbook.chapters,
+        mind_map: [],
+        question_bank: []
+      };
+
+      const { error: insertErr } = await supabase.from('books').upsert(supabasePayload);
+      if (insertErr) {
+        console.error("[Job Worker] Direct Supabase upsert error:", insertErr);
+      } else {
+        console.log(`[Job Worker] Job ${jobId} successfully saved book to Supabase directly!`);
+      }
+    } catch (dbErr) {
+      console.error("[Job Worker] Error saving to Supabase from backend:", dbErr);
+    }
+
     job.progressStep = "Ebook ready! Loading into bookshelf...";
     job.progressPercent = 100;
     job.status = "completed";
@@ -661,7 +792,7 @@ Provided user guidance / request: "${promptText || 'Convert the uploaded documen
 
 // 5. Convert content or create ebook from prompt / file upload (Async trigger)
 app.post("/api/ebooks", (req, res) => {
-  const { promptText, fileBase64, fileName, fileType } = req.body;
+  const { promptText, fileBase64, fileName, fileType, category, subcategory, grade_level, semester, academic_year } = req.body;
   
   if (!promptText && !fileBase64) {
     return res.status(400).json({ error: "Must provide either promptText, a file, or both to convert." });
@@ -678,7 +809,7 @@ app.post("/api/ebooks", (req, res) => {
   };
 
   // Run in the background without blocking the response
-  runBackgroundEbookConversion(jobId, { promptText, fileBase64, fileName, fileType });
+  runBackgroundEbookConversion(jobId, { promptText, fileBase64, fileName, fileType, category, subcategory, grade_level, semester, academic_year });
 
   // Return immediately with jobId
   res.json({ success: true, jobId });
@@ -783,7 +914,7 @@ app.post("/api/ebooks/:id/narrate", async (req, res) => {
           }
         }
       }
-    }, ["gemini-3.5-flash", "gemini-flash-latest", "gemini-3.1-flash-lite", "gemini-3.5-flash"]);
+    }, ["gemini-1.5-flash", "gemini-flash-latest", "gemini-1.5-flash-8b", "gemini-1.5-flash"]);
 
     const inlinePart = response.candidates?.[0]?.content?.parts?.[0]?.inlineData;
     const base64Audio = inlinePart?.data;
@@ -852,7 +983,7 @@ app.post("/api/narrate-text", async (req, res) => {
           }
         }
       }
-    }, ["gemini-3.5-flash", "gemini-flash-latest", "gemini-3.1-flash-lite", "gemini-3.5-flash"]);
+    }, ["gemini-1.5-flash", "gemini-flash-latest", "gemini-1.5-flash-8b", "gemini-1.5-flash"]);
 
     const inlinePart = response.candidates?.[0]?.content?.parts?.[0]?.inlineData;
     const base64Audio = inlinePart?.data;
@@ -876,7 +1007,7 @@ app.post("/api/narrate-text", async (req, res) => {
   }
 });
 
-// 7.5 High-Quality Gemini Human Audio Engine (Arabic Neural Voices)
+// 7.5 High-Quality Human Audio Engine (Arabic Neural Voices with Fast Failover)
 app.post("/api/tts/stream", async (req, res) => {
   try {
     const { text, speaker = "female" } = req.body;
@@ -885,52 +1016,42 @@ app.post("/api/tts/stream", async (req, res) => {
     const cleanedText = cleanScientificTextForSpeech(text);
     if (!cleanedText) return res.status(400).json({ error: "Cleaned text is empty" });
 
+    // Safe length chunking to prevent EdgeTTS timeouts on huge blocks
+    const safeText = cleanedText.length > 700 ? cleanedText.substring(0, 700) + "..." : cleanedText;
+
     const isMale = speaker === "male" || speaker === "كريم" || speaker === "Alex";
-    const selectedVoice = isMale ? "Aoede" : "Kore"; // Use Gemini's high quality voices
+    const primaryVoice = isMale ? "ar-EG-ShakirNeural" : "ar-EG-SalmaNeural";
+    const fallbackVoice = isMale ? "ar-SA-HamedNeural" : "ar-SA-ZariyahNeural";
 
     // Hash text for caching
-    const textHash = crypto.createHash("md5").update(`${selectedVoice}_${cleanedText}`).digest("hex");
+    const textHash = crypto.createHash("md5").update(`${primaryVoice}_${safeText}`).digest("hex");
     const cachedFilePath = path.join(AUDIO_CACHE_DIR, `${textHash}.mp3`);
 
     // Check if audio exists in local cache
     if (fs.existsSync(cachedFilePath)) {
       res.setHeader("Content-Type", "audio/mpeg");
+      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
       return fs.createReadStream(cachedFilePath).pipe(res);
     }
 
-    const ai = getGenAIClient();
-    if (!ai) {
-      return res.status(400).json({ error: "Gemini API key is missing. Required for human TTS." });
+    try {
+      const tts = new EdgeTTS({ voice: primaryVoice, timeout: 35000 });
+      await tts.ttsPromise(safeText, cachedFilePath);
+    } catch (primaryErr) {
+      console.warn(`[EdgeTTS] Primary voice ${primaryVoice} failed, trying fallback ${fallbackVoice}...`);
+      const fallbackTts = new EdgeTTS({ voice: fallbackVoice, timeout: 35000 });
+      await fallbackTts.ttsPromise(safeText, cachedFilePath);
     }
-
-    const narratorPrompt = `أنت مذيع أو راوٍ بشري محترف جداً. اقرأ هذا النص بلغة عربية فصحى وبطريقة معبرة تماماً مع التشكيل الصحيح والوقفات المنطقية والمشاعر المناسبة لسياق الكلام (سواء كان بودكاست أو قراءة كتاب)، دون نطق أي رموز، وبدون أن تبدو كروبوت:\n\n${cleanedText}`;
-
-    const response = await generateContentWithRetry(ai, {
-      contents: [{ parts: [{ text: narratorPrompt }] }],
-      config: {
-        responseModalities: ["AUDIO"],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: selectedVoice },
-          }
-        }
-      }
-    }, ["gemini-3.5-flash", "gemini-flash-latest", "gemini-3.1-flash-lite"]);
-
-    const inlinePart = response.candidates?.[0]?.content?.parts?.[0]?.inlineData;
-    const base64Audio = inlinePart?.data;
-    
-    if (!base64Audio) {
-      throw new Error("No audio payload returned from Gemini TTS.");
-    }
-
-    const audioBuffer = Buffer.from(base64Audio, 'base64');
-    fs.writeFileSync(cachedFilePath, audioBuffer);
 
     res.setHeader("Content-Type", "audio/mpeg");
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    
+    // Background upload to Supabase Storage
+    uploadAudioFileToSupabase(cachedFilePath, `${textHash}.mp3`).catch(() => {});
+
     fs.createReadStream(cachedFilePath).pipe(res);
   } catch (err: any) {
-    console.error("Gemini TTS Synthesis Error:", err);
+    console.error("EdgeTTS Synthesis Error:", err);
     res.status(500).json({ error: "Audio synthesis failed: " + err.message });
   }
 });
@@ -938,7 +1059,7 @@ app.post("/api/tts/stream", async (req, res) => {
 // In-memory cache for podcast episodes
 const podcastCache = new Map<string, any>();
 
-// 8. Generate 2-Persona Conversational AI Podcast for a chapter
+// 8. Generate 2-Persona Conversational AI Podcast for a chapter (High-Speed Lite Models)
 app.post("/api/ebooks/:id/podcast", async (req, res) => {
   const { chapterId, chapterTitle, chapterContent } = req.body;
   if (!chapterId || !chapterContent) {
@@ -973,77 +1094,47 @@ app.post("/api/ebooks/:id/podcast", async (req, res) => {
       const scriptPrompt = isArabic
         ? `أنت مخرج بودكاست تعليمي احترافي حواري ممتع للغاية.
 أنشئ حواراً صَوْتِيّاً دَافِئاً وَمُشَوِّقاً بين مُقَدِّمَيْنِ بَشَرِيَّيْنِ:
-1. "كريم": مُقَدِّمٌ ذَكِيٌّ وَفُضُولِيٌّ يطرح أسئلة.
-2. "سلمى": خَبِيرَةٌ وَمُعَلِّمَةٌ دَافِئَةٌ تُوَضِّحُ الفِكْرَةَ.
+1. "كريم": مُقَدِّمٌ ذَكِيٌّ وَفُضُولِيٌّ يطرح أسئلة استكشافية.
+2. "فرح": خَبِيرَةٌ وَمُعَلِّمَةٌ دَافِئَةٌ تُوَضِّحُ الفِكْرَةَ وتشرحها بأمثلة تطبيقية.
 موضوع الحلقة: فصل "${chapterTitle || 'الفصل التعليمي'}"
-محتوى الفصل:
-${chapterContent.substring(0, 2000)}
-الشروط:
-1. حوار من 6 إلى 8 تبادلات طبيعية جداً.
-2. توجيهات مشاعر قبل الجمل مثل [متحمس], [بجدية].
-3. JSON فقط:
-{ "title": "...", "summary": "...", "transcript": [ { "speaker": "كريم", "text": "..." }, { "speaker": "سلمى", "text": "..." } ] }`
+محتوى ومصدر الفصل:
+${chapterContent.substring(0, 2500)}
+
+الشروط الصارمة:
+1. استند حصرياً وبدقة على المعلومات المذكورة في نص الفصل أعلاه، دون اختراع أي معلومات خارج النص.
+2. اكتب الحوار في 5 إلى 7 تبادلات صوتية ممتعة وسريعة.
+3. ضع تشكيلاً بسيطاً على الكلمات الرئيسية لتسهيل القراءة الصوتية.
+4. الناتج بتنسيق JSON فقط:
+{ "title": "...", "summary": "...", "transcript": [ { "speaker": "كريم", "text": "..." }, { "speaker": "فرح", "text": "..." } ] }`
         : `You are a professional educational podcast producer.
 Hosts:
 1. "Alex": Engaging, asks questions.
-2. "Sarah": Knowledgeable, warm expert.
+2. "Farah": Knowledgeable expert.
 Topic: "${chapterTitle || 'Chapter'}"
-Content:
-${chapterContent.substring(0, 2000)}
+Content Source:
+${chapterContent.substring(0, 2500)}
+
 Instructions:
-1. 6-8 natural conversational exchanges.
-2. Emotion Tags before lines like [excited], [serious].
-3. JSON ONLY format: { "title": "...", "summary": "...", "transcript": [{ "speaker": "Alex", "text": "..." }, { "speaker": "Sarah", "text": "..." }] }`;
+1. Strictly base discussion on source content.
+2. 5-7 natural conversational exchanges.
+3. JSON ONLY format: { "title": "...", "summary": "...", "transcript": [{ "speaker": "Alex", "text": "..." }, { "speaker": "Farah", "text": "..." }] }`;
 
       const scriptResponse = await generateContentWithRetry(ai, {
         contents: [{ parts: [{ text: scriptPrompt }] }],
         config: { responseMimeType: "application/json" }
-      }, ["gemini-3.5-flash"]);
+      }, ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-3.7-flash"]);
 
       const jsonText = scriptResponse.text?.trim() || "";
       let podcastData = { title: chapterTitle || "Educational Podcast", summary: "Discussion of the chapter concepts", transcript: [] };
       try { podcastData = JSON.parse(jsonText); } catch (e) { console.warn("Failed to parse podcast JSON:", e); }
-
-      let base64Audio = undefined;
-      let mimeType = "audio/mp3";
-
-      try {
-        const fullSpeechText = podcastData.transcript.map((t: any) => `${t.speaker}: ${t.text}`).join("\n");
-        const ttsPrompt = isArabic
-          ? `حوار بودكاست بين كريم وسلمى حول فصل ${chapterTitle}:\n${fullSpeechText}`
-          : `A conversational podcast dialogue between Alex and Sarah:\n${fullSpeechText}`;
-
-        const ttsResponse = await generateContentWithRetry(ai, {
-          contents: [{ parts: [{ text: ttsPrompt }] }],
-          config: {
-            responseModalities: ["AUDIO"],
-            speechConfig: {
-              multiSpeakerVoiceConfig: {
-                speakerVoiceConfigs: [
-                  { speaker: isArabic ? "كريم" : "Alex", voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } } },
-                  { speaker: isArabic ? "سلمى" : "Sarah", voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } }
-                ]
-              }
-            }
-          }
-        }, ["gemini-3.5-flash", "gemini-3.5-flash"]);
-
-        const inlinePart = ttsResponse.candidates?.[0]?.content?.parts?.[0]?.inlineData;
-        if (inlinePart?.data) {
-          base64Audio = inlinePart.data;
-          mimeType = inlinePart.mimeType || "audio/mp3";
-        }
-      } catch (audioErr) {
-        console.warn("Audio generation skipped or fell back:", audioErr);
-      }
 
       podcastCache.set(cacheKey, {
         status: "ready",
         title: podcastData.title,
         summary: podcastData.summary,
         transcript: podcastData.transcript,
-        audioBase64: base64Audio,
-        mimeType
+        audioBase64: undefined,
+        mimeType: "audio/mp3"
       });
       console.log(`[Background] Podcast for ${chapterId} is READY.`);
 
@@ -1051,7 +1142,7 @@ Instructions:
       console.error("[Background] Error generating podcast:", err);
       podcastCache.set(cacheKey, { status: "error", error: err.message });
     }
-  })(); // immediately invoked async function for background processing
+  })();
 
   // Respond immediately to the frontend
   res.json({ success: true, status: "generating", message: "Podcast generation started." });
@@ -1070,9 +1161,9 @@ app.get("/api/ebooks/:id/podcast/status", (req, res) => {
 });
 
 
-// 9. Interactive Discussion / Q&A with Podcast Hosts (Type or Speak to AI Host)
+// 9. Interactive Pedagogical Discussion / Q&A with Podcast Hosts (Cross-Chapter Book Awareness)
 app.post("/api/ebooks/:id/podcast/talk", async (req, res) => {
-  const { chapterTitle, chapterContent, userMessage } = req.body;
+  const { chapterId, chapterTitle, chapterContent, userMessage } = req.body;
   if (!userMessage) {
     return res.status(400).json({ error: "userMessage is required." });
   }
@@ -1084,59 +1175,108 @@ app.post("/api/ebooks/:id/podcast/talk", async (req, res) => {
 
   const isArabic = /[\u0600-\u06FF]/.test(userMessage + (chapterContent || ""));
 
+  // Fetch full book context for cross-chapter intelligence
+  const ebook = ebooks.find((e) => e.id === req.params.id);
+  const allChapters = ebook?.chapters || [];
+  
+  const currentChapterIdx = allChapters.findIndex((c: any) => c.id === chapterId || c.title === chapterTitle);
+  const currentChapterNum = currentChapterIdx !== -1 ? currentChapterIdx + 1 : 1;
+
+  // Build compact book outline
+  const bookChaptersOutline = allChapters.map((ch: any, idx: number) => {
+    const conceptsSummary = Array.isArray(ch.concepts)
+      ? ch.concepts.map((c: any) => typeof c === 'string' ? c : (c.concept || c.title || '')).filter(Boolean).slice(0, 4).join(', ')
+      : '';
+    return `[الفصل ${idx + 1}: ${ch.title}] - ملخص: ${ch.summary || ''} - مفاهيم: ${conceptsSummary}`;
+  }).join("\n");
+
   try {
     const talkPrompt = isArabic
-      ? `أنت "سلمى"، مُقَدِّمَةُ البودكاست التعليمي التفاعلي الممتع حول فصل "${chapterTitle || 'الفصل'}"، محتوى الفصل: ${chapterContent?.substring(0, 1000) || ''}.
-المستمع يطرح عليكِ هذا السؤال أو الفكرة:
+      ? `أنتِ "فرح"، المرشدة التعليمية الذكية ومقدمة البودكاست التفاعلي لكتاب "${ebook?.title || 'المقرر التعليمي'}".
+أنتِ تتحدثين حالياً مع الطالب وهو يقرأ [الفصل ${currentChapterNum}: ${chapterTitle || 'هذا الفصل'}].
+
+فهرس ومحتوى فصول الكتاب بالكامل:
+"""
+${bookChaptersOutline}
+"""
+
+محتوى الفصل الحالي المفتوح أمام الطالب:
+"""
+${chapterContent?.substring(0, 2500) || ''}
+"""
+
+سؤال الطالب أو المستمع:
 "${userMessage}"
 
-أجيبي بصوت بشرية دافئة، مشجعة، وإيجابية جداً وبأسلوب حواري طبيعي في 2-3 جمل قصيرة، مفسرةً الفكرة بوضوح ودون نطق أي رموز أو ترقيم.`
-      : `You are "Sarah", warm co-host of an educational podcast discussing chapter "${chapterTitle || 'Chapter'}".
-Context: ${chapterContent?.substring(0, 1000) || ''}
-The listener asks/says:
+تعليمات التوجيه البيداغوجي والتربوي الذكي (Smart Pedagogical Tutoring):
+1. **إذا كانت الإجابة موجودة في الفصل الحالي**:
+   - أجيبي مباشرة بدقة وتوضيح تربوي دافئ في 2 إلى 3 جمل مع التشكيل الميسر على الكلمات الأساسية.
+
+2. **إذا كان السؤال يتناول موضوعاً موجوداً في فصل قادم/متقدم (مثلاً الفصل 4 أو 5)**:
+   - وجّهي الطالب بلطف بخصوص تسلسل التعلم: وضحي له أن سؤاله ممتاز ومتقدم ومكانه المخصص بالتفصيل هو (الفصل X: عنوانه)، ثم أعطيه إجابة تمهيدية موجزة تفيده الآن دون تعقيد.
+
+3. **إذا كان السؤال يخص نقطة تم شرحها في فصل سابق (مثلاً الفصل 1)**:
+   - ذكّريه بلطف بأن هذه النقطة تأسيسية وتم تناولها في (الفصل X: عنوانه)، وأعطيه تذكيراً سريعاً وواضحاً بخلاصتها.
+
+4. **إذا كان السؤال خارج محتوى الكتاب تماماً**:
+   - وضحي له بصدق ولطف: "هذه النقطة لم ترد في محتوى هذا المقرر الدراسي، ولكن كمعلومة إثرائية عامة: [إجابة عامة سريعة ومفيدة]. وإذا رغبت بالتعمق خارج إطار الكتاب أخبرني!"
+
+الشروط الأسلوبية:
+- تحدثي بأسلوب بشري دافئ ومشجع، وطبيعي تماماً وبدون أي رموز أو أقواس أو علامات ترقيم غريبة.
+- ضعي تشكيلاً ميسراً على الكلمات لتكون سهلة النطق صوتياً باللغة العربية الفصحى الجميلة.`
+      : `You are "Farah", the intelligent learning mentor and podcast host for the book "${ebook?.title || 'Course'}".
+Current active chapter: [Chapter ${currentChapterNum}: ${chapterTitle || 'Current Chapter'}].
+
+Book Chapters Outline:
+"""
+${bookChaptersOutline}
+"""
+
+Current Chapter Content:
+"""
+${chapterContent?.substring(0, 2500) || ''}
+"""
+
+Student's Question:
 "${userMessage}"
 
-Respond in 2-3 short, warm, engaging, natural human conversational sentences explaining the concept directly to the listener without pronouncing punctuation or symbols.`;
+Pedagogical Instructions:
+1. If answered in Current Chapter: Answer directly, warmly in 2-3 sentences.
+2. If in an Upcoming Chapter: Tell them it's covered in Chapter X, give a helpful preview.
+3. If in a Previous Chapter: Mention it was in Chapter X and give a quick recap.
+4. If Outside the Book: Clarify it's outside the text, provide a brief helpful insight, and offer further general exploration.`;
 
     const textRes = await generateContentWithRetry(ai, {
       contents: [{ parts: [{ text: talkPrompt }] }],
-    }, ["gemini-3.5-flash"]);
+    }, ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-3.7-flash"]);
 
-    const answerText = textRes.text?.trim() || (isArabic ? "شكراً لسؤالك الرائع! هذه الفكرة تبين كيف أن التعلم ممتد ومكتسب دائماً." : "Great question! This concept highlights how learning is an ongoing experience.");
+    const answerText = textRes.text?.trim() || (isArabic ? "شكراً لسؤالك! وفقاً لما ورد في هذا المقرر، فإن الهدف الأساسي هو تعزيز الفهم والتطبيق العملي." : "Great question! According to this course, the primary goal is practical understanding.");
 
+    // Generate Audio via EdgeTTS for immediate realistic speech
     let audioBase64 = undefined;
     let mimeType = "audio/mp3";
 
     try {
-      const { cleanText } = sanitizeTextForHumanNarration(answerText);
-      const audioPrompt = isArabic
-        ? `اقرئي بصوت بشرية دافئة ومباشرة للمستمع بأسلوب طبيعي:\n${cleanText}`
-        : `Say in a warm, direct, natural human voice:\n${cleanText}`;
+      const cleaned = cleanScientificTextForSpeech(answerText);
+      const textHash = crypto.createHash("md5").update(`talk_farah_${cleaned}`).digest("hex");
+      const talkAudioPath = path.join(AUDIO_CACHE_DIR, `${textHash}.mp3`);
 
-      const audioRes = await generateContentWithRetry(ai, {
-        contents: [{ parts: [{ text: audioPrompt }] }],
-        config: {
-          responseModalities: ["AUDIO"],
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: isArabic ? "Kore" : "Aoede" }
-            }
-          }
-        }
-      }, ["gemini-3.5-flash", "gemini-3.5-flash"]);
-
-      const inlinePart = audioRes.candidates?.[0]?.content?.parts?.[0]?.inlineData;
-      if (inlinePart?.data) {
-        audioBase64 = inlinePart.data;
-        mimeType = inlinePart.mimeType || "audio/mp3";
+      if (!fs.existsSync(talkAudioPath)) {
+        const tts = new EdgeTTS({ voice: isArabic ? "ar-EG-SalmaNeural" : "en-US-AriaNeural", timeout: 30000 });
+        await tts.ttsPromise(cleaned, talkAudioPath);
       }
-    } catch (e) {
-      console.warn("Could not generate host speech audio:", e);
+
+      if (fs.existsSync(talkAudioPath)) {
+        const audioBuffer = fs.readFileSync(talkAudioPath);
+        audioBase64 = audioBuffer.toString("base64");
+      }
+    } catch (audioErr) {
+      console.warn("Could not generate EdgeTTS for host response:", audioErr);
     }
 
     res.json({
       success: true,
-      speaker: isArabic ? "سلمى (مقدمة البودكاست)" : "Sarah (Podcast Host)",
+      speaker: isArabic ? "فرح (المرشدة الذكية)" : "Farah (AI Mentor)",
       replyText: answerText,
       audioBase64,
       mimeType
@@ -1145,6 +1285,252 @@ Respond in 2-3 short, warm, engaging, natural human conversational sentences exp
     console.error("Error in podcast talk Q&A:", err);
     res.status(500).json({ error: "Failed to process host conversation. " + err.message });
   }
+});
+
+// 9.5 Expand Book Chapters Feature (Incremental Chapter Generation)
+app.post("/api/ebooks/:id/expand-chapters", async (req, res) => {
+  const bookId = req.params.id;
+  const { additionalCount = 5 } = req.body;
+  
+  const ebook = ebooks.find(e => e.id === bookId);
+  if (!ebook) {
+    return res.status(404).json({ error: "Ebook not found" });
+  }
+
+  const ai = getGenAIClient();
+  if (!ai) {
+    return res.status(400).json({ error: "Gemini API key is required." });
+  }
+
+  const currentChapters = ebook.chapters || [];
+  const currentTitles = currentChapters.map((c: any, i: number) => `${i + 1}. ${c.title}`).join("\n");
+
+  const expansionPrompt = `
+You are the world-class Interactive Ebook Curriculum Architect.
+The user has an interactive educational book titled: "${ebook.title}"
+Description: "${ebook.description || ''}"
+
+Current existing chapters in this book:
+${currentTitles || "No chapters yet"}
+
+Task:
+Generate the NEXT batch of ${additionalCount} comprehensive, progressive educational chapters that seamlessly continue from where chapter ${currentChapters.length} left off.
+Do NOT repeat the existing chapters above! Create chapters ${currentChapters.length + 1} to ${currentChapters.length + additionalCount}.
+Output in formal, high-quality Arabic (Fusha) if the book is Arabic.
+
+For each chapter, provide:
+- 'title': Clear and engaging chapter title
+- 'summary': Summary of the chapter's core ideas
+- 'content': Full educational markdown content with theories, examples, and Arabic Tashkeel on key terms
+- 'concepts': Array of key conceptual terms and definitions
+- 'quiz': 3 multiple choice questions with 4 options and detailed explanations
+- 'mindMap': 5-7 hierarchical nodes with 'id', 'label', 'parentId', 'description'
+- 'videos': 2 curated search topics
+`;
+
+  try {
+    const response = await generateContentWithRetry(ai, {
+      contents: [expansionPrompt],
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            chapters: ebookResponseSchema.properties.chapters
+          },
+          required: ["chapters"]
+        },
+        temperature: 0.3
+      }
+    }, ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-3.7-flash"]);
+
+    const result = JSON.parse(response.text || "{}");
+    const newChapters = (result.chapters || []).map((ch: any, idx: number) => {
+      const cIdx = currentChapters.length + idx + 1;
+      const chapterId = `ch-${ebook.id}-${cIdx}`;
+      return {
+        id: chapterId,
+        title: ch.title || `الفصل ${cIdx}`,
+        content: ch.content || "محتوى الفصل قيد المعالجة.",
+        originalContent: ch.originalContent || "",
+        summary: ch.summary || "",
+        concepts: ch.concepts || [],
+        imagePrompt: ch.imagePrompt || "Minimal educational illustration",
+        videos: (ch.videos || []).map((v: any, vIdx: number) => ({
+          id: `v-${chapterId}-${vIdx + 1}`,
+          title: v.title || "مقطع مرئي إضافي",
+          url: v.url || `https://www.youtube.com/results?search_query=${encodeURIComponent(v.title || "education")}`,
+          description: v.description || "شرح وتوضيح إضافي."
+        })),
+        quiz: (ch.quiz || []).map((q: any, qIdx: number) => ({
+          id: `q-${chapterId}-${qIdx + 1}`,
+          question: q.question || "سؤال تقويمي تفاعلي؟",
+          options: q.options && q.options.length === 4 ? q.options : ["أ", "ب", "ج", "د"],
+          correctOptionIndex: typeof q.correctOptionIndex === "number" ? q.correctOptionIndex : 0,
+          explanation: q.explanation || "توضيح تعليمي للمفهوم."
+        })),
+        mindMap: (ch.mindMap || []).map((m: any, mIdx: number) => ({
+          id: m.id || `m-${chapterId}-${mIdx + 1}`,
+          label: m.label || "مفهوم",
+          parentId: m.parentId || null,
+          description: m.description || "شرح المفهوم في الخريطة."
+        }))
+      };
+    });
+
+    ebook.chapters = [...currentChapters, ...newChapters];
+    saveEbooks(ebooks);
+
+    // Save to Supabase
+    try {
+      await supabase.from('books').update({ chapters: ebook.chapters }).eq('id', ebook.id);
+    } catch (dbErr) {
+      console.warn("Supabase chapters update error:", dbErr);
+    }
+
+    res.json({ success: true, newChapters, totalChapters: ebook.chapters.length, book: ebook });
+  } catch (err: any) {
+    console.error("Expand chapters error:", err);
+    res.status(500).json({ error: "Failed to expand chapters: " + err.message });
+  }
+});
+
+// In-memory pre-generation jobs tracking
+const pregenJobs: Record<string, { status: string; progressPercent: number; currentStep: string }> = {};
+
+// 9.7 Batch Asset Pre-Generation for entire book (TTS Audios, Podcast dialogues & Flashcards)
+app.post("/api/ebooks/:id/pregenerate-all-assets", async (req, res) => {
+  const bookId = req.params.id;
+  const ebook = ebooks.find(e => e.id === bookId);
+  if (!ebook) return res.status(404).json({ error: "Ebook not found" });
+
+  if (pregenJobs[bookId] && pregenJobs[bookId].status === "processing") {
+    return res.json({ success: true, status: "processing", progressPercent: pregenJobs[bookId].progressPercent, message: "Pregeneration is already running." });
+  }
+
+  pregenJobs[bookId] = { status: "processing", progressPercent: 5, currentStep: "بدء تجهيز كافة الأصوات والبودكاست في الخلفية..." };
+  res.json({ success: true, status: "processing", message: "Batch pregeneration initiated in background." });
+
+  // Fire background worker
+  (async () => {
+    try {
+      const chapters = ebook.chapters || [];
+      const totalSteps = Math.max(1, chapters.length * 2);
+      let completedSteps = 0;
+      let totalAudioFilesSynthesized = 0;
+
+      for (let i = 0; i < chapters.length; i++) {
+        const ch = chapters[i];
+        
+        // 1. Pre-generate EdgeTTS chapter narrative audio
+        pregenJobs[bookId].currentStep = `تجهيز التسجيل الصوتي للراوي (الفصل ${i + 1}: ${ch.title})...`;
+        const cleanedText = cleanScientificTextForSpeech(ch.content || ch.summary || "");
+        if (cleanedText) {
+          const safeText = cleanedText.length > 700 ? cleanedText.substring(0, 700) + "..." : cleanedText;
+          const textHash = crypto.createHash("md5").update(`ar-EG-SalmaNeural_${safeText}`).digest("hex");
+          const cachedFilePath = path.join(AUDIO_CACHE_DIR, `${textHash}.mp3`);
+          if (!fs.existsSync(cachedFilePath)) {
+            try {
+              const tts = new EdgeTTS({ voice: "ar-EG-SalmaNeural", timeout: 35000 });
+              await tts.ttsPromise(safeText, cachedFilePath);
+              totalAudioFilesSynthesized++;
+            } catch (e) {
+              console.warn(`[Batch Pregen] Audio synthesis notice for chapter ${i + 1}:`, e);
+            }
+          }
+        }
+        completedSteps++;
+        pregenJobs[bookId].progressPercent = Math.min(95, Math.round((completedSteps / totalSteps) * 95));
+
+        // 2. Pre-generate Podcast episode script & ALL spoken voices (Karim & Farah)
+        pregenJobs[bookId].currentStep = `إنتاج حوار وبودكاست الفصل ${i + 1}...`;
+        const cacheKey = `podcast_${ch.id}_${ch.title || 'ch'}`;
+        let podcastData = podcastCache.get(cacheKey);
+
+        if (!podcastData) {
+          try {
+            const ai = getGenAIClient();
+            if (ai) {
+              const scriptPrompt = `أنت مخرج بودكاست تعليمي احترافي. أنشئ حواراً صوتياً جذاباً بين كريم وفرح حول فصل "${ch.title}":\n${(ch.content || '').substring(0, 2000)}\nJSON ONLY: { "title": "...", "summary": "...", "transcript": [ { "speaker": "كريم", "text": "..." }, { "speaker": "فرح", "text": "..." } ] }`;
+              const resp = await generateContentWithRetry(ai, { contents: [{ parts: [{ text: scriptPrompt }] }], config: { responseMimeType: "application/json" } });
+              if (resp.text) {
+                podcastData = JSON.parse(resp.text);
+                podcastCache.set(cacheKey, { status: "ready", ...podcastData });
+              }
+            }
+          } catch (e) {
+            console.warn(`[Batch Pregen] Podcast generation notice for chapter ${i + 1}:`, e);
+          }
+        }
+
+        // Now pre-synthesize EdgeTTS audio voices for each line of dialogue in Karim and Farah's transcript!
+        if (podcastData && Array.isArray(podcastData.transcript)) {
+          for (let tIdx = 0; tIdx < podcastData.transcript.length; tIdx++) {
+            const turn = podcastData.transcript[tIdx];
+            const isMale = turn.speaker === "كريم" || turn.speaker.includes("كريم");
+            const voice = isMale ? "ar-EG-ShakirNeural" : "ar-EG-SalmaNeural";
+            const cleanedTurnText = cleanScientificTextForSpeech(turn.text || "");
+            if (cleanedTurnText) {
+              const safeTurnText = cleanedTurnText.length > 700 ? cleanedTurnText.substring(0, 700) + "..." : cleanedTurnText;
+              const turnHash = crypto.createHash("md5").update(`${voice}_${safeTurnText}`).digest("hex");
+              const turnAudioPath = path.join(AUDIO_CACHE_DIR, `${turnHash}.mp3`);
+              if (!fs.existsSync(turnAudioPath)) {
+                try {
+                  const tts = new EdgeTTS({ voice, timeout: 35000 });
+                  await tts.ttsPromise(safeTurnText, turnAudioPath);
+                  totalAudioFilesSynthesized++;
+                } catch (ttsErr) {
+                  console.warn(`[Batch Pregen] EdgeTTS turn error:`, ttsErr);
+                }
+              }
+            }
+            pregenJobs[bookId].currentStep = `توليد أصوات حوار البودكاست (الفصل ${i + 1}: ${tIdx + 1}/${podcastData.transcript.length} مقطع)...`;
+          }
+        }
+
+        completedSteps++;
+        pregenJobs[bookId].progressPercent = Math.min(95, Math.round((completedSteps / totalSteps) * 95));
+      }
+
+      pregenJobs[bookId] = { status: "ready", progressPercent: 100, currentStep: `اكتمل بنجاح تجهيز كافة المقاطع الصوتية (${totalAudioFilesSynthesized} مقطع صوتي جاهز للتشغيل الفوري)!` };
+      ebook.pregeneration_status = "ready";
+      ebook.pregeneration_percent = 100;
+      saveEbooks(ebooks);
+
+      try {
+        await supabase.from('books').update({ pregeneration_status: 'ready', pregeneration_percent: 100 }).eq('id', bookId);
+      } catch (dbErr) {
+        console.warn("Supabase pregeneration update notice:", dbErr);
+      }
+    } catch (err: any) {
+      console.error("[Batch Pregen] Error during pregeneration:", err);
+      pregenJobs[bookId] = { status: "failed", progressPercent: 0, currentStep: "حدث خطأ: " + err.message };
+    }
+  })();
+});
+
+app.get("/api/ebooks/:id/pregenerate-status", (req, res) => {
+  const bookId = req.params.id;
+  const job = pregenJobs[bookId] || { status: "idle", progressPercent: 0, currentStep: "" };
+  res.json(job);
+});
+
+// 9.8 Toggle Book Publish Status (Draft vs Published for Students)
+app.post("/api/ebooks/:id/toggle-publish", async (req, res) => {
+  const bookId = req.params.id;
+  const ebook = ebooks.find(e => e.id === bookId);
+  if (!ebook) return res.status(404).json({ error: "Ebook not found" });
+
+  ebook.is_published = !ebook.is_published;
+  saveEbooks(ebooks);
+
+  try {
+    await supabase.from('books').update({ is_published: ebook.is_published }).eq('id', bookId);
+  } catch (e) {
+    console.warn("Supabase toggle publish error:", e);
+  }
+
+  res.json({ success: true, is_published: ebook.is_published });
 });
 
 /**
@@ -1193,7 +1579,7 @@ const getFallbackIllustration = (prompt: string): string => {
   return library.general;
 };
 
-// 7. Generate a custom image visual using gemini-3.5-flash
+// 7. Generate a custom image visual using gemini-1.5-flash
 app.post("/api/ebooks/:id/generate-image", async (req, res) => {
   const { chapterId, prompt } = req.body;
   if (!chapterId || !prompt) {
@@ -1230,7 +1616,7 @@ app.post("/api/ebooks/:id/generate-image", async (req, res) => {
           aspectRatio: "16:9", // Perfect for chapter banner visuals
         }
       }
-    }, ["gemini-3.5-flash", "gemini-3.5-flash"]);
+    }, ["gemini-1.5-flash", "gemini-1.5-flash"]);
 
     let base64Image = "";
     if (response.candidates?.[0]?.content?.parts) {
@@ -1511,131 +1897,7 @@ Instructions:
   }
 });
 
-// Podcast Jobs
-const podcastJobs: Record<string, { status: 'generating' | 'ready' | 'error'; transcript?: any[] }> = {};
 
-// 12. Generate Podcast Transcript
-app.post("/api/ebooks/:id/podcast", async (req, res) => {
-  const { chapterId, chapterTitle, chapterContent, forceRegenerate } = req.body;
-  if (!chapterId || !chapterContent) {
-    return res.status(400).json({ error: "Missing chapter data" });
-  }
-
-  const jobKey = `${req.params.id}-${chapterId}`;
-  
-  if (podcastJobs[jobKey] && podcastJobs[jobKey].status === 'generating' && !forceRegenerate) {
-    return res.json({ status: 'generating' });
-  }
-
-  const ebook = ebooks.find(e => e.id === req.params.id);
-  const chapter = ebook?.chapters.find((c: any) => c.id === chapterId);
-  
-  // Start job
-  podcastJobs[jobKey] = { status: 'generating' };
-  res.json({ status: 'generating' });
-
-  // Generate in background
-  try {
-    const ai = getGenAIClient();
-    if (!ai) {
-      podcastJobs[jobKey] = {
-        status: 'ready',
-        transcript: [
-          { speaker: 'host', text: `أهلاً بكم في حلقة جديدة من البودكاست! اليوم سنناقش فصل: ${chapterTitle || 'بدون عنوان'}.` },
-          { speaker: 'guest', text: 'أهلاً بك! نعم، هذا الفصل يحتوي على معلومات قيمة جداً.' },
-          { speaker: 'host', text: 'بناءً على المحتوى، ما هي أهم نقطة يمكن التركيز عليها؟' },
-          { speaker: 'guest', text: 'أعتقد أن النقطة الأساسية هي فهم الأساسيات قبل الانتقال للتفاصيل.' }
-        ]
-      };
-      return;
-    }
-
-    const systemInstruction = `
-You are an expert podcast script writer. Convert the following educational chapter into an engaging podcast transcript in Arabic.
-There are two speakers: "host" (المضيف) and "guest" (الضيف).
-Make it conversational, educational, and engaging. Return the response as a JSON array of message objects.
-`;
-    const prompt = `Chapter Title: ${chapterTitle}\nContent:\n${chapterContent}`;
-    
-    const responseSchema = {
-      type: Type.ARRAY,
-      items: {
-        type: Type.OBJECT,
-        properties: {
-          speaker: { type: Type.STRING, enum: ["host", "guest"] },
-          text: { type: Type.STRING }
-        },
-        required: ["speaker", "text"]
-      }
-    };
-
-    const response = await generateContentWithRetry(ai, {
-      contents: [systemInstruction, prompt],
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: responseSchema,
-        temperature: 0.7,
-      }
-    });
-
-    const resultText = response.text;
-    if (!resultText) throw new Error("No response text");
-
-    const transcript = JSON.parse(resultText);
-    podcastJobs[jobKey] = { status: 'ready', transcript };
-  } catch (error) {
-    console.error("Podcast generation error:", error);
-    podcastJobs[jobKey] = { status: 'error' };
-  }
-});
-
-app.get("/api/ebooks/:id/podcast/status", (req, res) => {
-  const { chapterId } = req.query;
-  const jobKey = `${req.params.id}-${chapterId}`;
-  const job = podcastJobs[jobKey];
-  
-  if (!job) {
-    return res.status(404).json({ error: "Not found" });
-  }
-  
-  if (job.status === 'ready') {
-    res.json({ status: 'ready', podcastTranscript: job.transcript });
-  } else {
-    res.json({ status: job.status });
-  }
-});
-
-app.post("/api/ebooks/:id/podcast/talk", async (req, res) => {
-  const { chapterId, userMessage, transcriptHistory } = req.body;
-  if (!userMessage) {
-    return res.status(400).json({ error: "Missing user message" });
-  }
-  
-  try {
-    const ai = getGenAIClient();
-    if (!ai) {
-      return res.json({ success: true, text: `هذا رد تجريبي على سؤالك: ${userMessage}` });
-    }
-    
-    const contextStr = transcriptHistory.map((t: any) => `${t.speaker}: ${t.text}`).join('\n');
-    const systemInstruction = `
-You are the "host" of an educational podcast. The user is a listener who just asked a question.
-Respond to the user directly, keeping the podcast persona. Provide a helpful, educational answer in Arabic based on the transcript context.
-Podcast Context:
-${contextStr}
-`;
-
-    const response = await generateContentWithRetry(ai, {
-      contents: [systemInstruction, userMessage],
-      config: { temperature: 0.7 }
-    });
-    
-    res.json({ success: true, text: response.text });
-  } catch (error: any) {
-    console.error("Podcast talk error:", error);
-    res.status(500).json({ error: "Failed to talk to host" });
-  }
-});
 
 // Serve frontend client SPA
 const startServer = async () => {
