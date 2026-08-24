@@ -1,8 +1,32 @@
 @import "tailwindcss";
 
+/* 🌟 GLOBAL FONT SCALE: +3 DEGREES ACROSS THE ENTIRE WEBSITE */
+:root {
+  font-size: 18.5px; /* Default browser base was 16px -> scaled up by ~3px */
+}
+
+@media (min-width: 640px) {
+  :root {
+    font-size: 19px; /* +3px on tablets/laptops */
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    font-size: 19.5px; /* +3.5px on desktop screens */
+  }
+}
+
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Arabic", "Cairo", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
+}
+
 /* Markdown Content Styling Custom Class */
 .markdown-body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Arabic", "Cairo", sans-serif;
   color: #1e293b; /* slate-800 */
 }
 

@@ -459,8 +459,8 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 flex flex-col font-sans selection:bg-teal-500 selection:text-white" dir="rtl">
       {/* GLOBAL SAAS NAVBAR (simplest Branding) */}
-      <header className="bg-white/95 border-b border-gray-200 sticky top-0 z-40 px-4 sm:px-6 py-3.5 backdrop-blur-md flex items-center justify-between">
-        <div className="flex items-center gap-6">
+      <header className="bg-white/95 border-b border-gray-200 sticky top-0 z-40 px-4 sm:px-6 py-3.5 backdrop-blur-md flex items-center justify-between relative">
+        <div className="flex items-center gap-3">
           <Link to="/" className="flex items-center gap-3 cursor-pointer group">
             <div className="w-10 h-10 bg-gradient-to-tr from-teal-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-md shadow-teal-500/25 text-white font-black text-xl group-hover:scale-105 transition">
               S
@@ -470,39 +470,39 @@ function AppContent() {
                 <span className="font-black text-lg text-slate-900 tracking-tight">simplest</span>
                 <span className="text-[10px] font-black bg-teal-50 text-teal-700 border border-teal-200 px-1.5 py-0.5 rounded-md">LMS</span>
               </div>
-              <p className="text-[10px] text-slate-500 font-bold">بإشراف د. كريم كامل (Dr. Koryem Kamel)</p>
+              <p className="text-xs text-slate-700 font-black">منصة التعلم الإلكتروني التفاعلي</p>
             </div>
           </Link>
-
-          {/* MAIN DESKTOP NAVIGATION LINKS */}
-          <nav className="hidden md:flex items-center gap-1 text-xs font-bold">
-            <Link
-              to="/"
-              className={`px-3 py-2 rounded-xl transition ${
-                isLandingPage
-                  ? 'bg-slate-900 text-white font-black'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              الرئيسية
-            </Link>
-
-            <Link
-              to="/marketplace"
-              className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 ${
-                !isLandingPage
-                  ? 'bg-teal-600 text-white font-black shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              <ShoppingCart className="w-3.5 h-3.5" />
-              <span>متجر ومكتبة المقررات</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${!isLandingPage ? 'bg-teal-700 text-white' : 'bg-slate-200 text-slate-700'}`}>
-                {ebooks.length}
-              </span>
-            </Link>
-          </nav>
         </div>
+
+        {/* 🌟 CENTERED MAIN NAVIGATION LINKS IN THE MIDDLE OF THE HEADER */}
+        <nav className="hidden md:flex items-center gap-2 text-xs font-bold absolute left-1/2 -translate-x-1/2">
+          <Link
+            to="/"
+            className={`px-4 py-2 rounded-xl transition ${
+              isLandingPage
+                ? 'bg-slate-900 text-white font-black shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            الرئيسية
+          </Link>
+
+          <Link
+            to="/marketplace"
+            className={`px-4 py-2 rounded-xl transition flex items-center gap-1.5 ${
+              !isLandingPage
+                ? 'bg-teal-600 text-white font-black shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <ShoppingCart className="w-3.5 h-3.5" />
+            <span>متجر ومكتبة المقررات</span>
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${!isLandingPage ? 'bg-teal-700 text-white' : 'bg-slate-200 text-slate-700'}`}>
+              {ebooks.length}
+            </span>
+          </Link>
+        </nav>
 
         {/* CONTROLS & AUTH BUTTONS */}
         <div className="flex items-center gap-2.5">

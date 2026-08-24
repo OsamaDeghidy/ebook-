@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { BookOpen, ArrowLeft, Brain, HelpCircle, Youtube, Edit, Radio, Sparkles, RefreshCw, Layers, Terminal, Volume2, Eye, EyeOff, Check, Flame, Lock, ShoppingCart, CheckCircle2, ExternalLink, X } from 'lucide-react';
+import { BookOpen, ArrowLeft, Brain, HelpCircle, Youtube, Edit, Radio, Sparkles, RefreshCw, Layers, Terminal, Volume2, Eye, EyeOff, Check, Flame, Lock, ShoppingCart, CheckCircle2, ExternalLink, X, Maximize2, Minimize2, ShieldCheck, Shield } from 'lucide-react';
 import { MarketplaceBook, MindMapNode, Flashcard, Chapter, UserRole } from '../types';
 import MindMap from '../components/MindMap';
 import QuizSection from '../components/QuizSection';
@@ -255,6 +255,61 @@ export default function BookDetailsRoute({
         : book.preview_video_url
     ) : null;
 
+    const viewerContainerRef = useRef<HTMLDivElement>(null);
+    const [isFullscreen, setIsFullscreen] = useState(false);
+
+    useEffect(() => {
+      const handleFullscreenChange = () => {
+        setIsFullscreen(!!document.fullscreenElement);
+      };
+      document.addEventListener('fullscreenchange', handleFullscreenChange);
+      document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+      return () => {
+        document.removeEventListener('fullscreenchange', handleFullscreenChange);
+        document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      };
+    }, []);
+
+    const toggleFullscreen = () => {
+      if (!document.fullscreenElement) {
+        if (viewerContainerRef.current?.requestFullscreen) {
+          viewerContainerRef.current.requestFullscreen();
+        } else if ((viewerContainerRef.current as any)?.webkitRequestFullscreen) {
+          (viewerContainerRef.current as any).webkitRequestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        } else if ((document as any).webkitExitFullscreen) {
+          (document as any).webkitExitFullscreen();
+        }
+      }
+    };
+
+    const cleanViewerUrl = useMemo(() => {
+      if (!book.external_url) return '';
+      let url = book.external_url.trim();
+      
+      // Disable share, download, print, search parameters for Heyzine, FlipHTML5, AnyFlip
+      if (url.includes('heyzine.com')) {
+        const sep = url.includes('?') ? '&' : '?';
+        if (!url.includes('noshare')) url += `${sep}noshare=1&nodownload=1&noprint=1&nosearch=1`;
+      }
+      if (url.includes('fliphtml5.com')) {
+        const sep = url.includes('?') ? '&' : '?';
+        if (!url.includes('showShare')) {
+          url += `${sep}showShare=false&showDownload=false&showPrint=false&showSearch=false&showSearchButton=false&showSearchInput=false&search=0&showPrintButton=false&showShareButton=false&showDownloadButton=false`;
+        }
+      }
+      if (url.includes('anyflip.com')) {
+        const sep = url.includes('?') ? '&' : '?';
+        if (!url.includes('showShare')) {
+          url += `${sep}showShare=false&showDownload=false&showPrint=false&showSearch=false&showSearchButton=false&search=0`;
+        }
+      }
+      return url;
+    }, [book.external_url]);
+
     return (
       <div className="space-y-8 animate-fade-in pb-24 text-right max-w-6xl mx-auto" dir="rtl">
         {/* TOP NAV BAR */}
@@ -275,31 +330,83 @@ export default function BookDetailsRoute({
         {isBookUnlocked ? (
           <div className="space-y-6">
             {/* SECURE VIEWER FRAME */}
-            <div className="bg-slate-950 rounded-3xl p-4 sm:p-6 border border-slate-800 shadow-2xl space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3 flex-wrap gap-2">
+            <div
+              ref={viewerContainerRef}
+              className={`bg-slate-950 rounded-3xl p-3 sm:p-5 border border-slate-800 shadow-2xl space-y-3 transition-all ${
+                isFullscreen ? 'fixed inset-0 z-50 rounded-none p-2 flex flex-col justify-between' : ''
+              }`}
+            >
+              {/* TOP VIEWER CONTROLLER BAR */}
+              <div className="flex items-center justify-between border-b border-slate-800 pb-2.5 flex-wrap gap-2">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                   <span className="text-xs sm:text-sm font-black text-white">
                     مشغل المحتوى التفاعلي المحمي داخل المنصة (simplest Interactive Player)
                   </span>
                 </div>
+
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-800/80 px-2.5 py-1 rounded-full">
-                    محتوى مؤمّن ومرخص للاستخدام الشخصي 🔒
+                  <span className="hidden sm:inline-flex text-[11px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-800/80 px-2.5 py-1 rounded-full">
+                    محتوى مؤمّن ومرخص 🔒
                   </span>
+
+                  {/* PROMINENT FULLSCREEN TOGGLE BUTTON */}
+                  <button
+                    onClick={toggleFullscreen}
+                    className="px-4 py-2 bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 text-white font-black text-xs rounded-xl flex items-center gap-1.5 shadow-md transition active:scale-95 cursor-pointer"
+                    title={isFullscreen ? 'تصغير الشاشة والخروج من ملء الشاشة' : 'تكبير الشاشة بالكامل لقراءة تفاعلية مريحة'}
+                  >
+                    {isFullscreen ? (
+                      <>
+                        <Minimize2 className="w-4 h-4" />
+                        <span>تصغير الشاشة (ESC)</span>
+                      </>
+                    ) : (
+                      <>
+                        <Maximize2 className="w-4 h-4" />
+                        <span>⛶ تكبير الشاشة بالكامل</span>
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
 
-              {/* EMBEDDED VIEWER (NO EXTERNAL REDIRECT) */}
-              <div className="relative w-full h-[75vh] min-h-[500px] max-h-[850px] rounded-2xl overflow-hidden bg-white shadow-inner">
+              {/* EMBEDDED VIEWER WITH DRM MASKING SHIELDS */}
+              <div className={`relative w-full rounded-2xl overflow-hidden bg-slate-900 shadow-inner ${
+                isFullscreen ? 'flex-1 h-full' : 'h-[80vh] min-h-[580px] max-h-[880px]'
+              }`}>
                 <iframe
-                  src={book.external_url}
+                  src={cleanViewerUrl}
                   title={book.title}
                   className="w-full h-full border-0 select-none"
-                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                  allow="fullscreen *; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowFullScreen
                 />
+
+                {/* 🛡️ TOP-RIGHT SEARCH BAR MASK (COMPLETELY BLOCKS SEARCH BAR & LENS ICON FROM RIGHT-0) */}
+                <div
+                  className="absolute top-0 right-0 h-11 w-80 sm:w-96 md:w-[420px] bg-black pointer-events-auto select-none z-30 flex items-center justify-end px-4 gap-2 text-xs font-black text-teal-400 shadow-md border-b border-l border-slate-800/80 rounded-bl-2xl"
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>كتاب تفاعلي معتمد - simplest LMS</span>
+                </div>
+
+                {/* 🛡️ RESPONSIVE BOTTOM-RIGHT DRM SHIELD (COVERS 100% OF SHARE/PRINT/DOWNLOAD/NOTES ON ANY SCREEN SIZE) */}
+                <div
+                  className="absolute bottom-0 right-0 h-11 w-[calc(50%-120px)] bg-black border-t border-slate-800/90 flex items-center justify-end pr-4 sm:pr-6 gap-2 text-[11px] sm:text-xs font-black text-slate-300 pointer-events-auto select-none z-30 shadow-lg"
+                  title="محتوى مؤمن - النسخ والتحميل والمشاركة غير مصرح بها"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span className="truncate hidden sm:inline">🔒 محتوى محمي ضد التحميل والمشاركة</span>
+                  <span className="truncate sm:hidden">🔒 محمي</span>
+                </div>
+
+                {/* 🛡️ RESPONSIVE BOTTOM-LEFT DRM SHIELD (COVERS 100% OF BOOKMARK/GRID/SLIDESHOW ON ANY SCREEN SIZE) */}
+                <div
+                  className="absolute bottom-0 left-0 h-11 w-[calc(50%-120px)] bg-black border-t border-slate-800/90 flex items-center justify-start pl-4 sm:pl-6 gap-2 text-[11px] sm:text-xs font-black text-teal-400 pointer-events-auto select-none z-30 shadow-lg"
+                >
+                  <span className="truncate font-black">simplest LMS ✦</span>
+                </div>
               </div>
             </div>
 

@@ -42,7 +42,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
 
   return (
     <div className="w-full text-right font-sans selection:bg-teal-500 selection:text-white overflow-x-hidden" dir="rtl">
-      
+
       {/* 🌟 TOP ANNOUNCEMENT TICKER */}
       <div className="bg-gradient-to-r from-teal-700 via-indigo-900 to-teal-800 text-white text-[11px] sm:text-xs font-bold py-2.5 px-3 sm:px-4 text-center border-b border-teal-500/30 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
         <Sparkles className="w-3.5 h-3.5 text-teal-300 animate-pulse shrink-0" />
@@ -63,10 +63,10 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            
+
             {/* HERO TEXT COLUMN */}
             <div className="lg:col-span-7 space-y-6 text-center lg:text-right">
-              
+
               {/* Badge */}
               <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-teal-100/80 border border-teal-200 text-teal-900 text-xs font-black shadow-xs">
                 <span className="w-2 h-2 rounded-full bg-teal-500 animate-ping" />
@@ -83,14 +83,10 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
 
               {/* Sub-headline (From Client Brief) */}
               <p className="text-sm sm:text-base lg:text-lg text-slate-600 font-medium leading-relaxed max-w-2xl mx-auto lg:mx-0">
-                <strong className="text-slate-900 font-black">simplest</strong> هي منصة متكاملة تجمع بين المناهج التعليمية الأكاديمية والمراجعات الشاملة، وبين الكورسات الحرة لتطوير المهارات الحياتية والمهنية. محتوى مركز، شروحات مبسطة، وتجربة تعليمية ممتعة بالذكاء الاصطناعي والصوت.
+                <strong className="text-slate-900 font-black">simplest</strong> هي منصة متكاملة تجمع بين المناهج التعليمية الأكاديمية والمراجعات الشاملة، وبين الكورسات الحرة لتطوير المهارات الحياتية والمهنية. محتوى مركز، شروحات مبسطة، وتجربة تعليمية ممتعة بالذكاء الاصطناعي .
               </p>
 
-              {/* Supervisor Callout */}
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 bg-slate-100 border border-slate-200/80 rounded-xl text-xs font-bold text-slate-700">
-                <GraduationCap className="w-4 h-4 text-teal-600" />
-                <span>تحت إشراف: <strong className="text-slate-900">د. كريم كامل (Dr. Koryem Kamel)</strong></span>
-              </div>
+
 
               {/* Dual CTA Buttons */}
               <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3.5 pt-2">
@@ -132,10 +128,10 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
             {/* HERO VISUAL MOCKUP COLUMN */}
             <div className="lg:col-span-5 relative">
               <div className="relative mx-auto max-w-md lg:max-w-none">
-                
+
                 {/* Visual Glass Frame Card */}
                 <div className="bg-white/90 backdrop-blur-xl border border-slate-200/80 rounded-3xl p-6 shadow-2xl shadow-slate-900/10 space-y-5">
-                  
+
                   {/* Card Header with Logo */}
                   <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                     <div className="flex items-center gap-3">
@@ -205,7 +201,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
       {/* 🚪 SECTION: THE TWO MAIN GATEWAYS (واجهتنا الرئيسية - من البريف) */}
       <section id="gateways" className="py-16 bg-slate-50/80 border-t border-b border-slate-200/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-          
+
           <div className="text-center space-y-3 max-w-2xl mx-auto">
             <span className="text-xs font-black text-teal-600 bg-teal-50 border border-teal-200 px-3.5 py-1 rounded-full">
               بوابات التعليم
@@ -219,7 +215,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            
+
             {/* GATEWAY 1: ACADEMIC (البوابة الأكاديمية والمراجعات الشاملة) */}
             <div className="bg-white border-2 border-emerald-500/40 rounded-3xl p-8 shadow-lg hover:shadow-xl hover:border-emerald-500 transition-all duration-300 flex flex-col justify-between space-y-6 group">
               <div className="space-y-4">
@@ -309,7 +305,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
       {/* 📚 SECTION: 10 MAIN CATEGORIES CATALOG */}
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-          
+
           <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
             <div className="space-y-2">
               <span className="text-xs font-black text-teal-600 bg-teal-50 border border-teal-200 px-3.5 py-1 rounded-full">
@@ -361,7 +357,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
       {/* 🏆 SECTION: WHY CHOOSE SIMPLEST (لماذا تختار simplest؟ - من البريف) */}
       <section className="py-16 bg-gradient-to-b from-slate-900 to-indigo-950 text-white relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12 relative z-10">
-          
+
           <div className="text-center space-y-3 max-w-xl mx-auto">
             <span className="text-xs font-black text-teal-300 bg-white/10 px-3.5 py-1 rounded-full border border-white/10">
               القيمة والتميز
@@ -375,7 +371,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            
+
             {/* PILLAR 1 */}
             <div className="bg-white/5 border border-white/10 rounded-3xl p-6 space-y-3 backdrop-blur-sm hover:bg-white/10 transition">
               <div className="w-12 h-12 rounded-2xl bg-teal-500/20 text-teal-300 flex items-center justify-center font-bold">
@@ -424,47 +420,13 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
         </div>
       </section>
 
-      {/* 📱 SECTION: QUICK ONBOARDING & PHONE LEAD (سجل دخولك الآن بأمان وسهولة - من البريف) */}
-      <section className="py-16 bg-white">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center space-y-6">
-          <div className="w-16 h-16 bg-teal-100 text-teal-700 rounded-3xl flex items-center justify-center mx-auto shadow-sm">
-            <Phone className="w-8 h-8" />
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="text-2xl sm:text-3xl font-black text-slate-900">
-              سجّل دخولك الآن بأمان وسهولة
-            </h3>
-            <p className="text-xs sm:text-sm text-slate-500 font-medium max-w-md mx-auto">
-              أدخل رقم هاتفك لتسجيل الدخول السريع وبدء التعلّم وتصفح مكتبة المقررات فوراً
-            </p>
-          </div>
-
-          <form onSubmit={handlePhoneSubmit} className="max-w-md mx-auto flex flex-col sm:flex-row gap-2.5">
-            <input
-              type="tel"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-              placeholder="أدخل رقم هاتفك المحمول (مثال: 010xxxxxxxx)"
-              className="flex-1 px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-900 outline-none focus:border-teal-500 focus:bg-white transition text-center sm:text-right"
-              dir="ltr"
-            />
-            <button
-              type="submit"
-              className="px-6 py-3.5 bg-teal-600 hover:bg-teal-700 text-white font-black text-xs rounded-2xl shadow-md shadow-teal-600/20 transition active:scale-95"
-            >
-              {phoneSubmitted ? 'جارٍ التحويل...' : 'تأكيد الدخول عبر SMS'}
-            </button>
-          </form>
-        </div>
-      </section>
 
       {/* 🏛️ OFFICIAL FOOTER (بيانات شركة E-LMS ود. كريم كامل المعتمدة) */}
       <footer className="bg-slate-950 text-slate-300 text-xs border-t border-slate-800 py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-          
+
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            
+
             {/* BRAND INFO */}
             <div className="space-y-3 md:col-span-2">
               <div className="flex items-center gap-3">
