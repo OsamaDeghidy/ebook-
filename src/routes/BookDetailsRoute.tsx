@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { BookOpen, ArrowLeft, Brain, HelpCircle, Youtube, Edit, Radio, Sparkles, RefreshCw, Layers, Terminal, Volume2, Eye, EyeOff, Check, Flame, Lock, ShoppingCart, CheckCircle2, ExternalLink } from 'lucide-react';
+import { BookOpen, ArrowLeft, Brain, HelpCircle, Youtube, Edit, Radio, Sparkles, RefreshCw, Layers, Terminal, Volume2, Eye, EyeOff, Check, Flame, Lock, ShoppingCart, CheckCircle2, ExternalLink, X } from 'lucide-react';
 import { MarketplaceBook, MindMapNode, Flashcard, Chapter, UserRole } from '../types';
 import MindMap from '../components/MindMap';
 import QuizSection from '../components/QuizSection';
@@ -45,6 +45,7 @@ export default function BookDetailsRoute({
   const [isGeneratingAiQuestions, setIsGeneratingAiQuestions] = useState(false);
   const [isExpandingChapters, setIsExpandingChapters] = useState(false);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+  const [isMobileChaptersOpen, setIsMobileChaptersOpen] = useState(false);
 
   // Batch pre-generation states
   const [isPregenerating, setIsPregenerating] = useState(false);
@@ -255,79 +256,57 @@ export default function BookDetailsRoute({
     ) : null;
 
     return (
-      <div className="space-y-10 animate-fade-in pb-24 text-right max-w-5xl mx-auto" dir="rtl">
+      <div className="space-y-8 animate-fade-in pb-24 text-right max-w-6xl mx-auto" dir="rtl">
         {/* TOP NAV BAR */}
         <div className="flex items-center justify-between pb-4 border-b border-gray-200">
           <button
-            onClick={() => navigate('/')}
-            className="flex items-center gap-2 text-xs font-bold text-gray-600 hover:text-indigo-600 transition"
+            onClick={() => navigate('/marketplace')}
+            className="flex items-center gap-2 text-xs font-bold text-gray-600 hover:text-teal-600 transition"
           >
             <ArrowLeft className="w-4 h-4 rotate-180" />
-            <span>العودة للمتجر والمكتبة الرقمية</span>
+            <span>العودة لمتجر ومكتبة المقررات</span>
           </button>
-          <span className="px-3 py-1 text-xs font-black bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100">
-            مرجع / مقرر خارجي معتمد
+          <span className="px-3 py-1 text-xs font-black bg-teal-50 text-teal-800 rounded-full border border-teal-100">
+            مقرر تفاعلي سحابي مدمج 🔒
           </span>
         </div>
 
-        {/* HERO CARD */}
-        <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
-          {/* COVER & QUICK ACTION */}
-          <div className="space-y-4">
-            <div className="relative rounded-2xl overflow-hidden shadow-md aspect-[3/4] bg-slate-900">
-              <img
-                src={book.thumbnail_url || 'https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=800&q=80'}
-                alt={book.title}
-                className="w-full h-full object-cover"
-              />
-              <span className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-black shadow-md ${
-                isFree ? 'bg-emerald-500 text-white' : 'bg-amber-400 text-amber-950'
-              }`}>
-                {isFree ? 'مجاني بالكامل' : `${book.price} ج.م`}
-              </span>
+        {/* IF UNLOCKED: SECURE IN-PLATFORM VIEWER */}
+        {isBookUnlocked ? (
+          <div className="space-y-6">
+            {/* SECURE VIEWER FRAME */}
+            <div className="bg-slate-950 rounded-3xl p-4 sm:p-6 border border-slate-800 shadow-2xl space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3 flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-xs sm:text-sm font-black text-white">
+                    مشغل المحتوى التفاعلي المحمي داخل المنصة (simplest Interactive Player)
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-800/80 px-2.5 py-1 rounded-full">
+                    محتوى مؤمّن ومرخص للاستخدام الشخصي 🔒
+                  </span>
+                </div>
+              </div>
+
+              {/* EMBEDDED VIEWER (NO EXTERNAL REDIRECT) */}
+              <div className="relative w-full h-[75vh] min-h-[500px] max-h-[850px] rounded-2xl overflow-hidden bg-white shadow-inner">
+                <iframe
+                  src={book.external_url}
+                  title={book.title}
+                  className="w-full h-full border-0 select-none"
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                  allowFullScreen
+                />
+              </div>
             </div>
 
-            {/* ACTION / PAYWALL */}
-            <div className="space-y-2">
-              {!isBookUnlocked ? (
-                <div className="space-y-3 p-4 bg-amber-50/70 border border-amber-200 rounded-2xl">
-                  <div className="flex items-center gap-2 text-xs font-black text-amber-900">
-                    <Lock className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span>هذا المقرر مدفوع ويتطلب الاشتراك للوصول للرابط الكامل</span>
-                  </div>
-                  <button
-                    onClick={() => setIsPurchaseModalOpen(true)}
-                    className="w-full py-3.5 px-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-amber-950 font-black text-xs rounded-xl flex items-center justify-center gap-2 shadow-sm transition active:scale-95 shadow-amber-200"
-                  >
-                    <ShoppingCart className="w-4 h-4" />
-                    <span>شراء المقرر وفتح الرابط ({book.price} ج.م)</span>
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-3 p-4 bg-emerald-50/70 border border-emerald-200 rounded-2xl">
-                  <div className="flex items-center gap-2 text-xs font-black text-emerald-900">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>تم فتح الوصول للمقرر بنجاح!</span>
-                  </div>
-                  <a
-                    href={book.external_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-black text-xs rounded-xl flex items-center justify-center gap-2 shadow-md transition active:scale-95 shadow-indigo-200"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                    <span>الانتقال للرابط التفاعلي والمحتوى الكامل</span>
-                  </a>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* DETAILS & VIDEO */}
-          <div className="md:col-span-2 space-y-6">
-            <div>
-              <div className="flex flex-wrap items-center gap-2 mb-2">
-                <span className="px-2.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-xs font-bold">
+            {/* COURSE INFO & DETAILS */}
+            <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-md bg-teal-50 text-teal-800 text-xs font-bold">
                   {book.subcategory || 'مقرر عام'}
                 </span>
                 {book.grade_level && (
@@ -336,42 +315,102 @@ export default function BookDetailsRoute({
                   </span>
                 )}
               </div>
-              <h1 className="text-2xl sm:text-3xl font-black text-gray-900 leading-snug">
+              <h1 className="text-2xl font-black text-gray-900 leading-snug">
                 {book.title}
               </h1>
-              <p className="text-xs text-gray-500 mt-1 font-medium">
-                المؤلف / المحاضر: <span className="font-bold text-gray-800">{book.author_name || 'خبير المحتوى'}</span>
+              <p className="text-xs text-gray-500 font-medium">
+                المحاضر / المؤلف: <span className="font-bold text-gray-800">{book.author_name || 'خبير المحتوى'}</span>
               </p>
-            </div>
-
-            {/* VIDEO EXPLANATION EMBED */}
-            {embedUrl ? (
-              <div className="space-y-2">
-                <h3 className="text-xs font-black text-gray-700 flex items-center gap-1.5">
-                  <Youtube className="w-4 h-4 text-rose-600" />
-                  <span>فيديو تعريفي وتوضيحي عن المقرر (شاهد قبل الشراء)</span>
-                </h3>
-                <div className="aspect-video w-full rounded-2xl overflow-hidden border border-gray-200 shadow-sm bg-black">
-                  <iframe
-                    src={embedUrl}
-                    title="Explanatory Video"
-                    className="w-full h-full border-0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                </div>
+              <div className="text-xs sm:text-sm text-gray-600 leading-relaxed bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                {book.description || 'مقرر تفاعلي سحابي متكامل يتيح التعلم التفاعلي والأنشطة التطبيقية مباشرة داخل المنصة.'}
               </div>
-            ) : null}
-
-            {/* DESCRIPTION */}
-            <div className="space-y-2">
-              <h3 className="text-xs font-black text-gray-700">نبذة وتفاصيل المقرر:</h3>
-              <p className="text-xs sm:text-sm text-gray-600 leading-relaxed bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                {book.description || 'يقدم هذا المرجع محتوى تعليمياً وتطبيقياً متخصصاً يغطي المفاهيم الأساسية والأمثلة العملية.'}
-              </p>
             </div>
           </div>
-        </div>
+        ) : (
+          /* IF LOCKED: COURSE PREVIEW & IN-PLATFORM CHECKOUT PAYWALL */
+          <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
+            {/* COVER & PURCHASE ACTION */}
+            <div className="space-y-4">
+              <div className="relative rounded-2xl overflow-hidden shadow-md aspect-[3/4] bg-slate-900">
+                <img
+                  src={book.thumbnail_url || 'https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=800&q=80'}
+                  alt={book.title}
+                  className="w-full h-full object-cover"
+                />
+                <span className="absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-black shadow-md bg-amber-400 text-amber-950">
+                  {book.price} ج.م
+                </span>
+              </div>
+
+              {/* ACTION / PAYWALL */}
+              <div className="space-y-3 p-5 bg-gradient-to-b from-amber-50/90 to-amber-100/60 border border-amber-200 rounded-2xl text-center">
+                <div className="flex items-center justify-center gap-1.5 text-xs font-black text-amber-900">
+                  <Lock className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>مقرر تفاعلي مغلق</span>
+                </div>
+                <p className="text-[11px] text-amber-800 font-medium leading-relaxed">
+                  اشترك الآن لفتح المحتوى التفاعلي والدراسة مباشرة داخل المنصة دون مغادرة الموقع.
+                </p>
+                <button
+                  onClick={() => setIsPurchaseModalOpen(true)}
+                  className="w-full py-3.5 px-4 bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 text-white font-black text-xs rounded-xl flex items-center justify-center gap-2 shadow-md transition active:scale-95 shadow-teal-500/20"
+                >
+                  <ShoppingCart className="w-4 h-4" />
+                  <span>شراء المقرر وفتح المحتوى ({book.price} ج.م)</span>
+                </button>
+              </div>
+            </div>
+
+            {/* DETAILS & DEMO VIDEO */}
+            <div className="md:col-span-2 space-y-6">
+              <div>
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="px-2.5 py-0.5 rounded-md bg-teal-50 text-teal-800 text-xs font-bold">
+                    {book.subcategory || 'مقرر عام'}
+                  </span>
+                  {book.grade_level && (
+                    <span className="px-2.5 py-0.5 rounded-md bg-gray-100 text-gray-700 text-xs font-bold">
+                      {book.grade_level}
+                    </span>
+                  )}
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-black text-gray-900 leading-snug">
+                  {book.title}
+                </h1>
+                <p className="text-xs text-gray-500 mt-1 font-medium">
+                  المؤلف / المحاضر: <span className="font-bold text-gray-800">{book.author_name || 'خبير المحتوى'}</span>
+                </p>
+              </div>
+
+              {/* VIDEO EXPLANATION EMBED */}
+              {embedUrl ? (
+                <div className="space-y-2">
+                  <h3 className="text-xs font-black text-gray-700 flex items-center gap-1.5">
+                    <Youtube className="w-4 h-4 text-rose-600" />
+                    <span>فيديو تعريفي وتوضيحي عن المقرر (شاهد قبل الشراء)</span>
+                  </h3>
+                  <div className="aspect-video w-full rounded-2xl overflow-hidden border border-gray-200 shadow-sm bg-black">
+                    <iframe
+                      src={embedUrl}
+                      title="Explanatory Video"
+                      className="w-full h-full border-0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                </div>
+              ) : null}
+
+              {/* DESCRIPTION */}
+              <div className="space-y-2">
+                <h3 className="text-xs font-black text-gray-700">نبذة وتفاصيل المقرر:</h3>
+                <p className="text-xs sm:text-sm text-gray-600 leading-relaxed bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                  {book.description || 'يقدم هذا المرجع محتوى تعليمياً وتطبيقياً متخصصاً يغطي المفاهيم الأساسية والأمثلة العملية عبر بيئة تفاعلية مؤمنة.'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 📚 RELATED COURSES & BOOKS SECTION (AT THE FULL-WIDTH BOTTOM) */}
         <div className="w-full pt-8 border-t border-gray-200">
@@ -409,195 +448,288 @@ export default function BookDetailsRoute({
   }
 
   return (
-    <div className="space-y-12 animate-fade-in pb-24 text-right" dir="rtl">
+    <div className="space-y-6 animate-fade-in pb-24 text-right" dir="rtl">
       
-      {/* 2-COLUMN MAIN CONTENT (SIDEBAR + ACTIVE TAB AREA) */}
-      <div className="flex flex-col md:flex-row gap-6 items-start">
-        
-        {/* CHAPTERS SIDEBAR */}
-        <div className="w-full md:w-72 shrink-0 space-y-4">
-        <div className="bg-white border border-gray-200 rounded-3xl p-5 shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-            <h3 className="font-black text-gray-900 text-sm flex items-center gap-2">
-              <Layers className="w-4 h-4 text-indigo-600" />
-              <span>فهرس فصول الكتاب</span>
-            </h3>
-            <span className="text-[11px] font-extrabold px-2.5 py-0.5 bg-indigo-50 text-indigo-700 rounded-full">
-              {book.chapters?.length || 0} فصول
-            </span>
-          </div>
-
-          <div className="space-y-1.5 max-h-[380px] overflow-y-auto pr-1 custom-scrollbar">
-            {(book.chapters || []).map((chapter, idx) => {
-              const isPurchased = purchasedBookIds.includes(book.id);
-              const isFree = !book.price || book.price === 0;
-              const isBookUnlocked = isFree || isPurchased || isAdminMode;
-              const isChapterLocked = !isBookUnlocked && idx > 0;
-              const isSelected = activeChapterId === chapter.id;
-
-              return (
-                <button
-                  key={chapter.id}
-                  onClick={() => {
-                    if (isChapterLocked) {
-                      setIsPurchaseModalOpen(true);
-                    } else {
-                      setActiveChapterId(chapter.id);
-                    }
-                  }}
-                  className={`w-full text-right p-3 rounded-2xl text-xs font-bold transition flex items-center justify-between ${
-                    isSelected
-                      ? 'bg-indigo-600 text-white shadow-md'
-                      : isChapterLocked
-                      ? 'text-gray-400 bg-gray-50/70 hover:bg-gray-100 hover:text-gray-700 border border-gray-100'
-                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 border border-transparent hover:border-gray-200'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 truncate">
-                    {isChapterLocked ? (
-                      <Lock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                    ) : idx === 0 && !isBookUnlocked ? (
-                      <span className="px-1.5 py-0.5 text-[9px] font-black bg-emerald-100 text-emerald-800 rounded shrink-0">معاينة</span>
-                    ) : null}
-                    <span className="truncate">{chapter.title}</span>
-                  </div>
-                  <span className={`text-[10px] shrink-0 mr-2 ${isSelected ? 'text-indigo-200' : 'text-gray-400'}`}>
-                    {idx + 1}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* ADMIN 1-CLICK BATCH ASSET PRE-GENERATION */}
-          <div className="pt-2 border-t border-gray-100 space-y-2">
-            <button
-              onClick={handlePregenerateAllAssets}
-              disabled={isPregenerating}
-              className="w-full p-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-slate-950 font-black rounded-2xl text-xs flex items-center justify-center gap-2 shadow-sm transition active:scale-95 disabled:opacity-60"
-            >
-              {isPregenerating ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>جاري تجهيز كافة الأصوات...</span>
-                </>
-              ) : (
-                <>
-                  <Volume2 className="w-4 h-4 text-slate-950" />
-                  <span>⚡ تجهيز كافة الأصوات والبودكاست</span>
-                </>
-              )}
-            </button>
-
-            {isPregenerating && (
-              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl space-y-1.5 text-right">
-                <div className="flex items-center justify-between text-[11px] font-bold text-emerald-900">
-                  <span className="truncate">{pregenStep}</span>
-                  <span>{pregenPercent}%</span>
-                </div>
-                <div className="h-1.5 bg-emerald-200 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-emerald-600 rounded-full transition-all duration-300"
-                    style={{ width: `${pregenPercent}%` }}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* AI INCREMENTAL EXPAND BUTTON */}
+      {/* TOP STATUS & CONTROLS HEADER BAR */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-gray-200 shadow-sm rounded-3xl p-4 px-5">
+        <div className="flex items-center gap-3">
           <button
-            onClick={handleExpandChapters}
-            disabled={isExpandingChapters}
-            className="w-full p-3 bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 border border-indigo-200 hover:border-indigo-300 text-indigo-800 rounded-2xl text-xs font-black flex items-center justify-center gap-2 transition shadow-sm hover:shadow active:scale-95 disabled:opacity-60"
+            onClick={() => navigate('/marketplace')}
+            className="flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-teal-600 transition"
           >
-            {isExpandingChapters ? (
+            <ArrowLeft className="w-4 h-4" />
+            <span>العودة لمتجر المقررات</span>
+          </button>
+          <span className="text-gray-300">|</span>
+          <h2 className="text-xs sm:text-sm font-black text-gray-900 truncate max-w-[200px] sm:max-w-md">{book.title}</h2>
+        </div>
+
+        {/* TOP BAR ACTIONS: CHAPTERS TOGGLE & PUBLISH BADGE */}
+        <div className="flex items-center gap-2 flex-wrap justify-between sm:justify-end">
+          {/* TOGGLE CHAPTERS SIDEBAR BUTTON */}
+          <button
+            onClick={() => setIsMobileChaptersOpen(!isMobileChaptersOpen)}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition border ${
+              isMobileChaptersOpen
+                ? 'bg-teal-600 text-white border-teal-600 shadow-sm'
+                : 'bg-teal-50 text-teal-800 border-teal-200 hover:bg-teal-100'
+            }`}
+            title="عرض أو إخفاء فهرس الفصول"
+          >
+            <Layers className="w-3.5 h-3.5" />
+            <span>
+              {isMobileChaptersOpen
+                ? 'إخفاء الفهرس (شاشة كاملة)'
+                : `فهرس الفصول (${(book.chapters || []).findIndex(c => c.id === activeChapterId) + 1}/${book.chapters?.length || 0}) 📑`}
+            </span>
+          </button>
+
+          {/* PUBLISH / DRAFT TOGGLE BADGE */}
+          <button
+            onClick={handleTogglePublish}
+            className={`px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-black flex items-center gap-1.5 transition shadow-sm ${
+              book.is_published
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                : 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
+            }`}
+            title="تغيير حالة النشر للطلاب"
+          >
+            {book.is_published ? (
               <>
-                <RefreshCw className="w-4 h-4 animate-spin text-indigo-600" />
-                <span>جاري استكمال وتوليد بقية الفصول...</span>
+                <Eye className="w-3.5 h-3.5 text-emerald-600" />
+                <span>منشور للطلاب</span>
               </>
             ) : (
               <>
-                <Sparkles className="w-4 h-4 text-amber-500 fill-current" />
-                <span>استكمال وتوليد فصول إضافية بالـ AI</span>
+                <EyeOff className="w-3.5 h-3.5 text-amber-600" />
+                <span>مسودة خاصة (مخفي)</span>
               </>
             )}
           </button>
         </div>
       </div>
 
-      <div className="flex-1 space-y-6">
-        {/* BACK TO MARKETPLACE & STATUS HEADER */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-gray-200 shadow-sm rounded-3xl p-4 px-6">
-          <div className="flex items-center gap-4">
+      {/* TAB NAVIGATION BAR */}
+      <div className="flex items-center gap-1.5 border-b border-gray-200 pb-2 overflow-x-auto scrollbar-none -mx-2 px-2 sm:mx-0 sm:px-0">
+        {[
+          { id: 'read', label: 'قراءة المقرر', icon: BookOpen, enabled: true },
+          { id: 'podcast', label: 'استوديو البودكاست', icon: Radio, enabled: book.feature_toggles?.show_podcast !== false },
+          { id: 'flashcards', label: 'بطاقات المراجعة', icon: Layers, enabled: book.feature_toggles?.show_flashcards !== false },
+          { id: 'sandbox', label: 'المختبر والتطبيق', icon: Terminal, enabled: book.feature_toggles?.show_sandbox !== false },
+          { id: 'quiz', label: 'بنك الأسئلة', icon: HelpCircle, enabled: book.feature_toggles?.show_quiz !== false },
+          { id: 'mindmap', label: 'الخريطة الذهنية', icon: Brain, enabled: book.feature_toggles?.show_mindmap !== false },
+          { id: 'videos', label: 'المقاطع المرئية', icon: Youtube, enabled: book.feature_toggles?.show_videos !== false },
+          { id: 'editor', label: 'محرر النصوص', icon: Edit, enabled: true }
+        ].filter(tab => tab.enabled).map(tab => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
             <button
-              onClick={() => navigate('/')}
-              className="flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-indigo-600 transition"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>العودة للمكتبة الرقمية</span>
-            </button>
-            <h2 className="text-sm font-black text-gray-900">{book.title}</h2>
-          </div>
-
-          {/* PUBLISH / DRAFT TOGGLE BADGE */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleTogglePublish}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition shadow-sm ${
-                book.is_published
-                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
-                  : 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`px-4 py-2.5 rounded-2xl text-xs font-black flex items-center gap-2 shrink-0 transition ${
+                isActive
+                  ? 'bg-teal-600 text-white shadow-md shadow-teal-500/20'
+                  : 'bg-white border border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`}
-              title="تغيير حالة النشر للطلاب"
             >
-              {book.is_published ? (
-                <>
-                  <Eye className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>منشور للطلاب (جاهز للعرض)</span>
-                </>
-              ) : (
-                <>
-                  <EyeOff className="w-3.5 h-3.5 text-amber-600" />
-                  <span>مسودة خاصة (مخفي عن الطلاب)</span>
-                </>
-              )}
+              <Icon className="w-4 h-4" />
+              <span>{tab.label}</span>
             </button>
-          </div>
-        </div>
+          );
+        })}
+      </div>
 
-        {/* TAB NAVIGATION BAR */}
-        <div className="flex items-center gap-2 border-b border-gray-200 pb-2 overflow-x-auto custom-scrollbar">
-          {[
-            { id: 'read', label: 'قراءة المقرر', icon: BookOpen, enabled: true },
-            { id: 'podcast', label: 'استوديو البودكاست', icon: Radio, enabled: book.feature_toggles?.show_podcast !== false },
-            { id: 'flashcards', label: 'بطاقات المراجعة الذكية', icon: Layers, enabled: book.feature_toggles?.show_flashcards !== false },
-            { id: 'sandbox', label: 'المختبر والتطبيق العملي', icon: Terminal, enabled: book.feature_toggles?.show_sandbox !== false },
-            { id: 'quiz', label: 'بنك الأسئلة والاختبارات', icon: HelpCircle, enabled: book.feature_toggles?.show_quiz !== false },
-            { id: 'mindmap', label: 'الخريطة المفاهيمية', icon: Brain, enabled: book.feature_toggles?.show_mindmap !== false },
-            { id: 'videos', label: 'المقاطع المرئية', icon: Youtube, enabled: book.feature_toggles?.show_videos !== false },
-            { id: 'editor', label: 'محرر الفصل وتصحيح النصوص', icon: Edit, enabled: true }
-          ].filter(tab => tab.enabled).map(tab => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
+      {/* 2-COLUMN MAIN CONTENT (TOGGLEABLE SIDEBAR + ACTIVE TAB AREA) */}
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
+        
+        {/* DESKTOP TOGGLEABLE SIDEBAR */}
+        {isMobileChaptersOpen && (
+          <div className="hidden lg:block w-80 shrink-0 space-y-4 animate-in fade-in duration-200">
+            <div className="bg-white border border-gray-200 rounded-3xl p-5 shadow-sm space-y-4 sticky top-20">
+              <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                <h3 className="font-black text-gray-900 text-sm flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-teal-600" />
+                  <span>فهرس فصول الكتاب</span>
+                </h3>
+                <span className="text-[11px] font-extrabold px-2.5 py-0.5 bg-teal-50 text-teal-700 rounded-full">
+                  {book.chapters?.length || 0} فصول
+                </span>
+              </div>
+
+              <div className="space-y-1.5 max-h-[420px] overflow-y-auto pr-1 custom-scrollbar">
+                {(book.chapters || []).map((chapter, idx) => {
+                  const isPurchased = purchasedBookIds.includes(book.id);
+                  const isFree = !book.price || book.price === 0;
+                  const isBookUnlocked = isFree || isPurchased || isAdminMode;
+                  const isChapterLocked = !isBookUnlocked && idx > 0;
+                  const isSelected = activeChapterId === chapter.id;
+
+                  return (
+                    <button
+                      key={chapter.id}
+                      onClick={() => {
+                        if (isChapterLocked) {
+                          setIsPurchaseModalOpen(true);
+                        } else {
+                          setActiveChapterId(chapter.id);
+                        }
+                      }}
+                      className={`w-full text-right p-3 rounded-2xl text-xs font-bold transition flex items-center justify-between ${
+                        isSelected
+                          ? 'bg-teal-600 text-white shadow-md'
+                          : isChapterLocked
+                          ? 'text-gray-400 bg-gray-50/70 hover:bg-gray-100 hover:text-gray-700 border border-gray-100'
+                          : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 border border-transparent hover:border-gray-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        {isChapterLocked ? (
+                          <Lock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                        ) : idx === 0 && !isBookUnlocked ? (
+                          <span className="px-1.5 py-0.5 text-[9px] font-black bg-emerald-100 text-emerald-800 rounded shrink-0">معاينة</span>
+                        ) : null}
+                        <span className="truncate">{chapter.title}</span>
+                      </div>
+                      <span className={`text-[10px] shrink-0 mr-2 ${isSelected ? 'text-teal-100' : 'text-gray-400'}`}>
+                        {idx + 1}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* ADMIN 1-CLICK BATCH ASSET PRE-GENERATION */}
+              <div className="pt-2 border-t border-gray-100 space-y-2">
+                <button
+                  onClick={handlePregenerateAllAssets}
+                  disabled={isPregenerating}
+                  className="w-full p-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-slate-950 font-black rounded-2xl text-xs flex items-center justify-center gap-2 shadow-sm transition active:scale-95 disabled:opacity-60"
+                >
+                  {isPregenerating ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>جاري تجهيز كافة الأصوات...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Volume2 className="w-4 h-4 text-slate-950" />
+                      <span>⚡ تجهيز كافة الأصوات والبودكاست</span>
+                    </>
+                  )}
+                </button>
+
+                {isPregenerating && (
+                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl space-y-1.5 text-right">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-emerald-900">
+                      <span className="truncate">{pregenStep}</span>
+                      <span>{pregenPercent}%</span>
+                    </div>
+                    <div className="h-1.5 bg-emerald-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-emerald-600 rounded-full transition-all duration-300"
+                        style={{ width: `${pregenPercent}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* AI INCREMENTAL EXPAND BUTTON */}
               <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`px-4 py-2.5 rounded-2xl text-xs font-black flex items-center gap-2 shrink-0 transition ${
-                  isActive
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : 'bg-white border border-gray-200 text-gray-500 hover:text-gray-900 hover:bg-gray-50'
-                }`}
+                onClick={handleExpandChapters}
+                disabled={isExpandingChapters}
+                className="w-full p-3 bg-gradient-to-r from-teal-50 via-indigo-50 to-purple-50 border border-teal-200 hover:border-teal-300 text-teal-900 rounded-2xl text-xs font-black flex items-center justify-center gap-2 transition shadow-sm hover:shadow active:scale-95 disabled:opacity-60"
               >
-                <Icon className="w-4 h-4" />
-                <span>{tab.label}</span>
+                {isExpandingChapters ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin text-teal-600" />
+                    <span>جاري استكمال وتوليد بقية الفصول...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 text-teal-600" />
+                    <span>+ استكمال الفصول المتبقية بالـ AI</span>
+                  </>
+                )}
               </button>
-            );
-          })}
-        </div>
+            </div>
+          </div>
+        )}
 
-        {/* ACTIVE TAB CONTENT */}
+        {/* MOBILE SLIDE-OVER CHAPTERS DRAWER */}
+        {isMobileChaptersOpen && (
+          <div className="lg:hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-gray-900/60 backdrop-blur-xs p-0 sm:p-4" dir="rtl">
+            <div className="bg-white rounded-t-3xl sm:rounded-3xl p-5 w-full sm:max-w-md max-h-[85vh] overflow-y-auto shadow-2xl space-y-4 animate-in slide-in-from-bottom duration-200">
+              <div className="flex items-center justify-between border-b border-gray-100 pb-3 sticky top-0 bg-white z-10">
+                <h3 className="font-black text-gray-900 text-sm flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-teal-600" />
+                  <span>فهرس فصول الكتاب</span>
+                </h3>
+                <button
+                  onClick={() => setIsMobileChaptersOpen(false)}
+                  className="p-1.5 text-gray-400 hover:text-gray-700 rounded-xl hover:bg-gray-100 transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-1.5 max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
+                {(book.chapters || []).map((chapter, idx) => {
+                  const isPurchased = purchasedBookIds.includes(book.id);
+                  const isFree = !book.price || book.price === 0;
+                  const isBookUnlocked = isFree || isPurchased || isAdminMode;
+                  const isChapterLocked = !isBookUnlocked && idx > 0;
+                  const isSelected = activeChapterId === chapter.id;
+
+                  return (
+                    <button
+                      key={chapter.id}
+                      onClick={() => {
+                        if (isChapterLocked) {
+                          setIsPurchaseModalOpen(true);
+                        } else {
+                          setActiveChapterId(chapter.id);
+                          setIsMobileChaptersOpen(false);
+                        }
+                      }}
+                      className={`w-full text-right p-3.5 rounded-2xl text-xs font-bold transition flex items-center justify-between ${
+                        isSelected
+                          ? 'bg-teal-600 text-white shadow-md'
+                          : isChapterLocked
+                          ? 'text-gray-400 bg-gray-50/70 border border-gray-100'
+                          : 'text-gray-700 hover:bg-gray-50 border border-gray-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        {isChapterLocked ? (
+                          <Lock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                        ) : idx === 0 && !isBookUnlocked ? (
+                          <span className="px-1.5 py-0.5 text-[9px] font-black bg-emerald-100 text-emerald-800 rounded shrink-0">معاينة</span>
+                        ) : null}
+                        <span className="truncate">{chapter.title}</span>
+                      </div>
+                      <span className={`text-[10px] shrink-0 mr-2 ${isSelected ? 'text-teal-100' : 'text-gray-400'}`}>
+                        {idx + 1}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                onClick={() => setIsMobileChaptersOpen(false)}
+                className="w-full py-3 bg-slate-900 text-white font-black text-xs rounded-2xl transition"
+              >
+                إغلاق والعودة للقراءة الكاملة
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 📖 ACTIVE CHAPTER CONTENT CONTAINER (100% WIDTH WHEN SIDEBAR IS HIDDEN) */}
+        <div className="flex-1 w-full space-y-6">
+
         {activeTab === 'read' && activeChapter && (
           <ReadSection chapter={activeChapter} />
         )}

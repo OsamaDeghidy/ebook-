@@ -1,22 +1,18 @@
 import React, { useState, useRef } from 'react';
-import { Upload, FileText, Sparkles, BookOpen, AlertCircle, RefreshCw, X, GraduationCap, Compass, BookMarked, Check, Wand2 } from 'lucide-react';
+import { Upload, FileText, Sparkles, X, GraduationCap, BookMarked, Wand2, School, Building2 } from 'lucide-react';
 import { BookCategory, BookTrack } from '../types';
-import { BOOK_TRACKS, SUBCATEGORIES, GRADE_LEVELS, SEMESTERS, ACADEMIC_YEARS } from './EditBookModal';
+import { 
+  MAIN_CATEGORIES, 
+  EDUCATION_LEVELS, 
+  ACADEMIC_SYSTEMS, 
+  ACADEMIC_SUBJECTS, 
+  GENERAL_SUBJECTS, 
+  UNIVERSITY_FACULTIES, 
+  SEMESTERS, 
+  ACADEMIC_YEARS, 
+  getGradesForSystem 
+} from '../constants/taxonomy';
 import { supabase } from '../lib/supabase';
-
-export const ACADEMIC_SUBJECTS = [
-  'الرياضيات والإحصاء',
-  'الفيزياء والعلوم الطبيعية',
-  'الكيمياء والعلوم التطبيقية',
-  'الأحياء والجيولوجيا وعلوم الأرض',
-  'اللغة العربية والنحو والبلاغة',
-  'اللغة الإنجليزية والترجمة',
-  'التاريخ والجغرافيا والدراسات الاجتماعية',
-  'الفلسفة والمنطق وعلم النفس',
-  'علوم الحاسب وتكنولوجيا المعلومات',
-  'العلوم المالية وإدارة الأعمال والمحاسبة',
-  'الطب والعلوم الصحية والصيدلة'
-];
 
 interface ContentUploaderProps {
   onConvert: (payload: {
@@ -27,6 +23,8 @@ interface ContentUploaderProps {
     fileType?: string;
     category?: BookCategory;
     track?: BookTrack;
+    education_level?: string;
+    academic_system?: string;
     subcategory?: string;
     grade_level?: string;
     semester?: string;
@@ -62,18 +60,19 @@ export default function ContentUploader({
   // Main Mode: Academic Curriculum vs General Digital Library Book
   const [isAcademicMode, setIsAcademicMode] = useState<boolean>(true);
 
-  // Academic metadata states
-  const [category, setCategory] = useState<BookCategory>('digital_book');
-  const [track, setTrack] = useState<BookTrack>('academic');
-  const [subcategory, setSubcategory] = useState<string>(ACADEMIC_SUBJECTS[0]);
+  // Cascading Academic metadata states
+  const [educationLevel, setEducationLevel] = useState<string>('pre_university');
+  const [academicSystem, setAcademicSystem] = useState<string>('general_arabic');
   const [gradeLevel, setGradeLevel] = useState<string>('الصف الأول الثانوي');
-  const [semester, setSemester] = useState<string>(SEMESTERS[1]); // ترم أول
-  const [academicYear, setAcademicYear] = useState<string>(ACADEMIC_YEARS[0]); // 2026-2027
+  const [subcategory, setSubcategory] = useState<string>(ACADEMIC_SUBJECTS[0]);
+  const [universityFaculty, setUniversityFaculty] = useState<string>(UNIVERSITY_FACULTIES[0]);
+  const [semester, setSemester] = useState<string>(SEMESTERS[0]);
+  const [academicYear, setAcademicYear] = useState<string>(ACADEMIC_YEARS[0]);
 
-  // General Library metadata states
-  const [generalTrack, setGeneralTrack] = useState<BookTrack>('self_help');
-  const [generalSubcategory, setGeneralSubcategory] = useState<string>(SUBCATEGORIES[0]);
-  const [generalAudience, setGeneralAudience] = useState<string>(GRADE_LEVELS[0]);
+  // General Library metadata states (9 Non-academic Categories)
+  const [generalCategory, setGeneralCategory] = useState<BookCategory>('programming_ai');
+  const [generalSubcategory, setGeneralSubcategory] = useState<string>(GENERAL_SUBJECTS[0]);
+  const [generalAudience, setGeneralAudience] = useState<string>('عام / للقراء والمهتمين ورواد الأعمال');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -119,9 +118,9 @@ export default function ContentUploader({
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
+    if (e.type === 'dragenter' || e.type === 'dragover') {
       setDragActive(true);
-    } else if (e.type === "dragleave") {
+    } else if (e.type === 'dragleave') {
       setDragActive(false);
     }
   };
@@ -130,7 +129,6 @@ export default function ContentUploader({
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       processFile(e.dataTransfer.files[0]);
     }
@@ -142,48 +140,71 @@ export default function ContentUploader({
     }
   };
 
-  const triggerFileSelect = () => {
-    fileInputRef.current?.click();
-  };
-
   const clearSelectedFile = (e: React.MouseEvent) => {
     e.stopPropagation();
     setSelectedFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const triggerFileSelect = () => {
+    if (fileInputRef.current) fileInputRef.current.click();
+  };
+
+  const handleEducationLevelChange = (level: string) => {
+    setEducationLevel(level);
+    const validGrades = getGradesForSystem(level, academicSystem);
+    if (validGrades.length > 0) setGradeLevel(validGrades[0]);
+  };
+
+  const handleAcademicSystemChange = (system: string) => {
+    setAcademicSystem(system);
+    const validGrades = getGradesForSystem(educationLevel, system);
+    if (validGrades.length > 0) setGradeLevel(validGrades[0]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!promptText.trim() && !selectedFile) {
-      setErrorMsg("يرجى تزويد النظام بمصدر تعليمي (رفع ملف PDF أو كتابة تعليمات/توجيه للكتاب).");
+    if (!selectedFile && !promptText.trim()) {
+      setErrorMsg("يرجى كتابة فكرة الكتاب أو رفع ملف PDF للبدء.");
       return;
     }
 
     let fileUrl: string | undefined = undefined;
 
-    // Direct cloud storage upload for large files or PDFs to bypass Vercel 4.5MB payload limit
-    if (selectedFile?.rawFile && (selectedFile.rawFile.size > 2 * 1024 * 1024 || selectedFile.rawFile.type === 'application/pdf')) {
-      setIsUploadingCloud(true);
+    // 1. Direct Cloud Upload to Supabase Storage if file is attached
+    if (selectedFile?.rawFile) {
       try {
-        const uploadPath = `documents/${Date.now()}_file.pdf`;
-        const { error: uploadErr } = await supabase.storage
-          .from('book-covers')
-          .upload(uploadPath, selectedFile.rawFile, { upsert: true });
+        setIsUploadingCloud(true);
+        const fileExt = selectedFile.rawFile.name.split('.').pop();
+        const safeId = crypto.randomUUID();
+        const fileName = `${Date.now()}-${safeId}.${fileExt}`;
+        const filePath = `uploads/${fileName}`;
 
-        if (!uploadErr) {
-          const { data: publicUrlData } = supabase.storage
-            .from('book-covers')
-            .getPublicUrl(uploadPath);
-          fileUrl = publicUrlData.publicUrl;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('ebook-files')
+          .upload(filePath, selectedFile.rawFile, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (!uploadError && uploadData) {
+          const { data: { publicUrl } } = supabase.storage
+            .from('ebook-files')
+            .getPublicUrl(filePath);
+          fileUrl = publicUrl;
         }
-      } catch (err) {
-        console.warn("Supabase direct upload notice:", err);
+      } catch (uploadErr) {
+        console.warn("Direct storage upload failed, falling back to base64 payload:", uploadErr);
       } finally {
         setIsUploadingCloud(false);
       }
     }
+
+    const activeSubcategory = isAcademicMode 
+      ? (educationLevel === 'university' ? universityFaculty : subcategory)
+      : generalSubcategory;
+
+    const activeGrade = isAcademicMode ? gradeLevel : generalAudience;
 
     onConvert({
       promptText,
@@ -191,10 +212,12 @@ export default function ContentUploader({
       fileBase64: fileUrl ? undefined : selectedFile?.base64,
       fileName: selectedFile?.name,
       fileType: selectedFile?.type,
-      category: isAcademicMode ? 'digital_book' : 'self_help',
-      track: isAcademicMode ? 'academic' : generalTrack,
-      subcategory: isAcademicMode ? subcategory : generalSubcategory,
-      grade_level: isAcademicMode ? gradeLevel : generalAudience,
+      category: isAcademicMode ? 'academic_curriculum' : generalCategory,
+      track: isAcademicMode ? 'academic' : 'general_literature',
+      education_level: isAcademicMode ? educationLevel : undefined,
+      academic_system: isAcademicMode ? (educationLevel === 'university' ? 'تعليم جامعي' : academicSystem) : undefined,
+      subcategory: activeSubcategory,
+      grade_level: activeGrade,
       semester: isAcademicMode ? semester : 'كتاب عام مستمر',
       academic_year: academicYear,
       price: Number(price) || 0,
@@ -325,65 +348,147 @@ export default function ContentUploader({
 
         {/* CONDITIONAL FORM FIELDS BASED ON SELECTED MODE */}
         {isAcademicMode ? (
-          /* ACADEMIC FIELDS */
+          /* ACADEMIC FIELDS - CASCADING TAXONOMY */
           <div className="p-5 bg-white border border-gray-200 rounded-3xl space-y-4 shadow-sm">
-            <h4 className="text-xs font-black text-gray-800 flex items-center gap-2">
-              <GraduationCap className="w-4 h-4 text-indigo-600" />
-              <span>بيانات المقرر والمادة الدراسية</span>
-            </h4>
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <h4 className="text-xs font-black text-gray-800 flex items-center gap-2">
+                <GraduationCap className="w-4 h-4 text-indigo-600" />
+                <span>الهيكلية الأكاديمية للمقرر والمنهج الدراسي</span>
+              </h4>
+              <span className="text-[11px] font-bold text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100">
+                مناهج ومقررات دراسية
+              </span>
+            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-bold text-gray-700 block mb-1.5">المادة الدراسية / التخصص</label>
-                <select
-                  value={subcategory}
-                  onChange={(e) => setSubcategory(e.target.value)}
-                  disabled={isConverting}
-                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500 focus:bg-white"
-                >
-                  {ACADEMIC_SUBJECTS.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-gray-700 block mb-1.5">الصف / المرحلة التعليمية</label>
-                <select
-                  value={gradeLevel}
-                  onChange={(e) => setGradeLevel(e.target.value)}
-                  disabled={isConverting}
-                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500 focus:bg-white"
-                >
-                  {GRADE_LEVELS.filter(g => !g.includes('للقراء') && !g.includes('مبتدئ')).map((g) => (
-                    <option key={g} value={g}>{g}</option>
-                  ))}
-                </select>
+            {/* 1. EDUCATION LEVEL SELECTOR (قبل جامعي vs جامعي) */}
+            <div>
+              <label className="text-xs font-bold text-gray-700 block mb-1.5">1. المرحلة التعليمية الرئيسية</label>
+              <div className="grid grid-cols-2 gap-2">
+                {EDUCATION_LEVELS.map((lvl) => (
+                  <button
+                    type="button"
+                    key={lvl.id}
+                    onClick={() => handleEducationLevelChange(lvl.id)}
+                    className={`p-3 rounded-2xl flex items-center justify-center gap-2 text-xs font-black transition border ${
+                      educationLevel === lvl.id
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                        : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                    }`}
+                  >
+                    {lvl.id === 'pre_university' ? <School className="w-4 h-4" /> : <Building2 className="w-4 h-4" />}
+                    <span>{lvl.label}</span>
+                  </button>
+                ))}
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* 2. PRE-UNIVERSITY CASCADING FIELDS */}
+            {educationLevel === 'pre_university' ? (
+              <div className="space-y-4 p-4 bg-gray-50/80 border border-gray-200/80 rounded-2xl">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* System Track */}
+                  <div>
+                    <label className="text-xs font-bold text-gray-700 block mb-1.5">2. مسار ونظام التعليم</label>
+                    <select
+                      value={academicSystem}
+                      onChange={(e) => handleAcademicSystemChange(e.target.value)}
+                      disabled={isConverting}
+                      className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500"
+                    >
+                      {ACADEMIC_SYSTEMS.map((sys) => (
+                        <option key={sys.id} value={sys.id}>{sys.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Grade Level */}
+                  <div>
+                    <label className="text-xs font-bold text-gray-700 block mb-1.5">3. الصف والمرحلة الدراسية</label>
+                    <select
+                      value={gradeLevel}
+                      onChange={(e) => setGradeLevel(e.target.value)}
+                      disabled={isConverting}
+                      className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500"
+                    >
+                      {getGradesForSystem('pre_university', academicSystem).map((g) => (
+                        <option key={g} value={g}>{g}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-gray-700 block mb-1.5">4. المادة الدراسية / التخصص</label>
+                  <select
+                    value={subcategory}
+                    onChange={(e) => setSubcategory(e.target.value)}
+                    disabled={isConverting}
+                    className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500"
+                  >
+                    {ACADEMIC_SUBJECTS.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            ) : (
+              /* UNIVERSITY FIELDS */
+              <div className="space-y-4 p-4 bg-indigo-50/50 border border-indigo-100 rounded-2xl">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-bold text-gray-700 block mb-1.5">2. الكلية / التخصص الجامعي</label>
+                    <select
+                      value={universityFaculty}
+                      onChange={(e) => setUniversityFaculty(e.target.value)}
+                      disabled={isConverting}
+                      className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500"
+                    >
+                      {UNIVERSITY_FACULTIES.map((fac) => (
+                        <option key={fac} value={fac}>{fac}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-gray-700 block mb-1.5">3. السنة / الفرقة الدراسية</label>
+                    <select
+                      value={gradeLevel}
+                      onChange={(e) => setGradeLevel(e.target.value)}
+                      disabled={isConverting}
+                      className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500"
+                    >
+                      {getGradesForSystem('university').map((g) => (
+                        <option key={g} value={g}>{g}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SEMESTER & YEAR */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
               <div>
                 <label className="text-xs font-bold text-gray-700 block mb-1.5">الفصل الدراسي</label>
                 <select
                   value={semester}
                   onChange={(e) => setSemester(e.target.value)}
                   disabled={isConverting}
-                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500 focus:bg-white"
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500 focus:bg-white"
                 >
-                  {SEMESTERS.filter(s => s.includes('ترم') || s.includes('مستمر') || s.includes('صيفي')).map((sem) => (
+                  {SEMESTERS.map((sem) => (
                     <option key={sem} value={sem}>{sem}</option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-gray-700 block mb-1.5">السنة الدراسية</label>
+                <label className="text-xs font-bold text-gray-700 block mb-1.5">السنة الدراسية / الطبعة</label>
                 <select
                   value={academicYear}
                   onChange={(e) => setAcademicYear(e.target.value)}
                   disabled={isConverting}
-                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500 focus:bg-white"
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500 focus:bg-white"
                 >
                   {ACADEMIC_YEARS.map((y) => (
                     <option key={y} value={y}>{y}</option>
@@ -393,27 +498,30 @@ export default function ContentUploader({
             </div>
           </div>
         ) : (
-          /* GENERAL LIBRARY FIELDS */
+          /* GENERAL LIBRARY FIELDS - 9 MAIN CATEGORIES */
           <div className="p-5 bg-white border border-gray-200 rounded-3xl space-y-4 shadow-sm">
             <h4 className="text-xs font-black text-gray-800 flex items-center gap-2">
               <BookMarked className="w-4 h-4 text-indigo-600" />
-              <span>تصنيف الكتاب في المكتبة العامة</span>
+              <span>اختر قسم الكتاب من أقسام المكتبة الرقمية العامة</span>
             </h4>
 
-            {/* TRACK PICKER */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {BOOK_TRACKS.filter(t => t.id !== 'academic').map(t => (
+            {/* 9 MAIN NON-ACADEMIC CATEGORIES GRID */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {MAIN_CATEGORIES.filter(c => !c.isAcademic).map(c => (
                 <button
                   type="button"
-                  key={t.id}
-                  onClick={() => setGeneralTrack(t.id)}
-                  className={`p-2.5 rounded-xl text-xs font-bold transition text-right border ${
-                    generalTrack === t.id
+                  key={c.id}
+                  onClick={() => setGeneralCategory(c.id as BookCategory)}
+                  className={`p-3 rounded-2xl text-xs font-bold transition text-right border flex flex-col justify-between gap-1.5 ${
+                    generalCategory === c.id
                       ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
                       : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
                   }`}
                 >
-                  {t.label}
+                  <span className="font-black text-[11px]">{c.label}</span>
+                  <span className={`text-[10px] leading-tight line-clamp-1 ${generalCategory === c.id ? 'text-indigo-100' : 'text-gray-400'}`}>
+                    {c.description}
+                  </span>
                 </button>
               ))}
             </div>
@@ -425,9 +533,9 @@ export default function ContentUploader({
                   value={generalSubcategory}
                   onChange={(e) => setGeneralSubcategory(e.target.value)}
                   disabled={isConverting}
-                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500 focus:bg-white"
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500 focus:bg-white"
                 >
-                  {SUBCATEGORIES.map((s) => (
+                  {GENERAL_SUBJECTS.map((s) => (
                     <option key={s} value={s}>{s}</option>
                   ))}
                 </select>
@@ -439,7 +547,7 @@ export default function ContentUploader({
                   value={generalAudience}
                   onChange={(e) => setGeneralAudience(e.target.value)}
                   disabled={isConverting}
-                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500 focus:bg-white"
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500 focus:bg-white"
                 >
                   <option value="عام / للقراء والمهتمين ورواد الأعمال">عام / للقراء والمهتمين ورواد الأعمال</option>
                   <option value="مستوى مبتدئ / تأسيسي">مستوى مبتدئ / تأسيسي</option>

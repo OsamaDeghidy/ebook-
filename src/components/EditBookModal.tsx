@@ -1,14 +1,22 @@
 import React, { useState } from 'react';
-import { X, Save, BookOpen, Layers, Calendar, GraduationCap, Tag, DollarSign, Image, Sparkles } from 'lucide-react';
+import { X, Save, BookOpen, Layers, Calendar, GraduationCap, Tag, DollarSign, Image, Sparkles, School, Building2 } from 'lucide-react';
 import { MarketplaceBook, BookCategory, BookTrack } from '../types';
+import { 
+  MAIN_CATEGORIES, 
+  EDUCATION_LEVELS, 
+  ACADEMIC_SYSTEMS, 
+  ACADEMIC_SUBJECTS, 
+  GENERAL_SUBJECTS, 
+  UNIVERSITY_FACULTIES, 
+  SEMESTERS, 
+  ACADEMIC_YEARS, 
+  getGradesForSystem 
+} from '../constants/taxonomy';
 
-interface EditBookModalProps {
-  isOpen: boolean;
-  book: MarketplaceBook | null;
-  onClose: () => void;
-  onSave: (updatedBook: MarketplaceBook) => Promise<void>;
-}
-
+// Re-export for compatibility
+export { ACADEMIC_SUBJECTS, GENERAL_SUBJECTS, SEMESTERS, ACADEMIC_YEARS };
+export const SUBCATEGORIES = GENERAL_SUBJECTS;
+export const GRADE_LEVELS = getGradesForSystem('pre_university', 'general_arabic');
 export const BOOK_TRACKS: { id: BookTrack; label: string }[] = [
   { id: 'academic', label: 'مناهج دراسية ومقررات تعليمية' },
   { id: 'self_help', label: 'تطوير الذات والمهارات القيادية' },
@@ -19,48 +27,12 @@ export const BOOK_TRACKS: { id: BookTrack; label: string }[] = [
   { id: 'general_literature', label: 'كتب عامة وروايات وفكر عالمي' }
 ];
 
-export const SUBCATEGORIES = [
-  'تطوير الذات والمهارات الحياتية',
-  'المالية والاستثمار وإدارة الثروة',
-  'البرمجة وعلوم الحاسب والذكاء الاصطناعي',
-  'الرياضيات والإحصاء',
-  'الفيزياء والكيمياء والعلوم الطبيعية',
-  'إدارة الأعمال والتسويق والقيادة',
-  'اللغات والترجمة والنحو',
-  'الأدب والروايات والفكر الإنساني',
-  'الطب والعلوم الصحية والصيدلة',
-  'القانون والعلوم السياسية والإدارية'
-];
-
-export const GRADE_LEVELS = [
-  'عام / للقراء والمهتمين ورواد الأعمال',
-  'مستوى مبتدئ / تأسيسي',
-  'مستوى متوسط وعملي',
-  'مستوى متقدم وتخصصي',
-  'الصف الأول الثانوي',
-  'الصف الثاني الثانوي',
-  'الصف الثالث الثانوي (شهادة عامة)',
-  'المرحلة الإعدادية / المتوسطة',
-  'المرحلة الابتدائية',
-  'المرحلة الجامعية - سنة أولى/ثانية',
-  'المرحلة الجامعية - تخرج وتخصص',
-  'دراسات عليا وتدريب مهني'
-];
-
-export const SEMESTERS = [
-  'كتاب عام مستمر (بدون ترم)',
-  'الفصل الدراسي الأول (ترم أول)',
-  'الفصل الدراسي الثاني (ترم ثاني)',
-  'الفصل الدراسي الصيفي',
-  'مقرر سنوي مستمر'
-];
-
-export const ACADEMIC_YEARS = [
-  'إصدار عام 2026 - 2027',
-  'إصدار 2025 - 2026',
-  'إصدار 2024 - 2025',
-  'طبعة كلاسيكية عالمية'
-];
+interface EditBookModalProps {
+  isOpen: boolean;
+  book: MarketplaceBook | null;
+  onClose: () => void;
+  onSave: (updatedBook: MarketplaceBook) => Promise<void>;
+}
 
 export const EditBookModal: React.FC<EditBookModalProps> = ({
   isOpen,
@@ -73,12 +45,18 @@ export const EditBookModal: React.FC<EditBookModalProps> = ({
   const [title, setTitle] = useState(book.title || '');
   const [description, setDescription] = useState(book.description || '');
   const [authorName, setAuthorName] = useState(book.author_name || 'د. كريم كامل');
-  const [category, setCategory] = useState<BookCategory>(book.category || 'digital_book');
-  const [track, setTrack] = useState<BookTrack>(book.track || 'general_literature');
-  const [subcategory, setSubcategory] = useState(book.subcategory || SUBCATEGORIES[0]);
-  const [gradeLevel, setGradeLevel] = useState(book.grade_level || GRADE_LEVELS[0]);
+  const [category, setCategory] = useState<BookCategory>(book.category || 'academic_curriculum');
+  
+  // Cascading Academic states
+  const [educationLevel, setEducationLevel] = useState<string>(book.education_level || 'pre_university');
+  const [academicSystem, setAcademicSystem] = useState<string>(book.academic_system || 'general_arabic');
+  const [gradeLevel, setGradeLevel] = useState<string>(book.grade_level || 'الصف الأول الثانوي');
+  const [subcategory, setSubcategory] = useState(book.subcategory || ACADEMIC_SUBJECTS[0]);
+  const [universityFaculty, setUniversityFaculty] = useState(book.subcategory || UNIVERSITY_FACULTIES[0]);
   const [semester, setSemester] = useState(book.semester || SEMESTERS[0]);
   const [academicYear, setAcademicYear] = useState(book.academic_year || ACADEMIC_YEARS[0]);
+  
+  const [externalUrl, setExternalUrl] = useState(book.external_url || '');
   const [tagsInput, setTagsInput] = useState((book.tags || []).filter(t => !t.includes(':')).join(', '));
   const [price, setPrice] = useState<number>(book.price || 0);
   const [previewVideoUrl, setPreviewVideoUrl] = useState<string>(() => {
@@ -95,7 +73,19 @@ export const EditBookModal: React.FC<EditBookModalProps> = ({
   const [showVideos, setShowVideos] = useState(book.feature_toggles?.show_videos !== false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const isAcademic = track === 'academic';
+  const isAcademic = category === 'academic_curriculum' || book.track === 'academic';
+
+  const handleEducationLevelChange = (level: string) => {
+    setEducationLevel(level);
+    const validGrades = getGradesForSystem(level, academicSystem);
+    if (validGrades.length > 0) setGradeLevel(validGrades[0]);
+  };
+
+  const handleAcademicSystemChange = (system: string) => {
+    setAcademicSystem(system);
+    const validGrades = getGradesForSystem(educationLevel, system);
+    if (validGrades.length > 0) setGradeLevel(validGrades[0]);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,10 +96,14 @@ export const EditBookModal: React.FC<EditBookModalProps> = ({
         .map(t => t.trim().replace(/^#/, ''))
         .filter(Boolean);
 
+      const activeSubcategory = isAcademic 
+        ? (educationLevel === 'university' ? universityFaculty : subcategory)
+        : subcategory;
+
       const structuredTags = [
         ...cleanTags,
-        `track:${track}`,
-        `sub:${subcategory}`,
+        `track:${isAcademic ? 'academic' : 'general_literature'}`,
+        `sub:${activeSubcategory}`,
         `grade:${gradeLevel}`,
         `term:${semester}`,
         `year:${academicYear}`,
@@ -122,13 +116,16 @@ export const EditBookModal: React.FC<EditBookModalProps> = ({
         description,
         author_name: authorName,
         category,
-        track,
-        subcategory,
+        track: isAcademic ? 'academic' : 'general_literature',
+        education_level: isAcademic ? educationLevel : undefined,
+        academic_system: isAcademic ? (educationLevel === 'university' ? 'تعليم جامعي' : academicSystem) : undefined,
+        subcategory: activeSubcategory,
         grade_level: gradeLevel,
         semester,
         academic_year: academicYear,
         tags: structuredTags,
         price: Number(price) || 0,
+        external_url: book.is_external ? externalUrl.trim() : book.external_url,
         preview_video_url: previewVideoUrl.trim() || undefined,
         thumbnail_url: thumbnailUrl || book.thumbnail_url,
         feature_toggles: {
@@ -172,25 +169,30 @@ export const EditBookModal: React.FC<EditBookModalProps> = ({
 
         <form onSubmit={handleSubmit} className="space-y-5">
           
-          {/* TRACK SELECTION */}
-          <div className="bg-gradient-to-r from-indigo-50/70 to-purple-50/70 p-4 rounded-2xl border border-indigo-100 space-y-2">
-            <label className="text-xs font-black text-indigo-950 flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-indigo-600" />
-              <span>المسار والنوع الرئيسي للكتاب</span>
+          {/* 10 MAIN CATEGORIES PICKER */}
+          <div className="bg-gradient-to-r from-indigo-50/70 to-purple-50/70 p-4 rounded-2xl border border-indigo-100 space-y-2.5">
+            <label className="text-xs font-black text-indigo-950 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-indigo-600" />
+                <span>قسم وتصنيف الكتاب في المكتبة الرقمية</span>
+              </span>
+              <span className="text-[10px] font-bold text-indigo-600 bg-white px-2 py-0.5 rounded-full border border-indigo-100">
+                10 أقسام رئيسية
+              </span>
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {BOOK_TRACKS.map(t => (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+              {MAIN_CATEGORIES.map(c => (
                 <button
                   type="button"
-                  key={t.id}
-                  onClick={() => setTrack(t.id)}
-                  className={`p-2.5 rounded-xl text-xs font-bold transition text-right border ${
-                    track === t.id
+                  key={c.id}
+                  onClick={() => setCategory(c.id as BookCategory)}
+                  className={`p-2 rounded-xl text-[11px] font-black transition text-center border leading-tight flex items-center justify-center min-h-[44px] ${
+                    category === c.id
                       ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
                       : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
                   }`}
                 >
-                  {t.label}
+                  {c.label}
                 </button>
               ))}
             </div>
@@ -272,72 +274,195 @@ export const EditBookModal: React.FC<EditBookModalProps> = ({
                   value={previewVideoUrl}
                   onChange={(e) => setPreviewVideoUrl(e.target.value)}
                   placeholder="https://www.youtube.com/watch?v=..."
-                  className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-900 outline-none focus:border-indigo-500"
+                  className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-900 outline-none focus:border-teal-500"
                 />
               </div>
             </div>
+
+            {book.is_external && (
+              <div className="pt-2 border-t border-amber-200/60">
+                <label className="block text-[11px] font-bold text-gray-700 mb-1">
+                  رابط حزمة المحتوى التفاعلي السحابي (يتم تضمينه بأمان داخل مشغل المنصة)
+                </label>
+                <input
+                  type="url"
+                  value={externalUrl}
+                  onChange={(e) => setExternalUrl(e.target.value)}
+                  placeholder="https://..."
+                  className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-900 outline-none focus:border-teal-500"
+                />
+                <p className="text-[10px] text-teal-700 mt-1 font-bold">
+                  🔒 يتم تشغيل هذا المحتوى للمشتركين حصرياً داخل مشغل المنصة المدمج دون توجيه أو كشف للرابط.
+                </p>
+              </div>
+            )}
           </div>
 
-          {/* DYNAMIC TAXONOMY */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1.5">التخصص / المجال الفرعي</label>
-              <select
-                value={subcategory}
-                onChange={(e) => setSubcategory(e.target.value)}
-                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold outline-none focus:border-indigo-500 focus:bg-white"
-              >
-                {SUBCATEGORIES.map(sub => (
-                  <option key={sub} value={sub}>{sub}</option>
-                ))}
-              </select>
-            </div>
+          {/* DYNAMIC CASCADING TAXONOMY */}
+          {isAcademic ? (
+            <div className="p-4 bg-gray-50 border border-gray-200 rounded-2xl space-y-4">
+              <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+                <span className="text-xs font-black text-gray-800 flex items-center gap-1.5">
+                  <GraduationCap className="w-4 h-4 text-indigo-600" />
+                  <span>الهيكلية الأكاديمية للمقرر</span>
+                </span>
+                <span className="text-[10px] font-bold text-indigo-700 bg-indigo-100/70 px-2 py-0.5 rounded-full">
+                  مناهج ومقررات دراسية
+                </span>
+              </div>
 
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                {isAcademic ? 'الصف / المرحلة التعليمية' : 'المستوى المستهدف'}
-              </label>
-              <select
-                value={gradeLevel}
-                onChange={(e) => setGradeLevel(e.target.value)}
-                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold outline-none focus:border-indigo-500 focus:bg-white"
-              >
-                {GRADE_LEVELS.map(g => (
-                  <option key={g} value={g}>{g}</option>
-                ))}
-              </select>
-            </div>
-          </div>
+              {/* 1. Education Level */}
+              <div>
+                <label className="block text-[11px] font-bold text-gray-600 mb-1">1. المرحلة التعليمية</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {EDUCATION_LEVELS.map((lvl) => (
+                    <button
+                      type="button"
+                      key={lvl.id}
+                      onClick={() => handleEducationLevelChange(lvl.id)}
+                      className={`p-2 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold transition border ${
+                        educationLevel === lvl.id
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                          : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      {lvl.id === 'pre_university' ? <School className="w-3.5 h-3.5" /> : <Building2 className="w-3.5 h-3.5" />}
+                      <span>{lvl.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                {isAcademic ? 'الفصل الدراسي' : 'طبيعة الإصدار'}
-              </label>
-              <select
-                value={semester}
-                onChange={(e) => setSemester(e.target.value)}
-                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold outline-none focus:border-indigo-500 focus:bg-white"
-              >
-                {SEMESTERS.map(s => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-            </div>
+              {/* 2. Cascading Fields */}
+              {educationLevel === 'pre_university' ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-600 mb-1">2. مسار التعليم</label>
+                    <select
+                      value={academicSystem}
+                      onChange={(e) => handleAcademicSystemChange(e.target.value)}
+                      className="w-full p-2 bg-white border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500"
+                    >
+                      {ACADEMIC_SYSTEMS.map((sys) => (
+                        <option key={sys.id} value={sys.id}>{sys.label}</option>
+                      ))}
+                    </select>
+                  </div>
 
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1.5">السنة / الطبعة</label>
-              <select
-                value={academicYear}
-                onChange={(e) => setAcademicYear(e.target.value)}
-                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold outline-none focus:border-indigo-500 focus:bg-white"
-              >
-                {ACADEMIC_YEARS.map(y => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-600 mb-1">3. الصف الدراسي</label>
+                    <select
+                      value={gradeLevel}
+                      onChange={(e) => setGradeLevel(e.target.value)}
+                      className="w-full p-2 bg-white border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500"
+                    >
+                      {getGradesForSystem('pre_university', academicSystem).map((g) => (
+                        <option key={g} value={g}>{g}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-600 mb-1">2. الكلية / التخصص الجامعي</label>
+                    <select
+                      value={universityFaculty}
+                      onChange={(e) => setUniversityFaculty(e.target.value)}
+                      className="w-full p-2 bg-white border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500"
+                    >
+                      {UNIVERSITY_FACULTIES.map((fac) => (
+                        <option key={fac} value={fac}>{fac}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-600 mb-1">3. الفرقة الدراسية</label>
+                    <select
+                      value={gradeLevel}
+                      onChange={(e) => setGradeLevel(e.target.value)}
+                      className="w-full p-2 bg-white border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500"
+                    >
+                      {getGradesForSystem('university').map((g) => (
+                        <option key={g} value={g}>{g}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-600 mb-1">المادة الدراسية</label>
+                  <select
+                    value={subcategory}
+                    onChange={(e) => setSubcategory(e.target.value)}
+                    className="w-full p-2 bg-white border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500"
+                  >
+                    {ACADEMIC_SUBJECTS.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-600 mb-1">الفصل الدراسي</label>
+                  <select
+                    value={semester}
+                    onChange={(e) => setSemester(e.target.value)}
+                    className="w-full p-2 bg-white border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500"
+                  >
+                    {SEMESTERS.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-600 mb-1">السنة / الطبعة</label>
+                  <select
+                    value={academicYear}
+                    onChange={(e) => setAcademicYear(e.target.value)}
+                    className="w-full p-2 bg-white border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500"
+                  >
+                    {ACADEMIC_YEARS.map((y) => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1.5">الموضوع / التخصص الفرعي</label>
+                <select
+                  value={subcategory}
+                  onChange={(e) => setSubcategory(e.target.value)}
+                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold outline-none focus:border-indigo-500 focus:bg-white"
+                >
+                  {GENERAL_SUBJECTS.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1.5">المستوى والجمهور المستهدف</label>
+                <select
+                  value={gradeLevel}
+                  onChange={(e) => setGradeLevel(e.target.value)}
+                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold outline-none focus:border-indigo-500 focus:bg-white"
+                >
+                  <option value="عام / للقراء والمهتمين ورواد الأعمال">عام / للقراء والمهتمين ورواد الأعمال</option>
+                  <option value="مستوى مبتدئ / تأسيسي">مستوى مبتدئ / تأسيسي</option>
+                  <option value="مستوى متوسط وتطبيقي">مستوى متوسط وتطبيقي</option>
+                  <option value="مستوى متقدم وتخصصي">مستوى متقدم وتخصصي</option>
+                </select>
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1.5">الوسوم والكلمات الدلالية (مفصولة بفاصلة)</label>

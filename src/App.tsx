@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useNavigate, useParams, Link } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useNavigate, useParams, Link, useLocation } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import {
-  BookOpen, ArrowLeft, Brain, HelpCircle, Youtube, Edit, Radio, Shield, LogOut, User, X
+  BookOpen, ArrowLeft, Brain, HelpCircle, Youtube, Edit, Radio, Shield, LogOut, User, X, Sparkles, Compass, ShoppingCart
 } from 'lucide-react';
 import { MarketplaceBook, UserRole } from './types';
 import ContentUploader from './components/ContentUploader';
@@ -13,6 +13,7 @@ import ChapterEditor from './components/ChapterEditor';
 import PodcastLounge from './components/PodcastLounge';
 import { ReadSection } from './components/ReadSection';
 import { MarketplaceView } from './components/MarketplaceView';
+import { LandingPageView } from './components/LandingPageView';
 import { AuthModal } from './components/AuthModal';
 import { AddExternalBookModal } from './components/AddExternalBookModal';
 import BookDetailsRoute from './routes/BookDetailsRoute';
@@ -117,6 +118,8 @@ function AppContent() {
       
       if (!error && data) {
         const formatted: MarketplaceBook[] = data.map((b: any) => {
+          let education_level = b.education_level;
+          let academic_system = b.academic_system;
           let subcategory = b.subcategory;
           let grade_level = b.grade_level;
           let semester = b.semester;
@@ -125,6 +128,8 @@ function AppContent() {
 
           if (Array.isArray(b.tags)) {
             b.tags.forEach((t: string) => {
+              if (t.startsWith('edu_level:') && !education_level) education_level = t.replace('edu_level:', '');
+              if (t.startsWith('system:') && !academic_system) academic_system = t.replace('system:', '');
               if (t.startsWith('sub:') && !subcategory) subcategory = t.replace('sub:', '');
               if (t.startsWith('grade:') && !grade_level) grade_level = t.replace('grade:', '');
               if (t.startsWith('term:') && !semester) semester = t.replace('term:', '');
@@ -137,6 +142,8 @@ function AppContent() {
             ...b,
             author_name: b.author_name || 'د. كريم كامل',
             category: b.category || 'digital_book',
+            education_level,
+            academic_system,
             subcategory,
             grade_level,
             semester,
@@ -360,6 +367,8 @@ function AppContent() {
       const academicTags = [
         'كتاب_تفاعلي',
         'ذكاء_اصطناعي',
+        payload.education_level ? `edu_level:${payload.education_level}` : '',
+        payload.academic_system ? `system:${payload.academic_system}` : '',
         payload.subcategory ? `sub:${payload.subcategory}` : '',
         payload.grade_level ? `grade:${payload.grade_level}` : '',
         payload.semester ? `term:${payload.semester}` : '',
@@ -370,7 +379,10 @@ function AppContent() {
       const newBook: MarketplaceBook = {
         ...generatedEbook,
         author_name: 'د. كريم كامل',
-        category: payload.category || 'digital_book',
+        category: payload.category || 'academic_curriculum',
+        track: payload.track || 'academic',
+        education_level: payload.education_level,
+        academic_system: payload.academic_system,
         subcategory: payload.subcategory,
         grade_level: payload.grade_level,
         semester: payload.semester,
@@ -441,28 +453,75 @@ function AppContent() {
     setIsAdminMode(false);
   };
 
+  const location = useLocation();
+  const isLandingPage = location.pathname === '/';
+
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 flex flex-col font-sans selection:bg-indigo-500 selection:text-white" dir="rtl">
-      {/* GLOBAL SAAS NAVBAR (Light Theme) */}
-      <header className="bg-white/90 border-b border-gray-200 sticky top-0 z-40 px-6 py-4 backdrop-blur-md flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-3 cursor-pointer">
-          <div className="w-10 h-10 bg-gradient-to-tr from-indigo-600 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200/50 text-white">
-            <BookOpen className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="font-black text-sm text-gray-900 tracking-tight">منصة المقررات الأكاديمية والكتب التفاعلية</h1>
-            <p className="text-[11px] text-indigo-600 font-bold">Interactive Ebook LMS & Marketplace Studio</p>
-          </div>
-        </Link>
+    <div className="min-h-screen bg-gray-50 text-gray-900 flex flex-col font-sans selection:bg-teal-500 selection:text-white" dir="rtl">
+      {/* GLOBAL SAAS NAVBAR (simplest Branding) */}
+      <header className="bg-white/95 border-b border-gray-200 sticky top-0 z-40 px-4 sm:px-6 py-3.5 backdrop-blur-md flex items-center justify-between">
+        <div className="flex items-center gap-6">
+          <Link to="/" className="flex items-center gap-3 cursor-pointer group">
+            <div className="w-10 h-10 bg-gradient-to-tr from-teal-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-md shadow-teal-500/25 text-white font-black text-xl group-hover:scale-105 transition">
+              S
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="font-black text-lg text-slate-900 tracking-tight">simplest</span>
+                <span className="text-[10px] font-black bg-teal-50 text-teal-700 border border-teal-200 px-1.5 py-0.5 rounded-md">LMS</span>
+              </div>
+              <p className="text-[10px] text-slate-500 font-bold">بإشراف د. كريم كامل (Dr. Koryem Kamel)</p>
+            </div>
+          </Link>
+
+          {/* MAIN DESKTOP NAVIGATION LINKS */}
+          <nav className="hidden md:flex items-center gap-1 text-xs font-bold">
+            <Link
+              to="/"
+              className={`px-3 py-2 rounded-xl transition ${
+                isLandingPage
+                  ? 'bg-slate-900 text-white font-black'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              الرئيسية
+            </Link>
+
+            <Link
+              to="/marketplace"
+              className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 ${
+                !isLandingPage
+                  ? 'bg-teal-600 text-white font-black shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <ShoppingCart className="w-3.5 h-3.5" />
+              <span>متجر ومكتبة المقررات</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${!isLandingPage ? 'bg-teal-700 text-white' : 'bg-slate-200 text-slate-700'}`}>
+                {ebooks.length}
+              </span>
+            </Link>
+          </nav>
+        </div>
 
         {/* CONTROLS & AUTH BUTTONS */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
+          {isLandingPage && (
+            <Link
+              to="/marketplace"
+              className="hidden sm:flex px-4 py-2 bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 text-white font-black text-xs rounded-xl shadow-sm transition items-center gap-1.5"
+            >
+              <ShoppingCart className="w-3.5 h-3.5" />
+              <span>تصفح المقررات</span>
+            </Link>
+          )}
+
           {userRole === 'admin' && (
             <button
               onClick={() => setIsAdminMode(!isAdminMode)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-black border transition flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-full text-xs font-black border transition flex items-center gap-1.5 ${
                 isAdminMode
-                  ? 'bg-amber-100 border-amber-300 text-amber-700'
+                  ? 'bg-amber-100 border-amber-300 text-amber-800'
                   : 'bg-white border-gray-300 text-gray-600 hover:text-gray-900'
               }`}
             >
@@ -473,14 +532,14 @@ function AppContent() {
 
           {currentUser ? (
             <div className="flex items-center gap-2">
-              <div className="px-3 py-1.5 bg-gray-100 border border-gray-200 rounded-xl flex items-center gap-2 text-xs font-bold text-gray-700">
-                <User className="w-3.5 h-3.5 text-indigo-600" />
+              <div className="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-xl flex items-center gap-2 text-xs font-bold text-slate-700">
+                <User className="w-3.5 h-3.5 text-teal-600" />
                 <span>{currentUser.email?.split('@')[0]}</span>
               </div>
               <button
                 onClick={handleLogout}
                 title="تسجيل الخروج"
-                className="p-2 text-gray-400 hover:text-rose-500 hover:bg-gray-100 rounded-xl transition"
+                className="p-2 text-slate-400 hover:text-rose-500 hover:bg-slate-100 rounded-xl transition"
               >
                 <LogOut className="w-4 h-4" />
               </button>
@@ -488,43 +547,53 @@ function AppContent() {
           ) : (
             <button
               onClick={() => setIsAuthModalOpen(true)}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-sm transition active:scale-95 flex items-center gap-1.5"
+              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition active:scale-95 flex items-center gap-1.5"
             >
-              <User className="w-3.5 h-3.5" />
+              <User className="w-3.5 h-3.5 text-teal-400" />
               <span>تسجيل الدخول</span>
             </button>
           )}
         </div>
       </header>
 
-      <main className="flex-1 p-6 max-w-7xl mx-auto w-full space-y-6">
+      <main className="flex-1 w-full">
         <Routes>
           <Route path="/" element={
-            <MarketplaceView
+            <LandingPageView
               books={ebooks}
-              userRole={userRole}
-              isAdminMode={isAdminMode}
-              purchasedBookIds={purchasedBookIds}
-              onLaunchBook={handleLaunchBook}
-              onLaunchQuiz={handleLaunchQuiz}
-              onOpenCreateModal={() => setIsAiCreateModalOpen(true)}
-              onOpenExternalModal={() => setIsExternalModalOpen(true)}
-              onTogglePublish={handleTogglePublish}
-              onDeleteBook={handleDeleteBook}
-              onUpdateBook={handleUpdateBook}
-              onPurchaseBook={handlePurchaseBook}
+              onOpenAuth={() => setIsAuthModalOpen(true)}
             />
           } />
+          <Route path="/marketplace" element={
+            <div className="p-4 sm:p-6 max-w-7xl mx-auto w-full space-y-6">
+              <MarketplaceView
+                books={ebooks}
+                userRole={userRole}
+                isAdminMode={isAdminMode}
+                purchasedBookIds={purchasedBookIds}
+                onLaunchBook={handleLaunchBook}
+                onLaunchQuiz={handleLaunchQuiz}
+                onOpenCreateModal={() => setIsAiCreateModalOpen(true)}
+                onOpenExternalModal={() => setIsExternalModalOpen(true)}
+                onTogglePublish={handleTogglePublish}
+                onDeleteBook={handleDeleteBook}
+                onUpdateBook={handleUpdateBook}
+                onPurchaseBook={handlePurchaseBook}
+              />
+            </div>
+          } />
           <Route path="/book/:id" element={
-            <BookDetailsRoute
-              books={ebooks}
-              setEbooks={setEbooks}
-              hasGeminiKey={hasGeminiKey}
-              purchasedBookIds={purchasedBookIds}
-              onPurchaseBook={handlePurchaseBook}
-              userRole={userRole}
-              isAdminMode={isAdminMode}
-            />
+            <div className="p-4 sm:p-6 max-w-7xl mx-auto w-full space-y-6">
+              <BookDetailsRoute
+                books={ebooks}
+                setEbooks={setEbooks}
+                hasGeminiKey={hasGeminiKey}
+                purchasedBookIds={purchasedBookIds}
+                onPurchaseBook={handlePurchaseBook}
+                userRole={userRole}
+                isAdminMode={isAdminMode}
+              />
+            </div>
           } />
         </Routes>
       </main>

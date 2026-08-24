@@ -9,9 +9,44 @@ export interface UserProfile {
   created_at?: string;
 }
 
-export type BookCategory = 'all' | 'digital_book' | 'training_kit' | 'quiz_bank' | 'academic_paper' | 'self_help' | 'business' | 'technology' | 'classics';
+export type BookCategory = 
+  | 'all'
+  | 'academic_curriculum' 
+  | 'quiz_bank' 
+  | 'training_packages' 
+  | 'programming_ai' 
+  | 'self_help' 
+  | 'languages_translation' 
+  | 'literature_novels' 
+  | 'medicine_health' 
+  | 'law_political_science' 
+  | 'business_marketing'
+  // Legacy / aliases compatibility
+  | 'digital_book' 
+  | 'training_kit' 
+  | 'academic_paper' 
+  | 'business' 
+  | 'technology' 
+  | 'classics';
 
-export type BookTrack = 'academic' | 'self_help' | 'business_finance' | 'programming_tech' | 'science_math' | 'languages' | 'general_literature';
+export type EducationLevel = 'pre_university' | 'university';
+
+export type AcademicSystem = 
+  | 'general_arabic' 
+  | 'general_languages' 
+  | 'international_american' 
+  | 'international_british' 
+  | 'international_french' 
+  | 'technical';
+
+export type BookTrack = 
+  | 'academic' 
+  | 'self_help' 
+  | 'business_finance' 
+  | 'programming_tech' 
+  | 'science_math' 
+  | 'languages' 
+  | 'general_literature';
 
 export type QuestionType = 'mcq' | 'true_false' | 'fill_blank' | 'case_study';
 
@@ -86,6 +121,8 @@ export interface Ebook {
   author_name?: string;
   category?: BookCategory;
   track?: BookTrack;
+  education_level?: string;
+  academic_system?: string;
   subcategory?: string;
   grade_level?: string;
   semester?: string;
@@ -120,6 +157,8 @@ export interface MarketplaceBook extends Ebook {
   author_name: string;
   category: BookCategory;
   track?: BookTrack;
+  education_level?: string;
+  academic_system?: string;
   subcategory?: string;
   grade_level?: string;
   semester?: string;
