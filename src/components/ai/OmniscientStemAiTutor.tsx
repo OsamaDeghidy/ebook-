@@ -21,7 +21,7 @@ export const OmniscientStemAiTutor: React.FC<OmniscientStemAiTutorProps> = ({
   const [messages, setMessages] = useState<Array<{ sender: 'user' | 'ai'; text: string; time: string }>>([
     {
       sender: 'ai',
-      text: `مرحباً بك! أنا **المعلم الذكي simplest STEM AI** لمقرر **(${bookTitle || 'المقرر الدراسي'})**.\n\nأنا جاهز لشرح أي مسألة رياضية، تفاعل كيميائي، قانون فيزيائي، أو كود برمجي في درس **(${currentChapterTitle || 'هذا الفصل'})**. كيف أساعدك اليوم؟ 💡`,
+      text: `مرحباً بك! أنا **المعلم الذكي Osera AI STEM Tutor** لمقرر **(${bookTitle || 'المقرر الدراسي'})**.\n\nأنا جاهز لشرح أي مسألة رياضية، تفاعل كيميائي، قانون فيزيائي، أو كود برمجي في درس **(${currentChapterTitle || 'هذا الفصل'})**. كيف أساعدك اليوم؟ 💡`,
       time: 'الآن'
     }
   ]);
@@ -71,7 +71,7 @@ export const OmniscientStemAiTutor: React.FC<OmniscientStemAiTutorProps> = ({
         ...prev,
         {
           sender: 'ai',
-          text: `💡 **شرح المعلم الذكي simplest:**\n\nالقاعدة الأساسية المتعلقة بسؤالك:\n* ركز على حفظ القانون وتطبيق شروط المسألة للحصول على الدرجة الكاملة في درس **(${currentChapterTitle || 'المقرر'})**.`,
+          text: `💡 **شرح المعلم الذكي Osera AI:**\n\nالقاعدة الأساسية المتعلقة بسؤالك:\n* ركز على حفظ القانون وتطبيق شروط المسألة للحصول على الدرجة الكاملة في درس **(${currentChapterTitle || 'المقرر'})**.`,
           time: 'الآن'
         }
       ]);

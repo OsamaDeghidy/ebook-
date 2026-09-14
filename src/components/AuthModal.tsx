@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { X, Mail, Lock, User, Shield, AlertCircle, Sparkles, GraduationCap, Check } from 'lucide-react';
 import { UserRole } from '../types';
 import { TermsOfUseModal } from './legal/TermsOfUseModal';
+import { getPlatformConfig, PlatformConfig } from '../services/platformConfigService';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -11,6 +12,16 @@ interface AuthModalProps {
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => {
+  const [platformConfig, setPlatformConfig] = useState<PlatformConfig>(getPlatformConfig());
+
+  useEffect(() => {
+    const handleConfigChange = (e: any) => {
+      setPlatformConfig(e.detail || getPlatformConfig());
+    };
+    window.addEventListener('platform-config-changed', handleConfigChange);
+    return () => window.removeEventListener('platform-config-changed', handleConfigChange);
+  }, []);
+
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -56,6 +67,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
             console.warn('Profile upsert notice:', e);
           }
 
+          localStorage.setItem('osera_auth_role', selectedRole);
+          localStorage.setItem('osera_auth_user', JSON.stringify(data.user));
           localStorage.setItem('simplest_auth_role', selectedRole);
           localStorage.setItem('simplest_auth_user', JSON.stringify(data.user));
           onSuccess(data.user, selectedRole);
@@ -100,6 +113,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
             console.warn('Profile sync notice:', e);
           }
 
+          localStorage.setItem('osera_auth_role', userRole);
+          localStorage.setItem('osera_auth_user', JSON.stringify(data.user));
           localStorage.setItem('simplest_auth_role', userRole);
           localStorage.setItem('simplest_auth_user', JSON.stringify(data.user));
           onSuccess(data.user, userRole);
@@ -125,13 +140,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
 
         <div className="text-center space-y-2 mb-6">
           <div className="w-12 h-12 bg-teal-50 border border-teal-200 rounded-2xl flex items-center justify-center mx-auto text-teal-600 font-black text-2xl shadow-sm">
-            ⚡
+            {platformConfig.brandName ? platformConfig.brandName.charAt(0) : '⚡'}
           </div>
           <h2 className="text-2xl font-black text-slate-900">
-            {isSignUp ? 'إنشاء حساب جديد في simplest' : 'تسجيل الدخول إلى simplest'}
+            {isSignUp ? `إنشاء حساب جديد في ${platformConfig.brandName}` : `تسجيل الدخول إلى ${platformConfig.brandName}`}
           </h2>
           <p className="text-xs text-slate-500 font-medium">
-            منظومة التعليم التفاعلي وإدارة المقررات الذكية
+            {platformConfig.brandSubtitle || 'منظومة التعليم التفاعلي وإدارة المقررات الذكية'}
           </p>
         </div>
 

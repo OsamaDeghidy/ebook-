@@ -449,7 +449,7 @@ export default function BookDetailsRoute({
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                   <span className="text-xs sm:text-sm font-black text-white">
-                    مشغل المحتوى التفاعلي المحمي داخل المنصة (simplest Interactive Player)
+                    مشغل المحتوى التفاعلي المحمي داخل المنصة (Osera Interactive Player)
                   </span>
                 </div>
 
@@ -505,7 +505,7 @@ export default function BookDetailsRoute({
                     className="absolute top-0 right-0 h-11 w-80 sm:w-96 md:w-[420px] bg-black pointer-events-auto select-none z-30 flex items-center justify-end px-4 gap-2 text-xs font-black text-teal-400 shadow-md border-b border-l border-slate-800/80 rounded-bl-2xl"
                   >
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>كتاب تفاعلي معتمد - simplest LMS</span>
+                    <span>كتاب تفاعلي معتمد - Osera AI LMS</span>
                   </div>
 
                   {/* 🛡️ RESPONSIVE BOTTOM-RIGHT DRM SHIELD (COVERS 100% OF SHARE/PRINT/DOWNLOAD/NOTES ON ANY SCREEN SIZE) */}
@@ -522,7 +522,7 @@ export default function BookDetailsRoute({
                   <div
                     className="absolute bottom-0 left-0 h-11 w-[calc(50%-120px)] bg-black border-t border-slate-800/90 flex items-center justify-start pl-4 sm:pl-6 gap-2 text-[11px] sm:text-xs font-black text-teal-400 pointer-events-auto select-none z-30 shadow-lg"
                   >
-                    <span className="truncate font-black">simplest LMS ✦</span>
+                    <span className="truncate font-black">Osera AI LMS ✦</span>
                   </div>
                 </div>
               </ScreenShieldGuard>

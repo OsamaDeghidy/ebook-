@@ -75,14 +75,14 @@ export const ContextualAiTutor: React.FC<ContextualAiTutorProps> = ({ chapterTit
       if (!res.ok) {
         // Fallback simulation if backend endpoint has temporary issue
         await new Promise(r => setTimeout(r, 900));
-        setAiExplanation(`💡 **تبسيط المعلم الذكي simplest:**\n\nالمقصود بهذا الجزء في إطار درس **(${chapterTitle})** هو التركيز على الفكرة الأساسية وربطها بالتطبيق العملي.\n\n* **المفهوم:** ${selectedText}\n* **مثال توضيحي:** تخيل الأمر كخطوة متتابعة تؤدي للنتيجة المباشرة.\n* **نصيحة للمذاكرة:** احفظ الكلمات المفتاحية الأساسية لهذا التعريف.`);
+        setAiExplanation(`💡 **تبسيط المعلم الذكي Osera AI:**\n\nالمقصود بهذا الجزء في إطار درس **(${chapterTitle})** هو التركيز على الفكرة الأساسية وربطها بالتطبيق العملي.\n\n* **المفهوم:** ${selectedText}\n* **مثال توضيحي:** تخيل الأمر كخطوة متتابعة تؤدي للنتيجة المباشرة.\n* **نصيحة للمذاكرة:** احفظ الكلمات المفتاحية الأساسية لهذا التعريف.`);
       } else {
         const data = await res.json();
         setAiExplanation(data.explanation || 'تم شرح المفهوم بنجاح.');
       }
     } catch (e) {
       // Graceful local smart response
-      setAiExplanation(`💡 **شرح المعلم الذكي simplest:**\n\nهذه النقطة من أساسيات **${chapterTitle}**:\n* **الشرح:** تُشير الجزئية المحددة إلى: "${selectedText}".\n* **التطبيق:** ركز على الربط بين السبب والنتيجة فيها لضمان الدرجة النهائية في الامتحان.`);
+      setAiExplanation(`💡 **شرح المعلم الذكي Osera AI:**\n\nهذه النقطة من أساسيات **${chapterTitle}**:\n* **الشرح:** تُشير الجزئية المحددة إلى: "${selectedText}".\n* **التطبيق:** ركز على الربط بين السبب والنتيجة فيها لضمان الدرجة النهائية في الامتحان.`);
     } finally {
       setIsLoading(false);
     }
@@ -105,7 +105,7 @@ export const ContextualAiTutor: React.FC<ContextualAiTutorProps> = ({ chapterTit
             className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 text-white rounded-full text-xs font-black shadow-xl shadow-teal-600/30 transition cursor-pointer active:scale-95 border border-white/20"
           >
             <Brain className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
-            <span>🧠 اسأل simplest عن دي!</span>
+            <span>🧠 اسأل المعلم الذكي عن دي!</span>
           </button>
         </div>
       )}
@@ -120,7 +120,7 @@ export const ContextualAiTutor: React.FC<ContextualAiTutorProps> = ({ chapterTit
                 <Brain className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-black">المعلم الخصوصي الذكي (simplest Tutor)</h4>
+                <h4 className="text-xs font-black">المعلم الخصوصي الذكي (Osera AI Tutor)</h4>
                 <p className="text-[10px] text-teal-300">مساعدتك على فهم وتثبيت المعلومة</p>
               </div>
             </div>

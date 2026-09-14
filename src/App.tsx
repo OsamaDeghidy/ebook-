@@ -35,6 +35,13 @@ function AppContent() {
     return () => window.removeEventListener('platform-config-changed', handleConfigChange);
   }, []);
 
+  // 🌐 Dynamic Page Title Sync with Platform Brand Settings
+  useEffect(() => {
+    if (platformConfig.brandName) {
+      document.title = `${platformConfig.brandName} | ${platformConfig.brandSubtitle || 'المنصة الذكية للكتب والمذكرات التعليمية'}`;
+    }
+  }, [platformConfig.brandName, platformConfig.brandSubtitle]);
+
   const [ebooks, setEbooks] = useState<MarketplaceBook[]>([]);
   const [currentUser, setCurrentUser] = useState<any | null>(null);
   const [userRole, setUserRole] = useState<UserRole>('student');
@@ -112,6 +119,8 @@ function AppContent() {
         setCurrentUser(null);
         setUserRole('student');
         setIsAdminMode(false);
+        localStorage.removeItem('osera_auth_user');
+        localStorage.removeItem('osera_auth_role');
         localStorage.removeItem('simplest_auth_user');
         localStorage.removeItem('simplest_auth_role');
       }
@@ -133,6 +142,7 @@ function AppContent() {
         const role = profile.role as UserRole;
         setUserRole(role);
         setIsAdminMode(role === 'admin');
+        localStorage.setItem('osera_auth_role', role);
         localStorage.setItem('simplest_auth_role', role);
         return;
       }
@@ -149,6 +159,7 @@ function AppContent() {
           const role = profileByEmail.role as UserRole;
           setUserRole(role);
           setIsAdminMode(role === 'admin');
+          localStorage.setItem('osera_auth_role', role);
           localStorage.setItem('simplest_auth_role', role);
           return;
         }
@@ -158,6 +169,7 @@ function AppContent() {
       const metaRole = (authUser?.user_metadata?.role as UserRole) || 'student';
       setUserRole(metaRole);
       setIsAdminMode(metaRole === 'admin');
+      localStorage.setItem('osera_auth_role', metaRole);
       localStorage.setItem('simplest_auth_role', metaRole);
 
       // Auto-upsert profile to Supabase so it's permanently saved in DB
@@ -522,6 +534,8 @@ function AppContent() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    localStorage.removeItem('osera_auth_user');
+    localStorage.removeItem('osera_auth_role');
     localStorage.removeItem('simplest_auth_user');
     localStorage.removeItem('simplest_auth_role');
     setCurrentUser(null);
@@ -783,6 +797,45 @@ function AppContent() {
         </Routes>
       </main>
 
+      {/* 🌟 DYNAMIC SAAS PLATFORM FOOTER */}
+      {!location.pathname.startsWith('/reels') && !location.pathname.includes('/reels') && (
+        <footer className="bg-slate-900 text-slate-400 text-xs py-8 border-t border-slate-800 print:hidden" dir="rtl">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-teal-500 to-sky-500 flex items-center justify-center text-white font-black text-sm">
+                {platformConfig.brandName.charAt(0) || 'أ'}
+              </div>
+              <div>
+                <p className="font-black text-white text-sm">{platformConfig.brandName}</p>
+                <p className="text-[11px] text-slate-500">{platformConfig.brandSubtitle}</p>
+              </div>
+            </div>
+
+            <div className="text-center md:text-right text-[11px] text-slate-500 space-y-1">
+              <p>{platformConfig.copyrightText || `جميع الحقوق محفوظة © ${new Date().getFullYear()} لشركة ${platformConfig.companyName}`}</p>
+              <p className="text-slate-600">{platformConfig.companyName} | مؤسس المنصة: {platformConfig.founderName}</p>
+            </div>
+
+            <div className="flex items-center gap-4 text-xs font-bold">
+              {platformConfig.supportEmail && (
+                <a href={`mailto:${platformConfig.supportEmail}`} className="text-slate-400 hover:text-teal-400 transition">
+                  الدعم الفني
+                </a>
+              )}
+              {platformConfig.whatsappNumber && (
+                <a 
+                  href={`https://wa.me/${platformConfig.whatsappNumber.replace(/[^0-9]/g, '')}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="text-slate-400 hover:text-emerald-400 transition"
+                >
+                  واتساب
+                </a>
+              )}
+            </div>
+          </div>
+        </footer>
+      )}
 
       {/* MODALS */}
       <AuthModal

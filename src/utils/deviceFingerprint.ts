@@ -4,8 +4,8 @@
  */
 
 export function getOrCreateDeviceId(): string {
-  const STORAGE_KEY = 'simplest_device_fingerprint';
-  let deviceId = localStorage.getItem(STORAGE_KEY);
+  const STORAGE_KEY = 'osera_device_fingerprint';
+  let deviceId = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('simplest_device_fingerprint');
 
   if (!deviceId) {
     // Generate a unique fingerprint using screen, hardware concurrency, language, and random entropy

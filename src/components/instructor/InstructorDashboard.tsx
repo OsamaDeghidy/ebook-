@@ -294,7 +294,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
               <div className="border-b-2 border-slate-900 pb-4 flex items-center justify-between">
                 <div>
                   <h2 className="text-xl font-black">{examTitle}</h2>
-                  <p className="text-xs font-bold text-slate-600 mt-1">منصة simplest LMS التعليمية</p>
+                  <p className="text-xs font-bold text-slate-600 mt-1">منصة Osera AI LMS التعليمية</p>
                 </div>
                 <div className="text-left font-mono text-xs font-bold space-y-1">
                   <div>الزمن: <strong>{examDuration}</strong></div>

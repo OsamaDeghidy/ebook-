@@ -17,7 +17,7 @@ export const ForensicWatermark: React.FC<ForensicWatermarkProps> = ({
 }) => {
   // Generate tracking fingerprint
   const identifier = userName || userPhone || (userEmail ? userEmail.split('@')[0] : 'طالب موثق');
-  const secondaryId = userPhone || userEmail || (userId ? `ID: ${userId.slice(0, 8)}` : 'simplest Secure');
+  const secondaryId = userPhone || userEmail || (userId ? `ID: ${userId.slice(0, 8)}` : 'Osera Secure');
   
   // Random coordinates state for floating tamper-evident watermark
   const [position, setPosition] = useState({ top: 25, left: 30 });
@@ -55,7 +55,7 @@ export const ForensicWatermark: React.FC<ForensicWatermarkProps> = ({
       <div className="absolute inset-0 grid grid-cols-2 sm:grid-cols-3 gap-16 p-8 opacity-[0.035] transform -rotate-12 pointer-events-none">
         {Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className="text-center font-mono font-black text-xs text-slate-900 tracking-wider">
-            <div>simplest LMS • {identifier}</div>
+            <div>Osera AI LMS • {identifier}</div>
             <div className="text-[10px] text-slate-700">{secondaryId}</div>
           </div>
         ))}

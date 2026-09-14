@@ -791,7 +791,7 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `simplest_vouchers_${Date.now()}.csv`);
+    link.setAttribute("download", `osera_vouchers_${Date.now()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -1508,7 +1508,7 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
                     <p className="text-xs font-bold text-slate-700">
                       إعداد المعلم: <strong>{teacherName}</strong> • {centerName} • مادة ({currentTargetBook?.title})
                     </p>
-                    <p className="text-[11px] text-slate-500">منظومة simplest LMS الأكاديمية</p>
+                    <p className="text-[11px] text-slate-500">منظومة Osera AI LMS الأكاديمية</p>
                   </div>
 
                   <div className="text-left font-mono text-xs font-bold border border-slate-900 p-3 rounded-xl space-y-1">
@@ -2215,23 +2215,12 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">طريقة الدفع والشحن:</label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   <button
                     type="button"
-                    onClick={() => setRechargeGateway('instapay')}
-                    className={`p-2.5 rounded-xl border text-xs font-bold transition flex items-center gap-2 ${
-                      rechargeGateway === 'instapay' ? 'bg-indigo-50 border-indigo-500 text-indigo-950 font-black shadow-2xs' : 'bg-slate-50 border-slate-200 text-slate-600'
-                    }`}
-                  >
-                    <Zap className="w-4 h-4 text-indigo-600" />
-                    <span>⚡ إنستاباي InstaPay</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setRechargeGateway('vodafone_cash')}
-                    className={`p-2.5 rounded-xl border text-xs font-bold transition flex items-center gap-2 ${
-                      rechargeGateway === 'vodafone_cash' ? 'bg-rose-50 border-rose-500 text-rose-950 font-black shadow-2xs' : 'bg-slate-50 border-slate-200 text-slate-600'
+                    onClick={() => setRechargeGateway('vodafone_cash' as any)}
+                    className={`p-2.5 rounded-xl border text-xs font-bold transition flex flex-col items-center justify-center gap-1 cursor-pointer ${
+                      rechargeGateway === 'vodafone_cash' ? 'bg-rose-50 border-rose-500 text-rose-950 font-black shadow-2xs' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                     }`}
                   >
                     <Smartphone className="w-4 h-4 text-rose-600" />
@@ -2241,23 +2230,23 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
                   <button
                     type="button"
                     onClick={() => setRechargeGateway('paymob')}
-                    className={`p-2.5 rounded-xl border text-xs font-bold transition flex items-center gap-2 ${
-                      rechargeGateway === 'paymob' ? 'bg-teal-50 border-teal-500 text-teal-950 font-black shadow-2xs' : 'bg-slate-50 border-slate-200 text-slate-600'
+                    className={`p-2.5 rounded-xl border text-xs font-bold transition flex flex-col items-center justify-center gap-1 cursor-pointer ${
+                      rechargeGateway === 'paymob' ? 'bg-sky-50 border-sky-500 text-sky-950 font-black shadow-2xs' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                     }`}
                   >
-                    <CreditCard className="w-4 h-4 text-teal-600" />
-                    <span>💳 فيزا / ماستركارد</span>
+                    <CreditCard className="w-4 h-4 text-sky-600" />
+                    <span>💳 فيزا / كارت</span>
                   </button>
 
                   <button
                     type="button"
-                    onClick={() => setRechargeGateway('fawry')}
-                    className={`p-2.5 rounded-xl border text-xs font-bold transition flex items-center gap-2 ${
-                      rechargeGateway === 'fawry' ? 'bg-amber-50 border-amber-500 text-amber-950 font-black shadow-2xs' : 'bg-slate-50 border-slate-200 text-slate-600'
+                    onClick={() => setRechargeGateway('paypal' as any)}
+                    className={`p-2.5 rounded-xl border text-xs font-bold transition flex flex-col items-center justify-center gap-1 cursor-pointer ${
+                      (rechargeGateway as any) === 'paypal' ? 'bg-indigo-50 border-indigo-500 text-indigo-950 font-black shadow-2xs' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                     }`}
                   >
-                    <Building2 className="w-4 h-4 text-amber-600" />
-                    <span>🏪 فوري Fawry</span>
+                    <Globe className="w-4 h-4 text-indigo-600" />
+                    <span>🅿️ PayPal</span>
                   </button>
                 </div>
               </div>

@@ -260,6 +260,99 @@ export const PlatformSettingsTab: React.FC = () => {
         </div>
       </div>
 
+      {/* 🗺️ BRAND SYNCHRONIZATION IMPACT MAP (خريطة التأثيرات الشاملة عند تغيير اسم وهوية المنصة) */}
+      <div className="p-5 rounded-3xl bg-slate-900/90 border border-teal-500/30 space-y-4 shadow-xl">
+        <div className="flex items-center justify-between border-b border-white/10 pb-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-teal-400" />
+            <h3 className="text-sm font-black text-white">
+              الأماكن والمكونات المرتبطة التي تتحدث تلقائياً فور تعديل اسم وهوية المنصة:
+            </h3>
+          </div>
+          <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 font-bold border border-teal-500/30">
+            ربط ديناميكي شامل 100%
+          </span>
+        </div>
+
+        <p className="text-xs text-slate-300 leading-relaxed">
+          عند تعديل اسم المنصة (Brand Name) أو الوصف أو بيانات الشركة في هذا النموذج والضغط على <strong>حفظ التعديلات</strong>، يقوم المحرك تلقائياً بتحديث الهوية في كافة أجزاء النظام التالية دون الحاجة لتعديل أي كود برمجي:
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+          <div className="p-3 bg-slate-950/80 border border-white/10 rounded-2xl space-y-1">
+            <div className="flex items-center gap-1.5 text-sky-400 font-black text-xs">
+              <span>1. تبويب المتصفح والـ SEO</span>
+            </div>
+            <p className="text-[11px] text-slate-400 leading-tight">
+              تحديث عنوان المتصفح (<code>document.title</code>)، وسوم الـ SEO و OpenGraph ومحركات بحث جوجل.
+            </p>
+          </div>
+
+          <div className="p-3 bg-slate-950/80 border border-white/10 rounded-2xl space-y-1">
+            <div className="flex items-center gap-1.5 text-teal-400 font-black text-xs">
+              <span>2. شاشات تسجيل الدخول</span>
+            </div>
+            <p className="text-[11px] text-slate-400 leading-tight">
+              نافذة <code>AuthModal</code> (تسجيل الدخول وإنشاء حساب جديد) والترويسة الترحيبية للطلاب والمعلمين.
+            </p>
+          </div>
+
+          <div className="p-3 bg-slate-950/80 border border-white/10 rounded-2xl space-y-1">
+            <div className="flex items-center gap-1.5 text-indigo-400 font-black text-xs">
+              <span>3. ترويسة الموقع وشعار الهيدر</span>
+            </div>
+            <p className="text-[11px] text-slate-400 leading-tight">
+              النافبار الرئيسي والشعار الأيقوني والأزرار العلوية في كافة صفحات المنصة.
+            </p>
+          </div>
+
+          <div className="p-3 bg-slate-950/80 border border-white/10 rounded-2xl space-y-1">
+            <div className="flex items-center gap-1.5 text-emerald-400 font-black text-xs">
+              <span>4. التذييل والملكية الفكرية</span>
+            </div>
+            <p className="text-[11px] text-slate-400 leading-tight">
+              شريط حقوق النشر (Footer Copyrights)، اسم الشركة، أرقام الدعم الفني ورابط واتساب.
+            </p>
+          </div>
+
+          <div className="p-3 bg-slate-950/80 border border-white/10 rounded-2xl space-y-1">
+            <div className="flex items-center gap-1.5 text-amber-400 font-black text-xs">
+              <span>5. مشغل الكتب والمذكرات</span>
+            </div>
+            <p className="text-[11px] text-slate-400 leading-tight">
+              أشرطة حماية الـ DRM، وترويسة قارئ المقررات التفاعلية، والعلامة المائية للأمان.
+            </p>
+          </div>
+
+          <div className="p-3 bg-slate-950/80 border border-white/10 rounded-2xl space-y-1">
+            <div className="flex items-center gap-1.5 text-purple-400 font-black text-xs">
+              <span>6. المعلم الذكي والـ AI Tutor</span>
+            </div>
+            <p className="text-[11px] text-slate-400 leading-tight">
+              اسم روبوت الشرح التفاعلي، ورسائل المساعد الذكي لمقررات STEM والملخصات.
+            </p>
+          </div>
+
+          <div className="p-3 bg-slate-950/80 border border-white/10 rounded-2xl space-y-1">
+            <div className="flex items-center gap-1.5 text-rose-400 font-black text-xs">
+              <span>7. ورقة الامتحانات المطبوعة</span>
+            </div>
+            <p className="text-[11px] text-slate-400 leading-tight">
+              ترويسة ورقة الاختبار للطباعة A4 وشعار المنصة الأكاديمي الرسمي.
+            </p>
+          </div>
+
+          <div className="p-3 bg-slate-950/80 border border-white/10 rounded-2xl space-y-1">
+            <div className="flex items-center gap-1.5 text-teal-300 font-black text-xs">
+              <span>8. استوديو ريلز المعرفة</span>
+            </div>
+            <p className="text-[11px] text-slate-400 leading-tight">
+              أشرطة الفيديو وهوية استوديو EduReels والبطاقات التلخيصية للفصول.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* FOOTER ACTIONS */}
       <div className="flex items-center justify-between pt-2">
         <button

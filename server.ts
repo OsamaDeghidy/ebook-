@@ -2450,7 +2450,7 @@ app.post("/api/ai/stem-tutor", async (req, res) => {
 
     const ai = getAiInstance();
     const stemSystemPrompt = `
-أنت "المعلم الخصوصي الذكي الشامل simplest STEM AI" لمقرر (${book?.title || "المقرر العلمي"}).
+أنت "المعلم الخصوصي الذكي الشامل Osera AI STEM Tutor" لمقرر (${book?.title || "المقرر العلمي"}).
 أنت خبير في تدريس العلوم والرياضيات والفيزياء والكيمياء والبرمجة والذكاء الاصطناعي.
 
 سياق الفصل الدراسي الحالي (${chapter?.title || "الفصل"}):
@@ -2485,7 +2485,7 @@ ${selectedText ? `النص المحدد من المذكرة:\n"""\n${selectedTex
     console.error("STEM tutor error:", error);
     res.json({
       success: true,
-      answer: `💡 **شرح المعلم الذكي simplest:**\n\nبناءً على درس **(${req.body.chapterTitle || "المقرر"})**:\n\n* **القاعدة الأساسية:** ${req.body.question || req.body.selectedText}\n* **التطبيق:** ركز على تطبيق القانون الرياضي وكتابة خطوات الحل النموذجية للحصول على الدرجة الكاملة.`
+      answer: `💡 **شرح المعلم الذكي Osera AI:**\n\nبناءً على درس **(${req.body.chapterTitle || "المقرر"})**:\n\n* **القاعدة الأساسية:** ${req.body.question || req.body.selectedText}\n* **التطبيق:** ركز على تطبيق القانون الرياضي وكتابة خطوات الحل النموذجية للحصول على الدرجة الكاملة.`
     });
   }
 });
@@ -2531,7 +2531,7 @@ app.post("/api/vouchers/redeem", async (req, res) => {
     }
 
     // Master / Universal VIP Passwords for Admin / Testing
-    if (["SIMP-2026-VIP", "CENTER-FREE", "KORYEM-FREE", "SIMPLEST-PASS"].includes(cleanCode)) {
+    if (["OSERA-2026-VIP", "OSERA-PASS", "SIMP-2026-VIP", "CENTER-FREE", "KORYEM-FREE", "SIMPLEST-PASS"].includes(cleanCode)) {
       return res.json({
         success: true,
         type: 'book_access',
@@ -2668,7 +2668,7 @@ app.post("/api/exams/generate-custom", async (req, res) => {
       const chaptersContext = selectedChapters.map((c: any) => `الفصل: ${c.title}\nالمحتوى: ${c.content?.substring(0, 1000) || ""}`).join("\n\n");
 
       const prompt = `
-أنت واضع امتحانات خبير في منصة simplest LMS لمقرر: "${targetBook.title}".
+أنت واضع امتحانات خبير في منصة Osera AI LMS لمقرر: "${targetBook.title}".
 المطلوب توليد أسئلة امتحانات جديدة بدقة عالية ومطابقة لمواصفات الورقة الامتحانية بناءً على محتوى الفصول التالية:
 
 ${chaptersContext}
@@ -2757,7 +2757,7 @@ app.post("/api/ebooks/explain", async (req, res) => {
 
     const ai = getAiInstance();
     const systemPrompt = `
-أنت المعلم الخصوصي الذكي والشارح التفاعلي لمنصة simplest LMS.
+أنت المعلم الخصوصي الذكي والشارح التفاعلي لمنصة Osera AI LMS.
 مهمتك شرح هذه الجزئية المحددة من درس (${chapterTitle || "المقرر الدراسي"}) بأسلوب شيق، مبسط جداً، وباللغة العربية الفصحى السلسة والمحفزة.
 
 الطلب الإضافي من الطالب: "${prompt || "اشرح هذا الجزء بأسلوب مبسط"}"
@@ -2787,7 +2787,7 @@ ${text}
     console.error("AI Explainer error:", error);
     res.json({
       success: true,
-      explanation: `💡 **شرح المعلم الذكي simplest:**\n\nالمقصود بهذا الجزء في درس **(${req.body.chapterTitle || "المقرر"})**:\n* **المفهوم:** ${req.body.text}\n* **التطبيق:** ركز على حفظ الكلمات المفتاحية الأساسية لهذا التعريف لضمان الدرجة النهائية.`
+      explanation: `💡 **شرح المعلم الذكي Osera AI:**\n\nالمقصود بهذا الجزء في درس **(${req.body.chapterTitle || "المقرر"})**:\n* **المفهوم:** ${req.body.text}\n* **التطبيق:** ركز على حفظ الكلمات المفتاحية الأساسية لهذا التعريف لضمان الدرجة النهائية.`
     });
   }
 });
@@ -2805,7 +2805,7 @@ app.post("/api/ebooks/grade-essay", async (req, res) => {
 
     const ai = getAiInstance();
     const prompt = `
-أنت مصحح امتحانات إلكتروني عادل ومحترف في منصة simplest LMS.
+أنت مصحح امتحانات إلكتروني عادل ومحترف في منصة Osera AI LMS.
 مهمتك تقييم إجابة الطالب على السؤال المقالي التالي بمقارنتها بنموذج الإجابة المعتمد.
 
 السؤال:
@@ -2952,7 +2952,7 @@ app.post("/api/reels/generate-for-book", async (req, res) => {
 
       const chapterContent = (chapter.content || "").substring(0, 3500);
       const prompt = `
-أنت كبير مخرجي المحتوى التعليمي والريلز التفاعلية (EduReels 100% Studio) لمنصة simplest LMS.
+أنت كبير مخرجي المحتوى التعليمي والريلز التفاعلية (EduReels 100% Studio) لمنصة Osera AI LMS.
 المطلوب تحويل محتوى هذا الفصل بدقة وأمانة علمية كاملة إلى ريل تعليمي احترافي سينمائي متكامل (مدته 40 - 45 ثانية).
 
 المقرر: "${book?.title || 'مقرر دراسي'}"
@@ -3163,7 +3163,7 @@ app.post("/api/reels/generate-single-chapter", async (req, res) => {
     const selectedVoice = voice || "ar-SA-HamedNeural";
 
     const prompt = `
-أنت كبير مخرجي المحتوى التعليمي والريلز التفاعلية (EduReels 100% Studio) لمنصة simplest LMS لمقرر: "${book?.title || 'مقرر دراسي'}".
+أنت كبير مخرجي المحتوى التعليمي والريلز التفاعلية (EduReels 100% Studio) لمنصة Osera AI LMS لمقرر: "${book?.title || 'مقرر دراسي'}".
 الفصل المطلوب: "${chapter.title}"
 المحتوى المعتمد للفصل:
 """
@@ -3911,7 +3911,7 @@ app.post("/api/vouchers/redeem", async (req, res) => {
     }
 
     // Master / Universal VIP Passwords for Admin / Testing
-    if (["SIMP-2026-VIP", "CENTER-FREE", "KORYEM-FREE", "SIMPLEST-PASS"].includes(cleanCode)) {
+    if (["OSERA-2026-VIP", "OSERA-PASS", "SIMP-2026-VIP", "CENTER-FREE", "KORYEM-FREE", "SIMPLEST-PASS"].includes(cleanCode)) {
       if (userId && bookId) {
         await processBookPurchaseFulfillment({
           userId,

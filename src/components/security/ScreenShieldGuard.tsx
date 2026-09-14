@@ -82,7 +82,7 @@ export const ScreenShieldGuard: React.FC<ScreenShieldGuardProps> = ({
               {warningMessage}
             </p>
             <div className="text-[10px] text-slate-400 font-bold">
-              جميع حقوق الطبع والنشر محفوظة لمنصة simplest LMS
+              جميع حقوق الطبع والنشر محفوظة لمنصة Osera AI LMS
             </div>
           </div>
         </div>

@@ -20,10 +20,10 @@ export const StudentStreakBadge: React.FC<StudentStreakBadgeProps> = ({ currentU
     const loadStreakAndXp = async () => {
       try {
         const today = new Date().toDateString();
-        const storageKey = `simplest_streak_${currentUser.id || currentUser.email}`;
-        const lastVisit = localStorage.getItem(`${storageKey}_last_date`);
-        let currentStreak = Number(localStorage.getItem(`${storageKey}_days`)) || 1;
-        let currentXp = Number(localStorage.getItem(`simplest_xp_${currentUser.id || currentUser.email}`)) || 150;
+        const storageKey = `osera_streak_${currentUser.id || currentUser.email}`;
+        const lastVisit = localStorage.getItem(`${storageKey}_last_date`) || localStorage.getItem(`simplest_streak_${currentUser.id || currentUser.email}_last_date`);
+        let currentStreak = Number(localStorage.getItem(`${storageKey}_days`) || localStorage.getItem(`simplest_streak_${currentUser.id || currentUser.email}_days`)) || 1;
+        let currentXp = Number(localStorage.getItem(`osera_xp_${currentUser.id || currentUser.email}`) || localStorage.getItem(`simplest_xp_${currentUser.id || currentUser.email}`)) || 150;
 
         // Try syncing from Supabase profile if available
         try {
@@ -54,7 +54,7 @@ export const StudentStreakBadge: React.FC<StudentStreakBadgeProps> = ({ currentU
 
         localStorage.setItem(`${storageKey}_days`, String(currentStreak));
         localStorage.setItem(`${storageKey}_last_date`, today);
-        localStorage.setItem(`simplest_xp_${currentUser.id || currentUser.email}`, String(currentXp));
+        localStorage.setItem(`osera_xp_${currentUser.id || currentUser.email}`, String(currentXp));
 
         setStreakDays(currentStreak);
         setXpPoints(currentXp);
@@ -83,7 +83,7 @@ export const StudentStreakBadge: React.FC<StudentStreakBadgeProps> = ({ currentU
       {/* Student XP Badge */}
       <div 
         className="hidden sm:flex items-center gap-1 px-2.5 py-1 bg-teal-50 border border-teal-200 rounded-xl text-[11px] font-black text-teal-900 select-none shadow-2xs"
-        title="نقاط خبرة المذاكرة والتفاعل في simplest"
+        title="نقاط خبرة المذاكرة والتفاعل في Osera AI"
       >
         <Trophy className="w-3.5 h-3.5 text-teal-600" />
         <span>{xpPoints} XP</span>

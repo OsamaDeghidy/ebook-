@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { MarketplaceBook } from '../types';
 import { MAIN_CATEGORIES } from '../constants/taxonomy';
+import { getPlatformConfig, PlatformConfig } from '../services/platformConfigService';
 
 interface LandingPageViewProps {
   books: MarketplaceBook[];
@@ -19,6 +20,16 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
   onOpenAuth
 }) => {
   const navigate = useNavigate();
+  const [platformConfig, setPlatformConfig] = useState<PlatformConfig>(getPlatformConfig());
+
+  React.useEffect(() => {
+    const handleConfigChange = (e: any) => {
+      setPlatformConfig(e.detail || getPlatformConfig());
+    };
+    window.addEventListener('platform-config-changed', handleConfigChange);
+    return () => window.removeEventListener('platform-config-changed', handleConfigChange);
+  }, []);
+
   const [phoneNumber, setPhoneNumber] = useState('');
   const [phoneSubmitted, setPhoneSubmitted] = useState(false);
 
@@ -46,7 +57,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
       {/* 🌟 TOP ANNOUNCEMENT TICKER */}
       <div className="bg-gradient-to-r from-teal-700 via-indigo-900 to-teal-800 text-white text-[11px] sm:text-xs font-bold py-2.5 px-3 sm:px-4 text-center border-b border-teal-500/30 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
         <Sparkles className="w-3.5 h-3.5 text-teal-300 animate-pulse shrink-0" />
-        <span>منصة simplest التعليمية | بوابتك للتعلم الذكي والأبسط</span>
+        <span>منصة {platformConfig.brandName} التعليمية | {platformConfig.brandSubtitle || 'بوابتك للتعلم الذكي والأبسط'}</span>
         <button
           onClick={() => navigate('/marketplace')}
           className="bg-white/20 hover:bg-white/30 text-[10px] sm:text-[11px] px-2.5 py-0.5 rounded-full font-black text-teal-200 transition shrink-0"
@@ -83,7 +94,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
 
               {/* Sub-headline (From Client Brief) */}
               <p className="text-sm sm:text-base lg:text-lg text-slate-600 font-medium leading-relaxed max-w-2xl mx-auto lg:mx-0">
-                <strong className="text-slate-900 font-black">simplest</strong> هي منصة متكاملة تجمع بين المناهج التعليمية الأكاديمية والمراجعات الشاملة، وبين الكورسات الحرة لتطوير المهارات الحياتية والمهنية. محتوى مركز، شروحات مبسطة، وتجربة تعليمية ممتعة بالذكاء الاصطناعي .
+                <strong className="text-slate-900 font-black">{platformConfig.brandName}</strong> هي منصة متكاملة تجمع بين المناهج التعليمية الأكاديمية والمراجعات الشاملة، وبين الكورسات الحرة لتطوير المهارات الحياتية والمهنية. محتوى مركز، شروحات مبسطة، وتجربة تعليمية ممتعة بالذكاء الاصطناعي .
               </p>
 
 
@@ -136,11 +147,11 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                   <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-teal-500 to-indigo-600 text-white flex items-center justify-center font-black text-xl shadow-md shadow-teal-500/30">
-                        S
+                        {platformConfig.brandName ? platformConfig.brandName.charAt(0) : 'O'}
                       </div>
                       <div>
-                        <h4 className="font-black text-base text-slate-900 tracking-tight">simplest</h4>
-                        <p className="text-[10px] text-teal-600 font-bold">LMS Learning Platform</p>
+                        <h4 className="font-black text-base text-slate-900 tracking-tight">{platformConfig.brandName}</h4>
+                        <p className="text-[10px] text-teal-600 font-bold">{platformConfig.brandSubtitle || 'LMS Learning Platform'}</p>
                       </div>
                     </div>
                     <span className="text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full">
@@ -210,7 +221,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
               واجهتنا الرئيسية: اختر مسارك التعليمي
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 font-medium">
-              صممت منصة simplest لتلبي احتياجات الطلاب الأكاديميين والباحثين عن تطوير المهارات المهنية والذاتية.
+              صممت منصة {platformConfig.brandName} لتلبي احتياجات الطلاب الأكاديميين والباحثين عن تطوير المهارات المهنية والذاتية.
             </p>
           </div>
 
@@ -363,7 +374,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
               القيمة والتميز
             </span>
             <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
-              لماذا تختار منصة simplest؟
+              لماذا تختار منصة {platformConfig.brandName}؟
             </h2>
             <p className="text-xs sm:text-sm text-slate-300">
               صممت المنصة لتقديم تجربة تعليمية ذكية، ممتعة، وميسرة تناسب جميع المراحل.
@@ -379,7 +390,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
               </div>
               <h3 className="font-black text-base text-white">محتوى معتمد ومبسّط</h3>
               <p className="text-xs text-slate-300 leading-relaxed">
-                مقررات دراسية محكمة ومراجعة علمياً تحت إشراف د. كريم كامل لضمان دقة المعلومة ويسر استيعابها.
+                مقررات دراسية محكمة ومراجعة علمياً لضمان دقة المعلومة ويسر استيعابها بالذكاء الاصطناعي.
               </p>
             </div>
 
@@ -399,7 +410,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
               <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-300 flex items-center justify-center font-bold">
                 <Radio className="w-6 h-6" />
               </div>
-              <h3 className="font-black text-base text-white">بودكاست كريم وفرح التفاعلي</h3>
+              <h3 className="font-black text-base text-white">استوديو البودكاست التفاعلي</h3>
               <p className="text-xs text-slate-300 leading-relaxed">
                 استمع لشروحات حوارية صوتية شيقة تحول المناهج الجافة إلى حوار ممتع يعزز الذاكرة السمعية.
               </p>
@@ -412,7 +423,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
               </div>
               <h3 className="font-black text-base text-white">سريعة، بسيطة، وآمنة</h3>
               <p className="text-xs text-slate-300 leading-relaxed">
-                تجربة مستخدم فائقة السلاسة، دخول سريع برقم الهاتف أو الحساب، وتوافق تام مع كل الأجهزة والشاشات.
+                تجربة مستخدم فائقة السلاسة، دخول سريع بالحساب، وتوافق تام مع كل الأجهزة والشاشات.
               </p>
             </div>
 
@@ -421,7 +432,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
       </section>
 
 
-      {/* 🏛️ OFFICIAL FOOTER (بيانات شركة E-LMS ود. كريم كامل المعتمدة) */}
+      {/* 🏛️ OFFICIAL FOOTER (بيانات شركة Osera AI المعتمدة) */}
       <footer className="bg-slate-950 text-slate-300 text-xs border-t border-slate-800 py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
 
@@ -431,37 +442,37 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
             <div className="space-y-3 md:col-span-2">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-teal-500 to-indigo-600 text-white flex items-center justify-center font-black text-xl shadow-md">
-                  S
+                  {platformConfig.brandName ? platformConfig.brandName.charAt(0) : 'O'}
                 </div>
                 <div>
-                  <h4 className="font-black text-base text-white tracking-tight">simplest</h4>
-                  <p className="text-[11px] text-teal-400 font-bold">بإشراف د. كريم كامل (Dr. Koryem Kamel)</p>
+                  <h4 className="font-black text-base text-white tracking-tight">{platformConfig.brandName}</h4>
+                  <p className="text-[11px] text-teal-400 font-bold">{platformConfig.brandSubtitle || 'منظومة التعليم الذكي LMS'}</p>
                 </div>
               </div>
               <p className="text-slate-400 text-xs leading-relaxed max-w-md">
-                منظومة التعليم وإدارة التعلم الإلكتروني الذكية (LMS) التابعة لشركة <strong className="text-white">نظم الإدارة والتعليم الإلكتروني (Electronic Learning and Management Systems.CO. - E-LMS)</strong>.
+                منظومة التعليم وإدارة التعلم الإلكتروني الذكية (LMS) التابعة لـ <strong className="text-white">{platformConfig.companyName}</strong>.
               </p>
             </div>
 
             {/* CONTACT DETAILS */}
             <div className="space-y-2.5">
-              <h5 className="font-black text-white text-xs">بيانات التواصل المعتمدة</h5>
+              <h5 className="font-black text-white text-xs">بيانات التواصل والدعم</h5>
               <div className="space-y-1.5 text-[11px] text-slate-400">
-                <div className="flex items-center gap-2">
-                  <Phone className="w-3.5 h-3.5 text-teal-400" />
-                  <span dir="ltr">+20 01223533387</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Phone className="w-3.5 h-3.5 text-teal-400" />
-                  <span dir="ltr">+20 01021461446</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Mail className="w-3.5 h-3.5 text-teal-400" />
-                  <span>dr.koryemkamel@e-lms-eg.com</span>
-                </div>
+                {platformConfig.supportPhone && (
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-3.5 h-3.5 text-teal-400" />
+                    <span dir="ltr">{platformConfig.supportPhone}</span>
+                  </div>
+                )}
+                {platformConfig.supportEmail && (
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-3.5 h-3.5 text-teal-400" />
+                    <span>{platformConfig.supportEmail}</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <Globe className="w-3.5 h-3.5 text-teal-400" />
-                  <span>www.e-lms-eg.com</span>
+                  <span>www.ebook.osera-ai.com</span>
                 </div>
               </div>
             </div>
@@ -497,8 +508,8 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
 
           {/* COPYRIGHT */}
           <div className="pt-8 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-500 font-bold">
-            <p>© {new Date().getFullYear()} simplest | جميع الحقوق محفوظة لشركة نظم الإدارة والتعليم الإلكتروني E-LMS</p>
-            <p>إشراف وتطوير: د. كريم كامل (Dr. Koryem Kamel)</p>
+            <p>{platformConfig.copyrightText || `© ${new Date().getFullYear()} ${platformConfig.brandName} | جميع الحقوق محفوظة لشركة ${platformConfig.companyName}`}</p>
+            <p>مؤسس المنصة: {platformConfig.founderName}</p>
           </div>
 
         </div>

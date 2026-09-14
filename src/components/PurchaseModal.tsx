@@ -524,10 +524,10 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
                 required
                 value={voucherCode}
                 onChange={(e) => setVoucherCode(e.target.value)}
-                placeholder="مثال: SMP-8K21-9421"
+                placeholder="مثال: OSR-8K21-9421"
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-center font-mono font-bold text-sm tracking-widest text-slate-900 uppercase focus:bg-white outline-none"
               />
-              <p className="text-[11px] text-slate-400 mt-1">كود تجريبي VIP: <strong className="text-sky-600 font-mono">SIMP-2026-VIP</strong></p>
+              <p className="text-[11px] text-slate-400 mt-1">كود تجريبي VIP: <strong className="text-sky-600 font-mono">OSERA-2026-VIP</strong></p>
             </div>
 
             {voucherError && (

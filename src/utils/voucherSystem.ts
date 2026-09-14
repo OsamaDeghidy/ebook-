@@ -11,7 +11,7 @@ export interface VoucherResult {
 }
 
 // Prefix for platform cards
-const VOUCHER_STORAGE_KEY = 'simplest_redeemed_vouchers';
+const VOUCHER_STORAGE_KEY = 'osera_redeemed_vouchers';
 
 export function validateVoucherCode(code: string, currentBookId: string): VoucherResult {
   const cleanCode = code.trim().toUpperCase();
@@ -21,13 +21,13 @@ export function validateVoucherCode(code: string, currentBookId: string): Vouche
   }
 
   // Check if already redeemed on this client
-  const redeemedList: string[] = JSON.parse(localStorage.getItem(VOUCHER_STORAGE_KEY) || '[]');
+  const redeemedList: string[] = JSON.parse(localStorage.getItem(VOUCHER_STORAGE_KEY) || localStorage.getItem('simplest_redeemed_vouchers') || '[]');
   if (redeemedList.includes(cleanCode)) {
     return { valid: false, message: 'هذا الكود تم استخدامه وتفعيله مسبقاً' };
   }
 
-  // 1. Universal VIP / Center Master Code Pattern: SIMP-2026-VIP, CENTER-FREE, KORYEM-FREE
-  if (['SIMP-2026-VIP', 'CENTER-FREE', 'KORYEM-FREE', 'SIMPLEST-PASS'].includes(cleanCode)) {
+  // 1. Universal VIP / Center Master Code Pattern: OSERA-2026-VIP, SIMP-2026-VIP, CENTER-FREE
+  if (['OSERA-2026-VIP', 'OSERA-PASS', 'SIMP-2026-VIP', 'CENTER-FREE', 'KORYEM-FREE', 'SIMPLEST-PASS'].includes(cleanCode)) {
     saveRedeemedCode(cleanCode);
     return { valid: true, message: 'تم تفعيل كود السنتر المعتمد بنجاح! مبروك 🎉' };
   }
