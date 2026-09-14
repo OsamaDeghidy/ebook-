@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { BookOpen, ArrowLeft, Brain, HelpCircle, Youtube, Edit, Radio, Sparkles, RefreshCw, Layers, Terminal, Volume2, Eye, EyeOff, Check, Flame, Lock, ShoppingCart, CheckCircle2, ExternalLink, X, Maximize2, Minimize2, ShieldCheck, Shield } from 'lucide-react';
-import { MarketplaceBook, MindMapNode, Flashcard, Chapter, UserRole } from '../types';
+import { BookOpen, ArrowLeft, Brain, HelpCircle, Youtube, Edit, Radio, Sparkles, RefreshCw, Layers, Terminal, Volume2, Eye, EyeOff, Check, Flame, Lock, ShoppingCart, CheckCircle2, ExternalLink, X, Maximize2, Minimize2, ShieldCheck, Shield, Play, Film } from 'lucide-react';
+import { MarketplaceBook, MindMapNode, Flashcard, Chapter, UserRole, EduReel, EduReelStyle } from '../types';
 import MindMap from '../components/MindMap';
 import QuizSection from '../components/QuizSection';
 import VideoSection from '../components/VideoSection';
@@ -13,7 +13,11 @@ import DynamicDomainSandbox from '../components/DynamicDomainSandbox';
 import FloatingAudioBar from '../components/FloatingAudioBar';
 import { RelatedBooksSection } from '../components/RelatedBooksSection';
 import { PurchaseModal } from '../components/PurchaseModal';
+import { OmniscientStemAiTutor } from '../components/ai/OmniscientStemAiTutor';
+import { EduReelPlayer } from '../components/reels/EduReelPlayer';
 import { supabase } from '../lib/supabase';
+import { ForensicWatermark } from '../components/security/ForensicWatermark';
+import { ScreenShieldGuard } from '../components/security/ScreenShieldGuard';
 
 interface BookDetailsRouteProps {
   books: MarketplaceBook[];
@@ -23,6 +27,7 @@ interface BookDetailsRouteProps {
   onPurchaseBook?: (book: MarketplaceBook) => Promise<void>;
   userRole?: UserRole;
   isAdminMode?: boolean;
+  currentUser?: any;
 }
 
 export default function BookDetailsRoute({
@@ -32,7 +37,8 @@ export default function BookDetailsRoute({
   purchasedBookIds = [],
   onPurchaseBook,
   userRole = 'student',
-  isAdminMode = false
+  isAdminMode = false,
+  currentUser
 }: BookDetailsRouteProps) {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -41,11 +47,19 @@ export default function BookDetailsRoute({
 
   const book = books.find(b => b.id === id);
   const [activeChapterId, setActiveChapterId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'read' | 'podcast' | 'flashcards' | 'sandbox' | 'quiz' | 'mindmap' | 'videos' | 'editor'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'read' | 'podcast' | 'flashcards' | 'sandbox' | 'quiz' | 'mindmap' | 'videos' | 'editor' | 'reels'>(initialTab);
   const [isGeneratingAiQuestions, setIsGeneratingAiQuestions] = useState(false);
   const [isExpandingChapters, setIsExpandingChapters] = useState(false);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [isMobileChaptersOpen, setIsMobileChaptersOpen] = useState(false);
+
+  // Reels Studio in-book states
+  const [bookReels, setBookReels] = useState<EduReel[]>([]);
+  const [isLoadingBookReels, setIsLoadingBookReels] = useState(false);
+  const [isGeneratingReel, setIsGeneratingReel] = useState(false);
+  const [selectedReelStyle, setSelectedReelStyle] = useState<EduReelStyle>('chalkboard');
+  const [selectedVoice, setSelectedVoice] = useState<string>('ar-SA-HamedNeural');
+  const [reelStatusMsg, setReelStatusMsg] = useState<string | null>(null);
 
   // Batch pre-generation states
   const [isPregenerating, setIsPregenerating] = useState(false);
@@ -57,6 +71,15 @@ export default function BookDetailsRoute({
       setActiveChapterId(book.chapters[0].id);
     }
   }, [book, activeChapterId]);
+
+  // Synchronize activeTab to URL search params
+  useEffect(() => {
+    const currentParams = new URLSearchParams(window.location.search);
+    if (currentParams.get('tab') !== activeTab) {
+      currentParams.set('tab', activeTab);
+      window.history.replaceState(null, '', `${window.location.pathname}?${currentParams.toString()}`);
+    }
+  }, [activeTab]);
 
   // Check pregeneration status on load
   useEffect(() => {
@@ -80,6 +103,91 @@ export default function BookDetailsRoute({
     };
     checkPregen();
   }, [book?.id]);
+
+  const fetchBookReels = async () => {
+    if (!book) return;
+    setIsLoadingBookReels(true);
+    try {
+      const res = await fetch(`/api/reels/book/${book.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.reels) setBookReels(data.reels);
+      }
+    } catch (e) {
+      console.warn("Failed to load book reels:", e);
+    } finally {
+      setIsLoadingBookReels(false);
+    }
+  };
+
+  useEffect(() => {
+    if (book?.id) fetchBookReels();
+  }, [book?.id]);
+
+  const handleGenerateCurrentChapterReel = async () => {
+    if (!book || !activeChapter) return;
+    setIsGeneratingReel(true);
+    setReelStatusMsg("جاري كتابة السكريبت وتوليد الصوت الطبيعي النقي والكروت بالـ AI... 🎬");
+    try {
+      const res = await fetch('/api/reels/generate-single-chapter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bookId: book.id,
+          chapterId: activeChapter.id,
+          chapterTitle: activeChapter.title,
+          chapterContent: activeChapter.content,
+          style: selectedReelStyle,
+          voice: selectedVoice
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setReelStatusMsg("تم توليد ريل الفصل بالصوت الطبيعي المختار والكروت بنجاح! 🎉");
+        await fetchBookReels();
+        setTimeout(() => setReelStatusMsg(null), 4000);
+      } else {
+        alert(data.error || data.message || "فشل توليد الريل");
+      }
+    } catch (e) {
+      alert("حدث خطأ أثناء توليد الريل");
+    } finally {
+      setIsGeneratingReel(false);
+    }
+  };
+
+  const handleGenerateAllBookReels = async (forceRegen = true) => {
+    if (!book) return;
+    setIsGeneratingReel(true);
+    setReelStatusMsg(`جاري معالجة وتوليد ريلز لكافة فصول المذكرة (${book.chapters?.length || 0} فصل) وتوليد أصواتها بالـ AI... 🚀`);
+    try {
+      const res = await fetch('/api/reels/generate-for-book', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bookId: book.id,
+          customStyle: selectedReelStyle,
+          voice: selectedVoice,
+          forceRegenerate: forceRegen,
+          chapters: book.chapters
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setReelStatusMsg(`تم الانتهاء من توليد ريلز كافة الفصول بنجاح! ✨ (${data.generatedCount || 0} ريل جديد)`);
+        await fetchBookReels();
+        setTimeout(() => setReelStatusMsg(null), 5000);
+      } else {
+        alert(data.error || data.message || "فشل توليد ريلز المذكرة");
+      }
+    } catch (e) {
+      alert("حدث خطأ أثناء التوليد");
+    } finally {
+      setIsGeneratingReel(false);
+    }
+  };
 
   if (!book) {
     return (
@@ -371,43 +479,53 @@ export default function BookDetailsRoute({
                 </div>
               </div>
 
-              {/* EMBEDDED VIEWER WITH DRM MASKING SHIELDS */}
-              <div className={`relative w-full rounded-2xl overflow-hidden bg-slate-900 shadow-inner ${
-                isFullscreen ? 'flex-1 h-full' : 'h-[80vh] min-h-[580px] max-h-[880px]'
-              }`}>
-                <iframe
-                  src={cleanViewerUrl}
-                  title={book.title}
-                  className="w-full h-full border-0 select-none"
-                  allow="fullscreen *; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowFullScreen
-                />
+              {/* EMBEDDED VIEWER WITH DRM MASKING SHIELDS AND FORENSIC WATERMARK */}
+              <ScreenShieldGuard>
+                <div className={`relative w-full rounded-2xl overflow-hidden bg-slate-900 shadow-inner ${
+                  isFullscreen ? 'flex-1 h-full' : 'h-[80vh] min-h-[580px] max-h-[880px]'
+                }`}>
+                  <iframe
+                    src={cleanViewerUrl}
+                    title={book.title}
+                    className="w-full h-full border-0 select-none"
+                    allow="fullscreen *; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                  />
 
-                {/* 🛡️ TOP-RIGHT SEARCH BAR MASK (COMPLETELY BLOCKS SEARCH BAR & LENS ICON FROM RIGHT-0) */}
-                <div
-                  className="absolute top-0 right-0 h-11 w-80 sm:w-96 md:w-[420px] bg-black pointer-events-auto select-none z-30 flex items-center justify-end px-4 gap-2 text-xs font-black text-teal-400 shadow-md border-b border-l border-slate-800/80 rounded-bl-2xl"
-                >
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>كتاب تفاعلي معتمد - simplest LMS</span>
-                </div>
+                  {/* 🛡️ FORENSIC DYNAMIC WATERMARK (ANTI-SCREEN-CAPTURE / LEAK DETECTION) */}
+                  <ForensicWatermark
+                    userId={currentUser?.id}
+                    userEmail={currentUser?.email}
+                    userName={currentUser?.user_metadata?.full_name}
+                    userPhone={currentUser?.phone || currentUser?.user_metadata?.phone}
+                  />
 
-                {/* 🛡️ RESPONSIVE BOTTOM-RIGHT DRM SHIELD (COVERS 100% OF SHARE/PRINT/DOWNLOAD/NOTES ON ANY SCREEN SIZE) */}
-                <div
-                  className="absolute bottom-0 right-0 h-11 w-[calc(50%-120px)] bg-black border-t border-slate-800/90 flex items-center justify-end pr-4 sm:pr-6 gap-2 text-[11px] sm:text-xs font-black text-slate-300 pointer-events-auto select-none z-30 shadow-lg"
-                  title="محتوى مؤمن - النسخ والتحميل والمشاركة غير مصرح بها"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                  <span className="truncate hidden sm:inline">🔒 محتوى محمي ضد التحميل والمشاركة</span>
-                  <span className="truncate sm:hidden">🔒 محمي</span>
-                </div>
+                  {/* 🛡️ TOP-RIGHT SEARCH BAR MASK (COMPLETELY BLOCKS SEARCH BAR & LENS ICON FROM RIGHT-0) */}
+                  <div
+                    className="absolute top-0 right-0 h-11 w-80 sm:w-96 md:w-[420px] bg-black pointer-events-auto select-none z-30 flex items-center justify-end px-4 gap-2 text-xs font-black text-teal-400 shadow-md border-b border-l border-slate-800/80 rounded-bl-2xl"
+                  >
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>كتاب تفاعلي معتمد - simplest LMS</span>
+                  </div>
 
-                {/* 🛡️ RESPONSIVE BOTTOM-LEFT DRM SHIELD (COVERS 100% OF BOOKMARK/GRID/SLIDESHOW ON ANY SCREEN SIZE) */}
-                <div
-                  className="absolute bottom-0 left-0 h-11 w-[calc(50%-120px)] bg-black border-t border-slate-800/90 flex items-center justify-start pl-4 sm:pl-6 gap-2 text-[11px] sm:text-xs font-black text-teal-400 pointer-events-auto select-none z-30 shadow-lg"
-                >
-                  <span className="truncate font-black">simplest LMS ✦</span>
+                  {/* 🛡️ RESPONSIVE BOTTOM-RIGHT DRM SHIELD (COVERS 100% OF SHARE/PRINT/DOWNLOAD/NOTES ON ANY SCREEN SIZE) */}
+                  <div
+                    className="absolute bottom-0 right-0 h-11 w-[calc(50%-120px)] bg-black border-t border-slate-800/90 flex items-center justify-end pr-4 sm:pr-6 gap-2 text-[11px] sm:text-xs font-black text-slate-300 pointer-events-auto select-none z-30 shadow-lg"
+                    title="محتوى مؤمن - النسخ والتحميل والمشاركة غير مصرح بها"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span className="truncate hidden sm:inline">🔒 محتوى محمي ضد التحميل والمشاركة</span>
+                    <span className="truncate sm:hidden">🔒 محمي</span>
+                  </div>
+
+                  {/* 🛡️ RESPONSIVE BOTTOM-LEFT DRM SHIELD (COVERS 100% OF BOOKMARK/GRID/SLIDESHOW ON ANY SCREEN SIZE) */}
+                  <div
+                    className="absolute bottom-0 left-0 h-11 w-[calc(50%-120px)] bg-black border-t border-slate-800/90 flex items-center justify-start pl-4 sm:pl-6 gap-2 text-[11px] sm:text-xs font-black text-teal-400 pointer-events-auto select-none z-30 shadow-lg"
+                  >
+                    <span className="truncate font-black">simplest LMS ✦</span>
+                  </div>
                 </div>
-              </div>
+              </ScreenShieldGuard>
             </div>
 
             {/* COURSE INFO & DETAILS */}
@@ -540,6 +658,13 @@ export default function BookDetailsRoute({
             onConfirmPurchase={onPurchaseBook}
           />
         )}
+
+        {/* 🌟 OMNISCIENT STEM AI TUTOR (FLOATING CHAT) */}
+        <OmniscientStemAiTutor
+          bookId={book.id}
+          bookTitle={book.title}
+          currentChapterTitle={book.chapters?.[0]?.title || 'المقدمة والتمهيد'}
+        />
       </div>
     );
   }
@@ -573,6 +698,17 @@ export default function BookDetailsRoute({
 
         {/* TOP BAR ACTIONS: CHAPTERS TOGGLE & PUBLISH BADGE */}
         <div className="flex items-center gap-2 flex-wrap justify-between sm:justify-end">
+          {/* REELS EXPLORER BUTTON */}
+          <button
+            onClick={() => navigate(`/book/${book.id}/reels`)}
+            className="px-3.5 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition border bg-purple-50 text-purple-800 border-purple-200 hover:bg-purple-100 shadow-2xs cursor-pointer"
+            title="مشاهدة ريلز وتيك توك فصول المذكرة"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+            <span>🎬 ريلز فصول الكتاب</span>
+          </button>
+
+
           {/* TOGGLE CHAPTERS SIDEBAR BUTTON */}
           <button
             onClick={() => setIsMobileChaptersOpen(!isMobileChaptersOpen)}
@@ -620,6 +756,7 @@ export default function BookDetailsRoute({
       <div className="flex items-center gap-1.5 border-b border-gray-200 pb-2 overflow-x-auto scrollbar-none -mx-2 px-2 sm:mx-0 sm:px-0">
         {[
           { id: 'read', label: 'قراءة المقرر', icon: BookOpen, enabled: true },
+          { id: 'reels', label: 'ريلز وتيك توك الفصل 🎬', icon: Film, enabled: true },
           { id: 'podcast', label: 'استوديو البودكاست', icon: Radio, enabled: book.feature_toggles?.show_podcast !== false },
           { id: 'flashcards', label: 'بطاقات المراجعة', icon: Layers, enabled: book.feature_toggles?.show_flashcards !== false },
           { id: 'sandbox', label: 'المختبر والتطبيق', icon: Terminal, enabled: book.feature_toggles?.show_sandbox !== false },
@@ -838,8 +975,307 @@ export default function BookDetailsRoute({
         <div className="flex-1 w-full space-y-6">
 
         {activeTab === 'read' && activeChapter && (
-          <ReadSection chapter={activeChapter} />
+          <ScreenShieldGuard>
+            <div className="relative">
+              <ForensicWatermark
+                userId={currentUser?.id}
+                userEmail={currentUser?.email}
+                userName={currentUser?.user_metadata?.full_name}
+                userPhone={currentUser?.phone || currentUser?.user_metadata?.phone}
+              />
+              <ReadSection chapter={activeChapter} />
+            </div>
+          </ScreenShieldGuard>
         )}
+
+        {activeTab === 'reels' && activeChapter && (() => {
+          const currentReel = bookReels.find(r => (r.chapter_id && r.chapter_id === activeChapter.id) || (r.chapter_title && r.chapter_title.trim() === activeChapter.title.trim()));
+          const hasAnyReel = bookReels.length > 0;
+          const totalChaptersCount = book.chapters?.length || 0;
+          const generatedReelsCount = bookReels.length;
+
+          return (
+            <div className="space-y-6 animate-in fade-in duration-300" dir="rtl">
+              {/* STATUS NOTIFICATION BANNER */}
+              {reelStatusMsg && (
+                <div className="p-4 bg-gradient-to-r from-teal-500/10 via-indigo-500/10 to-purple-500/10 border border-teal-500/30 rounded-2xl flex items-center justify-between shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <Sparkles className="w-5 h-5 text-teal-600 animate-pulse" />
+                    <span className="text-xs sm:text-sm font-black text-slate-800">{reelStatusMsg}</span>
+                  </div>
+                  {isGeneratingReel && <RefreshCw className="w-4 h-4 animate-spin text-teal-600" />}
+                </div>
+              )}
+
+              {/* REEL PLAYER OR GENERATOR */}
+              {currentReel ? (
+                <div className="space-y-4">
+                  {/* TOP CONTROL BAR */}
+                  <div className="bg-white border border-gray-200 rounded-3xl p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md">
+                        <Film className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="font-black text-gray-900 text-sm">{currentReel.title || activeChapter.title}</h4>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[11px] font-bold text-gray-500">ستايل: {currentReel.style || 'cyberpunk'}</span>
+                          <span className="text-[10px] bg-emerald-100 text-emerald-800 font-black px-2 py-0.5 rounded-full">
+                            جاهز بالصوت الطبيعي 🎙️
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                      {/* VOICE SELECTOR DROPDOWN */}
+                      <select
+                        value={selectedVoice}
+                        onChange={(e) => setSelectedVoice(e.target.value)}
+                        disabled={isGeneratingReel}
+                        className="px-3 py-2 bg-indigo-50/80 border border-indigo-200 rounded-xl text-xs font-black text-indigo-900 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                        title="اختيار صوت المعلق الصوتي بالذكاء الاصطناعي"
+                      >
+                        <option value="ar-SA-HamedNeural">🎙️ 🇸🇦 حامد (سعودي فخم)</option>
+                        <option value="ar-EG-ShakirNeural">🎙️ 🇪🇬 شاكر (مصري دافئ)</option>
+                        <option value="ar-JO-TaimNeural">🎙️ 🇯🇴 تيم (أردني شبابي)</option>
+                        <option value="ar-EG-SalmaNeural">🎙️ 🇪🇬 سلمى (مصرية حيوية)</option>
+                        <option value="ar-SA-ZariyahNeural">🎙️ 🇸🇦 زارية (سعودية هادئة)</option>
+                        <option value="ar-AE-HamdanNeural">🎙️ 🇦🇪 حمدان (إماراتي متزن)</option>
+                      </select>
+
+                      {/* STYLE SELECTOR DROPDOWN */}
+                      <select
+                        value={selectedReelStyle}
+                        onChange={(e) => setSelectedReelStyle(e.target.value as EduReelStyle)}
+                        disabled={isGeneratingReel}
+                        className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-black text-gray-700 outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
+                        title="اختيار الستايل البصري للريل"
+                      >
+                        <option value="chalkboard">📐 سبورة وأكاديمي</option>
+                        <option value="cyberpunk">🚀 سايبر بانك نيون</option>
+                        <option value="cinematic">🎬 سينمائي وثائقي</option>
+                        <option value="gamified">🎮 تفاعلي جيمينج</option>
+                      </select>
+
+                      <button
+                        onClick={handleGenerateCurrentChapterReel}
+                        disabled={isGeneratingReel}
+                        className="px-4 py-2 bg-gradient-to-r from-teal-600 to-indigo-600 text-white font-black text-xs rounded-xl shadow hover:shadow-md transition active:scale-95 flex items-center gap-1.5 disabled:opacity-60 cursor-pointer"
+                        title="إعادة توليد ريل لهذا الفصل بالصوت والستايل المختار"
+                      >
+                        {isGeneratingReel ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                        <span>توليد مجدداً</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleGenerateAllBookReels(true)}
+                        disabled={isGeneratingReel}
+                        className="px-3 py-2 bg-slate-900 text-white font-black text-xs rounded-xl hover:bg-slate-800 transition active:scale-95 flex items-center gap-1.5 disabled:opacity-60 cursor-pointer"
+                        title="توليد كافة فصول المذكرة بالصوت والستايل الجديد"
+                      >
+                        <span>🚀 توليد لكل الفصول ({generatedReelsCount}/{totalChaptersCount})</span>
+                      </button>
+
+                      <button
+                        onClick={() => navigate(`/book/${book.id}/reels`)}
+                        className="px-3 py-2 bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 text-slate-950 font-black text-xs rounded-xl shadow transition active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                        title="مشاهدة ريلز هذا المقرر في وضع ملء الشاشة الكامل"
+                      >
+                        <Smartphone className="w-3.5 h-3.5" />
+                        <span>📱 تجربة TikTok كاملة للمقرر</span>
+                      </button>
+
+                    </div>
+                  </div>
+
+                  {/* 9:16 VERTICAL PLAYER CONTAINER */}
+                  <div className="flex justify-center">
+                    <div className="w-full max-w-[420px] aspect-[9/16] max-h-[680px] rounded-3xl overflow-hidden shadow-2xl border-4 border-slate-900 bg-black relative">
+                      <EduReelPlayer
+                        reel={currentReel}
+                        isActive={activeTab === 'reels'}
+                        currentUser={currentUser}
+                        onNextReel={() => {
+                          const currentIndex = (book.chapters || []).findIndex(c => c.id === activeChapter.id);
+                          if (currentIndex < (book.chapters?.length || 1) - 1) {
+                            setActiveChapterId(book.chapters[currentIndex + 1].id);
+                          }
+                        }}
+                        onPrevReel={() => {
+                          const currentIndex = (book.chapters || []).findIndex(c => c.id === activeChapter.id);
+                          if (currentIndex > 0) {
+                            setActiveChapterId(book.chapters[currentIndex - 1].id);
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* REEL GENERATION STUDIO CARD */
+                <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-indigo-500/20 text-center space-y-6">
+                  <div className="max-w-xl mx-auto space-y-3">
+                    <div className="inline-flex items-center justify-center p-3.5 rounded-2xl bg-gradient-to-tr from-pink-500 to-indigo-600 text-white shadow-lg shadow-indigo-500/30">
+                      <Film className="w-8 h-8" />
+                    </div>
+                    <h3 className="text-xl sm:text-2xl font-black text-white">
+                      استوديو ريلز وتيك توك التعلم السريع 🎬
+                    </h3>
+                    <p className="text-xs sm:text-sm text-indigo-200/90 leading-relaxed font-medium">
+                      لم يتم توليد فيديو ريل تفاعلي لفصل <span className="text-yellow-400 font-bold">"{activeChapter.title}"</span> بعد.
+                      يقوم الذكاء الاصطناعي بتحليل النص، صياغة سكريبت شيق، وتوليد تعليق صوتي طبيعي متزامن مع كلمات ملونة وكروت أسئلة منبثقة!
+                    </p>
+                  </div>
+
+                  {/* VOICE & STYLE SELECTION CONTROLS */}
+                  <div className="max-w-xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4 text-right">
+                    <div>
+                      <label className="block text-xs font-black text-indigo-300 mb-2">
+                        🎙️ اختر صوت المعلق الصوتي:
+                      </label>
+                      <select
+                        value={selectedVoice}
+                        onChange={(e) => setSelectedVoice(e.target.value)}
+                        className="w-full p-3 bg-white/10 border border-white/20 rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-400 cursor-pointer"
+                      >
+                        <option value="ar-SA-HamedNeural" className="bg-slate-900 text-white">🇸🇦 حامد (سعودي فخم ووقور - الأفضل)</option>
+                        <option value="ar-EG-ShakirNeural" className="bg-slate-900 text-white">🇪🇬 شاكر (مصري دافئ ومفصل)</option>
+                        <option value="ar-JO-TaimNeural" className="bg-slate-900 text-white">🇯🇴 تيم (أردني شبابي وحماسي)</option>
+                        <option value="ar-EG-SalmaNeural" className="bg-slate-900 text-white">🇪🇬 سلمى (مصرية شابة وحيوية)</option>
+                        <option value="ar-SA-ZariyahNeural" className="bg-slate-900 text-white">🇸🇦 زارية (سعودية وثائقية هادئة)</option>
+                        <option value="ar-AE-HamdanNeural" className="bg-slate-900 text-white">🇦🇪 حمدان (إماراتي متزن ورسمي)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-black text-indigo-300 mb-2">
+                        🎨 اختر الستايل البصري للريل:
+                      </label>
+                      <select
+                        value={selectedReelStyle}
+                        onChange={(e) => setSelectedReelStyle(e.target.value as EduReelStyle)}
+                        className="w-full p-3 bg-white/10 border border-white/20 rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-400 cursor-pointer"
+                      >
+                        <option value="chalkboard" className="bg-slate-900 text-white">📐 سبورة وأكاديمي</option>
+                        <option value="cyberpunk" className="bg-slate-900 text-white">🚀 سايبر بانك نيون</option>
+                        <option value="cinematic" className="bg-slate-900 text-white">🎬 سينمائي وثائقي</option>
+                        <option value="gamified" className="bg-slate-900 text-white">🎮 تفاعلي جيمينج</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* STYLE SELECTION CARDS */}
+                  <div className="max-w-xl mx-auto">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                      {[
+                        { id: 'chalkboard', label: 'سبورة وأكاديمي', icon: '📐', desc: 'طباشير واقعي ومعادلات' },
+                        { id: 'cyberpunk', label: 'سايبر بانك', icon: '🚀', desc: 'HUD ليزري وشاشات نيون' },
+                        { id: 'cinematic', label: 'سينمائي وثائقي', icon: '🎬', desc: 'تركيز وإضاءة فاخرة' },
+                        { id: 'gamified', label: 'تفاعلي جيمينج', icon: '🎮', desc: 'حماسي وشارات نقاط' }
+                      ].map((st) => (
+                        <button
+                          key={st.id}
+                          type="button"
+                          onClick={() => setSelectedReelStyle(st.id as EduReelStyle)}
+                          className={`p-3 rounded-2xl border text-right transition flex flex-col justify-between cursor-pointer ${
+                            selectedReelStyle === st.id
+                              ? 'bg-gradient-to-br from-indigo-600/40 to-teal-600/40 border-teal-400 shadow-md shadow-teal-500/20'
+                              : 'bg-white/5 border-white/10 hover:bg-white/10 text-white/80'
+                          }`}
+                        >
+                          <div className="text-xl mb-1">{st.icon}</div>
+                          <div>
+                            <div className="font-black text-xs text-white">{st.label}</div>
+                            <div className="text-[10px] text-indigo-200/70">{st.desc}</div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* ACTION BUTTONS */}
+                  <div className="max-w-md mx-auto flex flex-col sm:flex-row gap-3 pt-2">
+                    <button
+                      onClick={handleGenerateCurrentChapterReel}
+                      disabled={isGeneratingReel}
+                      className="flex-1 py-3.5 px-5 bg-gradient-to-r from-teal-500 via-indigo-500 to-purple-600 hover:from-teal-600 hover:to-purple-700 text-white font-black text-xs sm:text-sm rounded-2xl shadow-lg shadow-indigo-500/30 transition active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
+                    >
+                      {isGeneratingReel ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <span>جاري كتابة السكريبت وتوليد الصوت...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-4 h-4 text-yellow-300" />
+                          <span>⚡ توليد ريل لهذا الفصل الآن</span>
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => handleGenerateAllBookReels(true)}
+                      disabled={isGeneratingReel}
+                      className="py-3.5 px-4 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-black text-xs rounded-2xl transition active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
+                    >
+                      <span>🚀 توليد لكل الفصول</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* CHAPTER REELS BROWSER / QUICK JUMP */}
+              {hasAnyReel && (
+                <div className="bg-white border border-gray-200 rounded-3xl p-5 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                    <h4 className="font-black text-gray-900 text-sm flex items-center gap-2">
+                      <Film className="w-4 h-4 text-teal-600" />
+                      <span>ريلز فصول المذكرة المتوفرة ({bookReels.length})</span>
+                    </h4>
+                    <span className="text-[11px] font-bold text-gray-500">اضغط للمشاهدة فوراً</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                    {(book.chapters || []).map((ch, idx) => {
+                      const chReel = bookReels.find(r => (r.chapter_id && r.chapter_id === ch.id) || (r.chapter_title && r.chapter_title.trim() === ch.title.trim()));
+                      const isCurrent = ch.id === activeChapter.id;
+
+                      return (
+                        <button
+                          key={ch.id}
+                          onClick={() => setActiveChapterId(ch.id)}
+                          className={`p-3 rounded-2xl border text-right transition flex items-center justify-between cursor-pointer ${
+                            isCurrent
+                              ? 'bg-teal-50 border-teal-300 text-teal-900 shadow-sm'
+                              : 'bg-gray-50/50 border-gray-200 hover:bg-gray-100 text-gray-700'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 truncate">
+                            <span className="w-5 h-5 rounded-full bg-gray-200 text-gray-700 text-[10px] font-black flex items-center justify-center shrink-0">
+                              {idx + 1}
+                            </span>
+                            <span className="text-xs font-bold truncate">{ch.title}</span>
+                          </div>
+
+                          {chReel ? (
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black shrink-0 flex items-center gap-1">
+                              <Play className="w-2.5 h-2.5 fill-emerald-800" /> جاهز
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full bg-gray-200 text-gray-500 text-[10px] font-bold shrink-0">
+                              غير مولد
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {activeTab === 'podcast' && activeChapter && (
           <PodcastLounge
@@ -963,6 +1399,13 @@ export default function BookDetailsRoute({
           onConfirmPurchase={onPurchaseBook}
         />
       )}
+
+      {/* 🌟 OMNISCIENT STEM AI TUTOR (FLOATING CHAT) */}
+      <OmniscientStemAiTutor
+        bookId={book.id}
+        bookTitle={book.title}
+        currentChapterTitle={activeChapter?.title || 'الفصل الحالي'}
+      />
     </div>
   );
 }

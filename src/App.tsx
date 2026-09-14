@@ -16,11 +16,25 @@ import { MarketplaceView } from './components/MarketplaceView';
 import { LandingPageView } from './components/LandingPageView';
 import { AuthModal } from './components/AuthModal';
 import { AddExternalBookModal } from './components/AddExternalBookModal';
+import { AdminInstructorHub } from './components/admin/AdminInstructorHub';
+import { StudentStreakBadge } from './components/gamification/StudentStreakBadge';
+import { EduReelsFeedView } from './components/reels/EduReelsFeedView';
 import BookDetailsRoute from './routes/BookDetailsRoute';
 import { supabase } from './lib/supabase';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { getPlatformConfig, PlatformConfig } from './services/platformConfigService';
 
 function AppContent() {
+  const [platformConfig, setPlatformConfig] = useState<PlatformConfig>(getPlatformConfig());
+
+  useEffect(() => {
+    const handleConfigChange = (e: any) => {
+      setPlatformConfig(e.detail || getPlatformConfig());
+    };
+    window.addEventListener('platform-config-changed', handleConfigChange);
+    return () => window.removeEventListener('platform-config-changed', handleConfigChange);
+  }, []);
+
   const [ebooks, setEbooks] = useState<MarketplaceBook[]>([]);
   const [currentUser, setCurrentUser] = useState<any | null>(null);
   const [userRole, setUserRole] = useState<UserRole>('student');
@@ -42,6 +56,7 @@ function AppContent() {
   });
   
   const navigate = useNavigate();
+
 
   const handlePurchaseBook = async (book: MarketplaceBook) => {
     try {
@@ -70,10 +85,10 @@ function AppContent() {
     fetchSupabaseCatalog();
     checkAuthSession();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         setCurrentUser(session.user);
-        fetchUserProfile(session.user.id);
+        await fetchUserProfile(session.user.id, session.user);
       } else {
         setCurrentUser(null);
         setUserRole('student');
@@ -87,28 +102,79 @@ function AppContent() {
   }, []);
 
   const checkAuthSession = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-      setCurrentUser(session.user);
-      fetchUserProfile(session.user.id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setCurrentUser(session.user);
+        await fetchUserProfile(session.user.id, session.user);
+      } else {
+        // No active Supabase session
+        setCurrentUser(null);
+        setUserRole('student');
+        setIsAdminMode(false);
+        localStorage.removeItem('simplest_auth_user');
+        localStorage.removeItem('simplest_auth_role');
+      }
+    } catch (e) {
+      console.warn("Session check notice:", e);
     }
   };
 
-  const fetchUserProfile = async (userId: string) => {
+  const fetchUserProfile = async (userId: string, authUser?: any) => {
     try {
+      // 1. Check Supabase profiles table by ID
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role')
+        .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
-      if (profile) {
-        const role = (profile.role as UserRole) || 'student';
+      if (profile && profile.role) {
+        const role = profile.role as UserRole;
         setUserRole(role);
-        if (role === 'admin') setIsAdminMode(true);
+        setIsAdminMode(role === 'admin');
+        localStorage.setItem('simplest_auth_role', role);
+        return;
+      }
+
+      // 2. Check Supabase profiles table by Email
+      if (authUser?.email) {
+        const { data: profileByEmail } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('email', authUser.email)
+          .maybeSingle();
+
+        if (profileByEmail && profileByEmail.role) {
+          const role = profileByEmail.role as UserRole;
+          setUserRole(role);
+          setIsAdminMode(role === 'admin');
+          localStorage.setItem('simplest_auth_role', role);
+          return;
+        }
+      }
+
+      // 3. Fallback to auth user metadata if profile not created yet
+      const metaRole = (authUser?.user_metadata?.role as UserRole) || 'student';
+      setUserRole(metaRole);
+      setIsAdminMode(metaRole === 'admin');
+      localStorage.setItem('simplest_auth_role', metaRole);
+
+      // Auto-upsert profile to Supabase so it's permanently saved in DB
+      try {
+        await supabase.from('profiles').upsert({
+          id: userId,
+          email: authUser?.email || '',
+          full_name: authUser?.user_metadata?.full_name || authUser?.email?.split('@')[0] || '',
+          role: metaRole
+        });
+      } catch (e) {
+        console.warn('Profile auto-create notice:', e);
       }
     } catch (e) {
-      console.warn("Profile fetch error:", e);
+      console.warn('Fetch profile error:', e);
+      setUserRole('student');
+      setIsAdminMode(false);
     }
   };
 
@@ -266,11 +332,13 @@ function AppContent() {
   };
 
   const handleAddExternalBook = async (bookData: any) => {
+    const authorName = bookData.authorName || currentUser?.user_metadata?.full_name || currentUser?.email?.split('@')[0] || 'د. كريم كامل';
     const newBook: MarketplaceBook = {
       id: crypto.randomUUID(),
       title: bookData.title,
       description: bookData.description,
-      author_name: bookData.authorName,
+      author_name: authorName,
+      author_id: currentUser?.id,
       category: bookData.category,
       tags: bookData.tags,
       price: Number(bookData.price) || 0,
@@ -290,6 +358,7 @@ function AppContent() {
         title: newBook.title,
         description: newBook.description,
         author_name: newBook.author_name,
+        author_id: currentUser?.id || null,
         category: newBook.category,
         tags: newBook.tags,
         price: newBook.price,
@@ -324,6 +393,8 @@ function AppContent() {
     fileType?: string;
     category?: any;
     track?: any;
+    education_level?: string;
+    academic_system?: string;
     subcategory?: string;
     grade_level?: string;
     semester?: string;
@@ -376,9 +447,11 @@ function AppContent() {
         payload.preview_video_url ? `video:${payload.preview_video_url}` : ''
       ].filter(Boolean);
 
+      const creatorAuthorName = currentUser?.user_metadata?.full_name || currentUser?.email?.split('@')[0] || 'د. كريم كامل';
       const newBook: MarketplaceBook = {
         ...generatedEbook,
-        author_name: 'د. كريم كامل',
+        author_name: creatorAuthorName,
+        author_id: currentUser?.id,
         category: payload.category || 'academic_curriculum',
         track: payload.track || 'academic',
         education_level: payload.education_level,
@@ -407,6 +480,7 @@ function AppContent() {
           title: newBook.title,
           description: newBook.description,
           author_name: newBook.author_name,
+          author_id: currentUser?.id || null,
           category: newBook.category,
           tags: newBook.tags,
           price: newBook.price,
@@ -448,6 +522,8 @@ function AppContent() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    localStorage.removeItem('simplest_auth_user');
+    localStorage.removeItem('simplest_auth_role');
     setCurrentUser(null);
     setUserRole('student');
     setIsAdminMode(false);
@@ -458,19 +534,19 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 flex flex-col font-sans selection:bg-teal-500 selection:text-white" dir="rtl">
-      {/* GLOBAL SAAS NAVBAR (simplest Branding) */}
-      <header className="bg-white/95 border-b border-gray-200 sticky top-0 z-40 px-4 sm:px-6 py-3.5 backdrop-blur-md flex items-center justify-between relative">
+      {/* GLOBAL SAAS NAVBAR (Dynamic White-Label Branding) */}
+      <header className="bg-white/95 border-b border-gray-200 sticky top-0 z-40 px-4 sm:px-6 py-3.5 backdrop-blur-md flex items-center justify-between relative print:hidden">
         <div className="flex items-center gap-3">
           <Link to="/" className="flex items-center gap-3 cursor-pointer group">
-            <div className="w-10 h-10 bg-gradient-to-tr from-teal-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-md shadow-teal-500/25 text-white font-black text-xl group-hover:scale-105 transition">
-              S
+            <div className="w-10 h-10 bg-gradient-to-tr from-sky-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-md shadow-sky-500/25 text-white font-black text-xl group-hover:scale-105 transition">
+              {platformConfig.brandName.charAt(0) || 'أ'}
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-black text-lg text-slate-900 tracking-tight">simplest</span>
-                <span className="text-[10px] font-black bg-teal-50 text-teal-700 border border-teal-200 px-1.5 py-0.5 rounded-md">LMS</span>
+                <span className="font-black text-lg text-slate-900 tracking-tight">{platformConfig.brandName}</span>
+                <span className="text-[10px] font-black bg-sky-50 text-sky-700 border border-sky-200 px-1.5 py-0.5 rounded-md">AI LMS</span>
               </div>
-              <p className="text-xs text-slate-700 font-black">منصة التعلم الإلكتروني التفاعلي</p>
+              <p className="text-xs text-slate-700 font-bold">{platformConfig.brandSubtitle}</p>
             </div>
           </Link>
         </div>
@@ -491,21 +567,53 @@ function AppContent() {
           <Link
             to="/marketplace"
             className={`px-4 py-2 rounded-xl transition flex items-center gap-1.5 ${
-              !isLandingPage
-                ? 'bg-teal-600 text-white font-black shadow-xs'
+              location.pathname === '/marketplace'
+                ? 'bg-sky-600 text-white font-black shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
             <ShoppingCart className="w-3.5 h-3.5" />
             <span>متجر ومكتبة المقررات</span>
-            <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${!isLandingPage ? 'bg-teal-700 text-white' : 'bg-slate-200 text-slate-700'}`}>
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${location.pathname === '/marketplace' ? 'bg-sky-700 text-white' : 'bg-slate-200 text-slate-700'}`}>
               {ebooks.length}
             </span>
           </Link>
+
+          {/* REELS LINK */}
+          <Link
+            to="/reels"
+            className={`px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 ${
+              location.pathname === '/reels'
+                ? 'bg-purple-600 text-white font-black shadow-xs'
+                : 'text-purple-700 hover:text-purple-900 hover:bg-purple-50 border border-purple-100'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+            <span>🎬 ريلز المعرفة</span>
+          </Link>
+
+          {/* INSTRUCTOR / ADMIN HUB LINK */}
+          {currentUser && (userRole === 'admin' || userRole === 'instructor' || isAdminMode) && (
+            <Link
+              to="/admin"
+              className={`px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 ${
+                location.pathname === '/admin' || location.pathname === '/instructor'
+                  ? 'bg-indigo-600 text-white font-black shadow-xs'
+                  : 'text-indigo-700 hover:text-indigo-900 hover:bg-indigo-50 border border-indigo-100'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <span>{userRole === 'admin' ? 'لوحة التحكم والإدارة 🛡️' : 'لوحة المعلم والسنتر ⚡'}</span>
+            </Link>
+          )}
         </nav>
 
         {/* CONTROLS & AUTH BUTTONS */}
         <div className="flex items-center gap-2.5">
+          {/* 🌟 GAMIFICATION / DAILY STREAK BADGE */}
+          <StudentStreakBadge currentUser={currentUser} />
+
+
           {isLandingPage && (
             <Link
               to="/marketplace"
@@ -571,6 +679,8 @@ function AppContent() {
                 userRole={userRole}
                 isAdminMode={isAdminMode}
                 purchasedBookIds={purchasedBookIds}
+                currentUser={currentUser}
+                onOpenAuth={() => setIsAuthModalOpen(true)}
                 onLaunchBook={handleLaunchBook}
                 onLaunchQuiz={handleLaunchQuiz}
                 onOpenCreateModal={() => setIsAiCreateModalOpen(true)}
@@ -582,6 +692,66 @@ function AppContent() {
               />
             </div>
           } />
+          <Route path="/admin" element={
+            !currentUser ? (
+              <div className="p-12 text-center bg-white border border-gray-200 rounded-3xl shadow-sm space-y-4 max-w-lg mx-auto my-12" dir="rtl">
+                <Shield className="w-12 h-12 text-amber-500 mx-auto" />
+                <h3 className="text-xl font-black text-slate-900">هذه المنطقة مخصصة للمعلمين وإدارة المنصة</h3>
+                <p className="text-xs text-slate-500">يرجى تسجيل الدخول بحساب المعلم أو المسؤول العام للوصول إلى لوحة العمليات والاستوديو.</p>
+                <button
+                  onClick={() => setIsAuthModalOpen(true)}
+                  className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs rounded-xl shadow-md transition cursor-pointer"
+                >
+                  تسجيل الدخول الآن 🔑
+                </button>
+              </div>
+            ) : (
+              <div className="p-4 sm:p-6 max-w-7xl mx-auto w-full space-y-6">
+                <AdminInstructorHub
+                  books={ebooks}
+                  userRole={userRole}
+                  isAdminMode={isAdminMode}
+                  currentUser={currentUser}
+                  onBackToMarketplace={() => navigate('/marketplace')}
+                  onLaunchBook={(id) => navigate(`/book/${id}`)}
+                  onTogglePublish={handleTogglePublish}
+                  onDeleteBook={handleDeleteBook}
+                  onOpenCreateModal={() => setIsAiCreateModalOpen(true)}
+                  onOpenExternalModal={() => setIsExternalModalOpen(true)}
+                />
+              </div>
+            )
+          } />
+          <Route path="/instructor" element={
+            !currentUser ? (
+              <div className="p-12 text-center bg-white border border-gray-200 rounded-3xl shadow-sm space-y-4 max-w-lg mx-auto my-12" dir="rtl">
+                <Shield className="w-12 h-12 text-amber-500 mx-auto" />
+                <h3 className="text-xl font-black text-slate-900">هذه المنطقة مخصصة للمعلمين</h3>
+                <p className="text-xs text-slate-500">يرجى تسجيل الدخول بحسابك للوصول إلى استوديو المعلم.</p>
+                <button
+                  onClick={() => setIsAuthModalOpen(true)}
+                  className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs rounded-xl shadow-md transition cursor-pointer"
+                >
+                  تسجيل الدخول كمعلم 👨‍🏫
+                </button>
+              </div>
+            ) : (
+              <div className="p-4 sm:p-6 max-w-7xl mx-auto w-full space-y-6">
+                <AdminInstructorHub
+                  books={ebooks}
+                  userRole={userRole}
+                  isAdminMode={isAdminMode}
+                  currentUser={currentUser}
+                  onBackToMarketplace={() => navigate('/marketplace')}
+                  onLaunchBook={(id) => navigate(`/book/${id}`)}
+                  onTogglePublish={handleTogglePublish}
+                  onDeleteBook={handleDeleteBook}
+                  onOpenCreateModal={() => setIsAiCreateModalOpen(true)}
+                  onOpenExternalModal={() => setIsExternalModalOpen(true)}
+                />
+              </div>
+            )
+          } />
           <Route path="/book/:id" element={
             <div className="p-4 sm:p-6 max-w-7xl mx-auto w-full space-y-6">
               <BookDetailsRoute
@@ -592,11 +762,27 @@ function AppContent() {
                 onPurchaseBook={handlePurchaseBook}
                 userRole={userRole}
                 isAdminMode={isAdminMode}
+                currentUser={currentUser}
               />
             </div>
           } />
+          <Route path="/reels" element={
+            <EduReelsFeedView
+              currentUser={currentUser}
+              onBack={() => navigate(-1)}
+              onOpenBook={(bookId, chapterId) => navigate(`/book/${bookId}`)}
+            />
+          } />
+          <Route path="/book/:bookId/reels" element={
+            <EduReelsFeedView
+              currentUser={currentUser}
+              onBack={() => navigate(-1)}
+              onOpenBook={(bookId, chapterId) => navigate(`/book/${bookId}`)}
+            />
+          } />
         </Routes>
       </main>
+
 
       {/* MODALS */}
       <AuthModal

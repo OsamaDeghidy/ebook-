@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import { Play, Square, FileText, Lightbulb, ListCollapse, BookOpen, Volume2, RefreshCw } from 'lucide-react';
 import { Chapter } from '../types';
 import { useGlobalAudio } from '../hooks/useGlobalAudio';
+import { ContextualAiTutor } from './ai/ContextualAiTutor';
 
 export function ReadSection({ chapter }: { chapter: Chapter }) {
   const { isItemPlaying, isItemLoading, play, stop } = useGlobalAudio();
@@ -136,6 +137,9 @@ export function ReadSection({ chapter }: { chapter: Chapter }) {
         </div>,
         chapter.originalContent
       )}
+
+      {/* 🧠 CONTEXTUAL AI TUTOR (SELECTION EXPLAINER) */}
+      <ContextualAiTutor chapterTitle={chapter.title} />
     </div>
   );
 }

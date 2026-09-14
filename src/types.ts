@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'student';
+export type UserRole = 'admin' | 'instructor' | 'student';
 
 export interface UserProfile {
   id: string;
@@ -118,6 +118,7 @@ export interface Ebook {
   id: string;
   title: string;
   description: string;
+  author_id?: string;
   author_name?: string;
   category?: BookCategory;
   track?: BookTrack;
@@ -135,6 +136,9 @@ export interface Ebook {
   preview_video_url?: string; // Explanatory demo video URL
   sales_count?: number;
   is_published?: boolean;
+  approval_status?: 'draft' | 'pending_approval' | 'approved' | 'rejected' | 'edit_requested';
+  admin_rejection_reason?: string;
+  edit_request_notes?: string;
   thumbnail_url?: string;
   rating?: number;
   reviews_count?: number;
@@ -154,6 +158,7 @@ export interface MarketplaceBook extends Ebook {
   id: string;
   title: string;
   description: string;
+  author_id?: string;
   author_name: string;
   category: BookCategory;
   track?: BookTrack;
@@ -171,6 +176,9 @@ export interface MarketplaceBook extends Ebook {
   preview_video_url?: string;
   sales_count?: number;
   is_published: boolean;
+  approval_status?: 'draft' | 'pending_approval' | 'approved' | 'rejected' | 'edit_requested';
+  admin_rejection_reason?: string;
+  edit_request_notes?: string;
   thumbnail_url: string;
   rating: number;
   reviews_count: number;
@@ -187,4 +195,76 @@ export interface ConversionJob {
   resultEbook?: Ebook;
   error?: string;
   createdAt: string;
+}
+
+export type EduReelStyle = 'cyberpunk' | 'chalkboard' | 'cinematic' | 'gamified';
+
+export interface EduReelWordTiming {
+  word: string;
+  startMs: number;
+  endMs: number;
+}
+
+export interface EduReelVisualCard {
+  title: string;
+  content: string;
+  type: 'formula' | 'code' | 'lore' | 'diagram' | 'quote';
+  startSec: number;
+  endSec: number;
+}
+
+export interface EduReelInteractiveQuiz {
+  question: string;
+  options: string[];
+  correctIndex: number;
+  triggerSec: number;
+  explanation: string;
+}
+
+export interface EduReelScene {
+  id: string;
+  act: 'hook' | 'concept' | 'takeaway';
+  title: string;
+  subtitle?: string;
+  badgeText: string;
+  visualType: 'illustration' | 'code' | 'formula' | 'diagram' | 'quote' | 'bullet_points';
+  visualData?: {
+    codeSnippet?: string;
+    language?: string;
+    formulaLatex?: string;
+    bullets?: string[];
+    highlightQuote?: string;
+    imageUrl?: string;
+    imagePrompt?: string;
+  };
+  startSec: number;
+  endSec: number;
+}
+
+export interface EduReel {
+  id: string;
+  book_id: string;
+  book_title?: string;
+  author_name?: string;
+  category?: BookCategory;
+  subcategory?: string;
+  thumbnail_url?: string;
+  chapter_id: string;
+  chapter_title: string;
+  style_type: EduReelStyle;
+  style?: EduReelStyle;
+  voice?: string;
+  duration_seconds: number;
+  audio_url?: string;
+  ambient_music_url?: string;
+  narration_script: string;
+  scenes?: EduReelScene[];
+  word_timings: EduReelWordTiming[];
+  visual_cards: EduReelVisualCard[];
+  interactive_quiz?: EduReelInteractiveQuiz;
+  likes_count: number;
+  views_count: number;
+  completions_count: number;
+  is_public_teaser?: boolean;
+  created_at?: string;
 }

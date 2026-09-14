@@ -156,10 +156,7 @@ export const AddExternalBookModal: React.FC<AddExternalBookModalProps> = ({
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
-              onClick={() => {
-                setIsAcademicMode(true);
-                setTrack('academic');
-              }}
+              onClick={() => setIsAcademicMode(true)}
               className={`p-2.5 rounded-xl flex items-center justify-center gap-2 transition font-black text-xs ${
                 isAcademicMode
                   ? 'bg-teal-600 text-white shadow-sm'
@@ -172,10 +169,7 @@ export const AddExternalBookModal: React.FC<AddExternalBookModalProps> = ({
 
             <button
               type="button"
-              onClick={() => {
-                setIsAcademicMode(false);
-                setTrack(generalTrack);
-              }}
+              onClick={() => setIsAcademicMode(false)}
               className={`p-2.5 rounded-xl flex items-center justify-center gap-2 transition font-black text-xs ${
                 !isAcademicMode
                   ? 'bg-teal-600 text-white shadow-sm'

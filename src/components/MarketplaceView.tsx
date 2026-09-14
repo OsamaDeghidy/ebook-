@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Search, Filter, BookOpen, Star, Sparkles, ExternalLink, Play, HelpCircle,
   Plus, Shield, Eye, EyeOff, Trash2, Layers, GraduationCap, Calendar, Edit3, Tag,
@@ -23,6 +24,8 @@ interface MarketplaceViewProps {
   userRole: UserRole;
   isAdminMode: boolean;
   purchasedBookIds?: string[];
+  currentUser?: any;
+  onOpenAuth?: () => void;
   onLaunchBook: (book: MarketplaceBook) => void;
   onLaunchQuiz: (book: MarketplaceBook) => void;
   onOpenCreateModal: () => void;
@@ -38,6 +41,8 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
   userRole,
   isAdminMode,
   purchasedBookIds = [],
+  currentUser,
+  onOpenAuth,
   onLaunchBook,
   onLaunchQuiz,
   onOpenCreateModal,
@@ -396,6 +401,24 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
               {myLibraryBooks.length}
             </span>
           </button>
+
+          <Link
+            to="/reels"
+            className="px-5 py-2.5 rounded-2xl font-black text-sm flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-md shadow-purple-500/20 transition active:scale-95"
+          >
+            <Sparkles className="w-4 h-4 text-purple-200" />
+            <span>🎬 ريلز المعرفة والتيك توك ✦</span>
+          </Link>
+
+          {currentUser && (isAdminMode || userRole === 'admin' || userRole === 'instructor') && (
+            <Link
+              to="/admin"
+              className="px-5 py-2.5 rounded-2xl font-black text-sm flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-amber-600 hover:from-indigo-500 hover:to-amber-500 text-white shadow-md shadow-indigo-500/20 transition active:scale-95"
+            >
+              <Sparkles className="w-4 h-4 text-amber-200" />
+              <span>غرفة العمليات واستوديو السناتر ⚡</span>
+            </Link>
+          )}
         </div>
 
         {mainViewTab === 'my_library' && (
@@ -1201,6 +1224,8 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
         <PurchaseModal
           isOpen={!!purchasingBook}
           book={purchasingBook}
+          currentUser={currentUser}
+          onOpenAuth={onOpenAuth}
           onClose={() => setPurchasingBook(null)}
           onConfirmPurchase={onPurchaseBook}
         />
