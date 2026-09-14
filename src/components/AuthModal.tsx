@@ -22,39 +22,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
 
   if (!isOpen) return null;
 
-  // Quick Instant Login for testing and demos
-  const handleQuickDemoLogin = async (role: UserRole, name: string, demoEmail: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const demoUser = {
-        id: `demo-${role}-${Date.now()}`,
-        email: demoEmail,
-        user_metadata: { full_name: name, role: role }
-      };
-
-      localStorage.setItem('simplest_auth_user', JSON.stringify(demoUser));
-      localStorage.setItem('simplest_auth_role', role);
-
-      // Upsert to Supabase if possible
-      try {
-        await supabase.from('profiles').upsert({
-          id: demoUser.id,
-          email: demoEmail,
-          full_name: name,
-          role: role
-        });
-      } catch (e) {}
-
-      onSuccess(demoUser, role);
-      onClose();
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -168,50 +135,39 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
           </p>
         </div>
 
-        {/* 🌟 ROLE SELECTION TABS */}
-        <div className="space-y-2 mb-6">
-          <label className="block text-xs font-bold text-slate-700">حدد نوع الحساب والصلاحية:</label>
-          <div className="grid grid-cols-3 gap-2">
-            <button
-              type="button"
-              onClick={() => setSelectedRole('student')}
-              className={`p-2.5 rounded-xl border text-xs font-bold transition flex flex-col items-center gap-1 ${
-                selectedRole === 'student'
-                  ? 'bg-teal-50 border-teal-500 text-teal-900 shadow-2xs font-black'
-                  : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              <GraduationCap className="w-4 h-4 text-teal-600" />
-              <span>🎓 طالب</span>
-            </button>
+        {/* 🌟 ROLE SELECTION TABS (Sign Up Only) */}
+        {isSignUp && (
+          <div className="space-y-2 mb-6">
+            <label className="block text-xs font-bold text-slate-700">حدد نوع الحساب:</label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setSelectedRole('student')}
+                className={`p-3 rounded-2xl border text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+                  selectedRole === 'student'
+                    ? 'bg-teal-50 border-teal-500 text-teal-950 shadow-2xs font-black'
+                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <GraduationCap className="w-4 h-4 text-teal-600" />
+                <span>🎓 حساب طالب</span>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => setSelectedRole('instructor')}
-              className={`p-2.5 rounded-xl border text-xs font-bold transition flex flex-col items-center gap-1 ${
-                selectedRole === 'instructor'
-                  ? 'bg-indigo-50 border-indigo-500 text-indigo-900 shadow-2xs font-black'
-                  : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              <User className="w-4 h-4 text-indigo-600" />
-              <span>👨‍🏫 معلّم / محاضر</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSelectedRole('admin')}
-              className={`p-2.5 rounded-xl border text-xs font-bold transition flex flex-col items-center gap-1 ${
-                selectedRole === 'admin'
-                  ? 'bg-amber-50 border-amber-500 text-amber-900 shadow-2xs font-black'
-                  : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              <Shield className="w-4 h-4 text-amber-600" />
-              <span>🛡️ مسؤول نظام</span>
-            </button>
+              <button
+                type="button"
+                onClick={() => setSelectedRole('instructor')}
+                className={`p-3 rounded-2xl border text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+                  selectedRole === 'instructor'
+                    ? 'bg-indigo-50 border-indigo-500 text-indigo-950 shadow-2xs font-black'
+                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <User className="w-4 h-4 text-indigo-600" />
+                <span>👨‍🏫 حساب معلّم / محاضر</span>
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* ERROR MESSAGE */}
         {error && (
@@ -299,40 +255,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
           onClose={() => setIsTermsOpen(false)}
         />
 
-
-        {/* ⚡ QUICK DEMO ACCESS PROFILES FOR TESTING */}
-        <div className="mt-6 pt-5 border-t border-slate-200 space-y-2.5">
-          <div className="flex items-center justify-between text-[11px] font-black text-slate-500">
-            <span>⚡ الدخول التجريبي الفوري (1-Click Test):</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <button
-              onClick={() => handleQuickDemoLogin('admin', 'مدير عام أوسيرا AI', 'admin@osera.com')}
-              className="p-2 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 rounded-xl text-[11px] font-black transition text-center cursor-pointer"
-            >
-              🛡️ أدمن: admin@osera.com
-            </button>
-            <button
-              onClick={() => handleQuickDemoLogin('instructor', 'المعلم المعتمد', 'm01066906132@gmail.com')}
-              className="p-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-900 rounded-xl text-[11px] font-black transition text-center cursor-pointer"
-            >
-              👨‍🏫 معلم: m01066906132@...
-            </button>
-            <button
-              onClick={() => handleQuickDemoLogin('student', 'طالب متميز', 'student@osera.com')}
-              className="p-2 bg-teal-50 hover:bg-teal-100 border border-teal-200 text-teal-900 rounded-xl text-[11px] font-black transition text-center cursor-pointer"
-            >
-              🎓 حساب طالب تجريبي
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-4 text-center">
+        <div className="mt-5 pt-4 border-t border-slate-100 text-center">
           <button
             type="button"
             onClick={() => setIsSignUp(!isSignUp)}
-            className="text-xs font-bold text-teal-600 hover:underline"
+            className="text-xs font-bold text-teal-600 hover:underline cursor-pointer"
           >
             {isSignUp ? 'لديك حساب بالفعل؟ سجل دخولك' : 'ليس لديك حساب؟ أنشئ حساباً جديداً'}
           </button>

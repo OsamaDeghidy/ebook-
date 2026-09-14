@@ -132,33 +132,17 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
           window.location.href = data.iframeUrl;
           return;
         } else {
-          // Instant grant fallback
-          await onConfirmPurchase(book);
-          setIsSuccess(true);
-          setTimeout(() => {
-            setIsSuccess(false);
-            setIsProcessing(false);
-            onClose();
-          }, 1500);
+          setStatusNotice(data.message || 'تم إرسال طلب الدفع بنجاح. يرجى تأكيد الدفع عبر هاتفك.');
+          setIsProcessing(false);
         }
       } else {
-        await onConfirmPurchase(book);
-        setIsSuccess(true);
-        setTimeout(() => {
-          setIsSuccess(false);
-          setIsProcessing(false);
-          onClose();
-        }, 1500);
-      }
-    } catch (err) {
-      console.warn('Payment fallback execution:', err);
-      await onConfirmPurchase(book);
-      setIsSuccess(true);
-      setTimeout(() => {
-        setIsSuccess(false);
         setIsProcessing(false);
-        onClose();
-      }, 1500);
+        setStatusNotice(data.error || data.message || 'تعذر بدء عملية الدفع عبر بوابة Paymob. يرجى التحقق من الرقم والمحاولة مرة أخرى.');
+      }
+    } catch (err: any) {
+      console.error('Payment error:', err);
+      setIsProcessing(false);
+      setStatusNotice('حدث خطأ في الاتصال بخادم الدفع: ' + (err.message || 'يرجى المحاولة لاحقاً'));
     }
   };
 

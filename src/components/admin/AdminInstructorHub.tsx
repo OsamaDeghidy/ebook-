@@ -292,7 +292,7 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
 
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState(100);
-  const [withdrawMethod, setWithdrawMethod] = useState<'vodafone_cash' | 'instapay' | 'bank_transfer'>('vodafone_cash');
+  const [withdrawMethod, setWithdrawMethod] = useState<'vodafone_cash' | 'instapay'>('vodafone_cash');
   const [payoutDetails, setPayoutDetails] = useState('');
   const [isProcessingWithdraw, setIsProcessingWithdraw] = useState(false);
 
@@ -336,6 +336,28 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
 
     setIsProcessingRecharge(true);
     try {
+      // If Paymob Card or Mobile Wallet selected, attempt direct payment session redirect
+      if (rechargeGateway === 'paymob' || rechargeGateway === 'vodafone_cash') {
+        const paymobRes = await fetch('/api/payment/paymob/initiate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: rechargeAmount,
+            method: rechargeGateway === 'vodafone_cash' ? 'wallet' : 'card',
+            userId: currentUser.id,
+            userEmail: currentUser.email,
+            userName: currentUser.user_metadata?.full_name || 'مستخدم المنصة',
+            walletMobileNumber: rechargeGateway === 'vodafone_cash' ? (prompt('أدخل رقم محفظة الكاش (فودافون/أورنج/اتصالات/وي):', '01000000000') || undefined) : undefined
+          })
+        });
+
+        const paymobData = await paymobRes.json();
+        if (paymobRes.ok && (paymobData.redirectUrl || paymobData.iframeUrl)) {
+          window.location.href = paymobData.redirectUrl || paymobData.iframeUrl;
+          return;
+        }
+      }
+
       const res = await fetch('/api/wallet/recharge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -353,6 +375,8 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
         setIsRechargeModalOpen(false);
         await reloadWalletAndData();
         setTimeout(() => setStatusMsg(null), 4000);
+      } else {
+        alert(data.error || data.message || 'فشل شحن المحفظة');
       }
     } catch (err) {
       alert('حدث خطأ أثناء معالجة الشحن');
@@ -2303,22 +2327,21 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
                   onChange={(e) => setWithdrawMethod(e.target.value as any)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white outline-none"
                 >
-                  <option value="vodafone_cash">📱 فودافون كاش / محافظ المحمول</option>
+                  <option value="vodafone_cash">📱 فودافون كاش / محافظ المحمول الإلكترونية</option>
                   <option value="instapay">⚡ إنستاباي InstaPay</option>
-                  <option value="bank_transfer">🏛️ تحويل بنكي مباشر (IBAN)</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  {withdrawMethod === 'vodafone_cash' ? 'رقم محفظة الكاش:' : (withdrawMethod === 'instapay' ? 'عنوان الدفع اللحظي (IPA / Mobile):' : 'رقم الآيبان (IBAN) واسم البنك:')}
+                  {withdrawMethod === 'vodafone_cash' ? 'رقم محفظة الكاش (010 / 011 / 012 / 015):' : 'عنوان الدفع اللحظي (IPA / Mobile):'}
                 </label>
                 <input
                   type="text"
                   required
                   value={payoutDetails}
                   onChange={(e) => setPayoutDetails(e.target.value)}
-                  placeholder={withdrawMethod === 'vodafone_cash' ? '010XXXXXXXX' : 'name@instapay'}
+                  placeholder={withdrawMethod === 'vodafone_cash' ? '010XXXXXXXX' : 'username@instapay'}
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white outline-none"
                 />
               </div>
