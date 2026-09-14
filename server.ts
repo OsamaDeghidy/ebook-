@@ -4,7 +4,6 @@ import fs from "fs";
 import os from "os";
 import crypto from "crypto";
 import { EdgeTTS } from "node-edge-tts";
-import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
@@ -4390,6 +4389,7 @@ app.post("/api/platform/settings", async (req, res) => {
 const startServer = async () => {
 
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: {
         middlewareMode: true,
