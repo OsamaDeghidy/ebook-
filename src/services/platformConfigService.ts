@@ -89,20 +89,44 @@ export const syncPlatformConfigWithServer = async (): Promise<PlatformConfig> =>
   return getPlatformConfig();
 };
 
+export const savePlatformConfigAsync = async (newConfig: Partial<PlatformConfig>): Promise<{ success: boolean; config: PlatformConfig; message?: string }> => {
+  const current = getPlatformConfig();
+  const updated: PlatformConfig = { ...current, ...newConfig };
+  
+  // 1. Immediately cache locally and dispatch event
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    window.dispatchEvent(new CustomEvent('platform-config-changed', { detail: updated }));
+  } catch (e) {}
+
+  // 2. Persist to backend server (file + supabase)
+  try {
+    const res = await fetch('/api/platform/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updated)
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      const serverSaved = { ...DEFAULT_PLATFORM_CONFIG, ...data.settings };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(serverSaved));
+      window.dispatchEvent(new CustomEvent('platform-config-changed', { detail: serverSaved }));
+      return { success: true, config: serverSaved, message: data.message || 'تم حفظ وتطبيق الإعدادات بنجاح! ✓' };
+    }
+  } catch (err: any) {
+    console.warn('Server save warning:', err);
+  }
+
+  return { success: true, config: updated, message: 'تم حفظ وتطبيق الإعدادات بنجاح!' };
+};
+
 export const savePlatformConfig = (newConfig: Partial<PlatformConfig>): PlatformConfig => {
   const current = getPlatformConfig();
   const updated: PlatformConfig = { ...current, ...newConfig };
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    // Dispatch window custom event so all components update immediately without reload
     window.dispatchEvent(new CustomEvent('platform-config-changed', { detail: updated }));
-    
-    // Asynchronously persist to backend Supabase database
-    fetch('/api/platform/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updated)
-    }).catch(err => console.warn('Database save warning:', err));
+    savePlatformConfigAsync(newConfig);
   } catch (e) {}
   return updated;
 };

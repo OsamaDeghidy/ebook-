@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Sliders, Shield, Globe, Eye, EyeOff, Save, CheckCircle2, 
   Sparkles, Phone, Mail, MessageCircle, Building2, User, RefreshCw, 
-  Smartphone, Award, Wallet, Palette
+  Smartphone, Award, Wallet, Palette, Upload, Image as ImageIcon, Trash2
 } from 'lucide-react';
 import { 
   getPlatformConfig, 
-  savePlatformConfig, 
+  savePlatformConfigAsync, 
+  syncPlatformConfigWithServer,
   PlatformConfig, 
   DEFAULT_PLATFORM_CONFIG 
 } from '../../services/platformConfigService';
@@ -14,6 +15,16 @@ import {
 export const PlatformSettingsTab: React.FC = () => {
   const [config, setConfig] = useState<PlatformConfig>(getPlatformConfig());
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync latest settings from server when tab mounts
+  useEffect(() => {
+    syncPlatformConfigWithServer().then(synced => {
+      if (synced) setConfig(synced);
+    });
+  }, []);
 
   const handleToggle = (key: keyof PlatformConfig) => {
     setConfig(prev => ({
@@ -22,17 +33,72 @@ export const PlatformSettingsTab: React.FC = () => {
     }));
   };
 
-  const handleSave = () => {
-    savePlatformConfig(config);
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 2000);
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const result = await savePlatformConfigAsync(config);
+      if (result.config) setConfig(result.config);
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 3500);
+    } catch (e) {
+      alert('حدث خطأ أثناء حفظ الإعدادات');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleReset = () => {
-    setConfig(DEFAULT_PLATFORM_CONFIG);
-    savePlatformConfig(DEFAULT_PLATFORM_CONFIG);
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 2000);
+  const handleReset = async () => {
+    if (!confirm('هل أنت متأكد من استعادة كافة الإعدادات والهوية الافتراضية لأوسيرا AI؟')) return;
+    setIsSaving(true);
+    try {
+      setConfig(DEFAULT_PLATFORM_CONFIG);
+      const res = await savePlatformConfigAsync(DEFAULT_PLATFORM_CONFIG);
+      if (res.config) setConfig(res.config);
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 3500);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Logo file upload handler
+  const handleLogoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingLogo(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = reader.result as string;
+        try {
+          const res = await fetch('/api/platform/upload-logo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              imageBase64: base64,
+              fileName: file.name
+            })
+          });
+          const data = await res.json();
+          if (res.ok && data.logoUrl) {
+            setConfig(prev => ({ ...prev, brandLogoUrl: data.logoUrl }));
+          } else {
+            // Fallback to Base64 preview
+            setConfig(prev => ({ ...prev, brandLogoUrl: base64 }));
+          }
+        } catch (uploadErr) {
+          // Fallback to direct Base64 Data URL
+          setConfig(prev => ({ ...prev, brandLogoUrl: base64 }));
+        } finally {
+          setIsUploadingLogo(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      setIsUploadingLogo(false);
+      alert('تعذر قراءة ملف الصورة.');
+    }
   };
 
   return (
@@ -48,27 +114,33 @@ export const PlatformSettingsTab: React.FC = () => {
             <h2 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
               <span>إعدادات وهوية المنصة والتحكم في الميزات (White-Label Admin)</span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">
-                Live Switch
+                Live Persistent
               </span>
             </h2>
             <p className="text-xs text-slate-400">
-              تحكم في هوية المنصة والمسميات، وأخفِ أو أظهر أي ميزة (Reels, XP, روبوت الذكاء الاصطناعي) بنقرة زر واحدة فوراً.
+              تحكم في هوية المنصة والشعار، المسميات، ونسب العمولات والحد الأدنى للسحب فورياً دون أي خلط.
             </p>
           </div>
         </div>
 
         <button
           onClick={handleSave}
-          className={`px-5 py-2.5 rounded-2xl font-bold text-xs transition flex items-center gap-2 shadow-lg cursor-pointer ${
+          disabled={isSaving}
+          className={`px-5 py-2.5 rounded-2xl font-bold text-xs transition flex items-center gap-2 shadow-lg cursor-pointer disabled:opacity-50 ${
             savedSuccess 
               ? 'bg-emerald-500 text-white' 
               : 'bg-gradient-to-r from-indigo-500 to-sky-500 hover:from-indigo-600 hover:to-sky-600 text-white'
           }`}
         >
-          {savedSuccess ? (
+          {isSaving ? (
+            <>
+              <RefreshCw className="w-4 h-4 animate-spin" />
+              <span>جاري الحفظ والتطبيق...</span>
+            </>
+          ) : savedSuccess ? (
             <>
               <CheckCircle2 className="w-4 h-4" />
-              <span>تم حفظ الإعدادات وتطبيقها!</span>
+              <span>تم حفظ الإعدادات وتطبيقها بنجاح! ✓</span>
             </>
           ) : (
             <>
@@ -81,15 +153,87 @@ export const PlatformSettingsTab: React.FC = () => {
 
       {/* 🏢 BRANDING & IDENTITY (تخصيص اسم المنصة واللوجو والشركة) */}
       <div className="p-5 rounded-3xl bg-slate-900 border border-white/10 space-y-4 shadow-lg">
-        <div className="flex items-center justify-between border-b border-white/10 pb-3">
+        <div className="flex items-center justify-between border-b border-white/10 pb-3 flex-wrap gap-2">
           <h3 className="text-sm font-black text-white flex items-center gap-2">
             <Building2 className="w-4 h-4 text-indigo-400" />
-            <span>هوية المنصة واللوجو (Brand Identity & White-Label):</span>
+            <span>هوية المنصة واللوجو (Brand Identity & Logo Upload):</span>
           </h3>
-          <span className="text-[11px] text-slate-400">تعديل اسم المنصة والشعار يظهر فوراً لجميع المستخدمين</span>
+          <span className="text-[11px] text-emerald-400 font-bold">تعديل اسم المنصة والشعار يظهر فوراً لكافة الطلاب والمعلمين</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* LOGO UPLOAD & PREVIEW CARD */}
+        <div className="p-4 bg-slate-950/80 border border-indigo-500/20 rounded-2xl flex flex-col sm:flex-row items-center gap-4">
+          <div className="w-20 h-20 rounded-2xl bg-slate-900 border border-white/15 flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
+            {config.brandLogoUrl ? (
+              <img src={config.brandLogoUrl} alt="Logo Preview" className="w-full h-full object-contain p-2" />
+            ) : (
+              <div className="text-center p-2 text-slate-500">
+                <ImageIcon className="w-6 h-6 mx-auto mb-1 text-slate-600" />
+                <span className="text-[9px] block">لا يوجد شعار</span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1 space-y-2 text-center sm:text-right w-full">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h4 className="text-xs font-black text-white">شعار المنصة الرسمي (Platform Logo):</h4>
+              {config.brandLogoUrl && (
+                <button
+                  type="button"
+                  onClick={() => setConfig({ ...config, brandLogoUrl: '' })}
+                  className="text-rose-400 hover:text-rose-300 text-[11px] font-bold flex items-center gap-1 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>حذف الشعار الحالي</span>
+                </button>
+              )}
+            </div>
+
+            <p className="text-[11px] text-slate-400">
+              ارفع صورة شعار المنصة (PNG أو JPG أو SVG شفاف) ليظهر تلقائياً في الترويسة الرئيسية وأوراق الاختبارات.
+            </p>
+
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <input
+                type="file"
+                ref={logoInputRef}
+                accept="image/*"
+                onChange={handleLogoFileChange}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => logoInputRef.current?.click()}
+                disabled={isUploadingLogo}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                {isUploadingLogo ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>جاري رفع الشعار...</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>اختر وارفـع الشعار من الجهاز 📁</span>
+                  </>
+                )}
+              </button>
+
+              <div className="flex-1 min-w-[200px]">
+                <input
+                  type="url"
+                  value={config.brandLogoUrl || ''}
+                  onChange={(e) => setConfig({ ...config, brandLogoUrl: e.target.value })}
+                  placeholder="أو ألصق رابط الشعار المباشر (https://...)"
+                  className="w-full px-3 py-2 bg-slate-900 border border-white/10 rounded-xl text-white font-mono text-[11px] outline-none focus:border-indigo-500 transition"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
           <div className="space-y-1">
             <label className="block text-xs font-bold text-slate-300">اسم المنصة الرئيسي (Brand Name):</label>
             <input
@@ -108,17 +252,6 @@ export const PlatformSettingsTab: React.FC = () => {
               value={config.brandSubtitle}
               onChange={(e) => setConfig({ ...config, brandSubtitle: e.target.value })}
               placeholder="مثال: المنصة الذكية للكتب والمذكرات التعليمية"
-              className="w-full px-3.5 py-2.5 bg-slate-950 border border-white/15 rounded-xl text-white font-bold text-xs outline-none focus:border-indigo-500 transition"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="block text-xs font-bold text-slate-300">رابط الشعار أو اللوجو (Logo URL):</label>
-            <input
-              type="url"
-              value={config.brandLogoUrl || ''}
-              onChange={(e) => setConfig({ ...config, brandLogoUrl: e.target.value })}
-              placeholder="https://example.com/logo.png"
               className="w-full px-3.5 py-2.5 bg-slate-950 border border-white/15 rounded-xl text-white font-bold text-xs outline-none focus:border-indigo-500 transition"
             />
           </div>

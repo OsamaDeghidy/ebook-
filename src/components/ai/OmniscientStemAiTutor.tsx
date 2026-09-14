@@ -9,24 +9,39 @@ interface OmniscientStemAiTutorProps {
   bookId?: string;
   bookTitle?: string;
   currentChapterTitle?: string;
+  chapterContent?: string;
+  bookCategory?: string;
 }
 
 export const OmniscientStemAiTutor: React.FC<OmniscientStemAiTutorProps> = ({
   bookId,
   bookTitle,
-  currentChapterTitle
+  currentChapterTitle,
+  chapterContent,
+  bookCategory
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [question, setQuestion] = useState('');
   const [messages, setMessages] = useState<Array<{ sender: 'user' | 'ai'; text: string; time: string }>>([
     {
       sender: 'ai',
-      text: `مرحباً بك! أنا **المعلم الذكي Osera AI STEM Tutor** لمقرر **(${bookTitle || 'المقرر الدراسي'})**.\n\nأنا جاهز لشرح أي مسألة رياضية، تفاعل كيميائي، قانون فيزيائي، أو كود برمجي في درس **(${currentChapterTitle || 'هذا الفصل'})**. كيف أساعدك اليوم؟ 💡`,
+      text: `مرحباً بك! أنا **المعلم الذكي Osera AI Tutor** لمقرر **(${bookTitle || 'المقرر الدراسي'})**.\n\nأنا جاهز لشرح، تبسيط، والإجابة عن أي استفسار أو مسألة في درس **(${currentChapterTitle || 'هذا الفصل'})**. كيف أساعدك اليوم؟ 💡`,
       time: 'الآن'
     }
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
+
+  // Update greeting message when book/chapter changes
+  useEffect(() => {
+    setMessages([
+      {
+        sender: 'ai',
+        text: `مرحباً بك! أنا **المعلم الذكي Osera AI Tutor** لمقرر **(${bookTitle || 'المقرر الدراسي'})**.\n\nأنا جاهز لشرح، تبسيط، والإجابة عن أي استفسار أو مسألة في درس **(${currentChapterTitle || 'هذا الفصل'})**. كيف أساعدك اليوم؟ 💡`,
+        time: 'الآن'
+      }
+    ]);
+  }, [bookTitle, currentChapterTitle]);
 
   useEffect(() => {
     if (isOpen) {
@@ -54,7 +69,10 @@ export const OmniscientStemAiTutor: React.FC<OmniscientStemAiTutorProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           bookId,
+          bookTitle,
           chapterTitle: currentChapterTitle,
+          chapterContent,
+          bookCategory,
           question: queryText
         })
       });
@@ -62,7 +80,7 @@ export const OmniscientStemAiTutor: React.FC<OmniscientStemAiTutorProps> = ({
       const data = await res.json();
       const aiMsg = {
         sender: 'ai' as const,
-        text: data.answer || 'تم تحليل السؤال. راجع خطوات الحل النموذجية.',
+        text: data.answer || 'تم تحليل السؤال وتقديم الشرح.',
         time: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })
       };
       setMessages(prev => [...prev, aiMsg]);
@@ -71,7 +89,7 @@ export const OmniscientStemAiTutor: React.FC<OmniscientStemAiTutorProps> = ({
         ...prev,
         {
           sender: 'ai',
-          text: `💡 **شرح المعلم الذكي Osera AI:**\n\nالقاعدة الأساسية المتعلقة بسؤالك:\n* ركز على حفظ القانون وتطبيق شروط المسألة للحصول على الدرجة الكاملة في درس **(${currentChapterTitle || 'المقرر'})**.`,
+          text: `💡 **شرح المعلم الذكي Osera AI:**\n\nبناءً على درس **(${currentChapterTitle || 'المقرر'})**:\n* يرجى إعادة إرسال السؤال أو صياغته للحصول على شرح مفصل.`,
           time: 'الآن'
         }
       ]);
@@ -87,12 +105,12 @@ export const OmniscientStemAiTutor: React.FC<OmniscientStemAiTutorProps> = ({
         <button
           onClick={() => setIsOpen(true)}
           className="fixed bottom-6 left-6 z-40 px-4 py-3 bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 text-white font-black text-xs rounded-2xl shadow-xl shadow-teal-500/25 flex items-center gap-2.5 transition active:scale-95 cursor-pointer border border-white/20 group"
-          title="اسأل المعلم الذكي في أي وقت عن أي مسألة أو كود"
+          title="اسأل المعلم الذكي في أي وقت عن أي نقطة في الدرس"
         >
           <div className="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center">
             <Sparkles className="w-4 h-4 text-amber-300 animate-spin" />
           </div>
-          <span className="hidden sm:inline">اسأل المعلم الذكي (STEM AI)</span>
+          <span className="hidden sm:inline">اسأل المعلم الذكي 💡</span>
           <span className="sm:hidden">المعلم الذكي</span>
         </button>
       )}
@@ -107,9 +125,9 @@ export const OmniscientStemAiTutor: React.FC<OmniscientStemAiTutorProps> = ({
                 ⚡
               </div>
               <div>
-                <h3 className="font-black text-sm tracking-tight">المعلم الخصوصي الذكي (STEM AI)</h3>
+                <h3 className="font-black text-sm tracking-tight">المعلم الأكاديمي الذكي (Osera AI)</h3>
                 <p className="text-[10px] text-teal-300 truncate max-w-[240px]">
-                  مساعد درس: {currentChapterTitle || bookTitle || 'المقرر العلمي'}
+                  مساعد درس: {currentChapterTitle || bookTitle || 'المقرر الدراسي'}
                 </p>
               </div>
             </div>
@@ -131,16 +149,22 @@ export const OmniscientStemAiTutor: React.FC<OmniscientStemAiTutorProps> = ({
               💡 بسطهالي بمثال
             </button>
             <button
-              onClick={() => handleSendMessage('❓ ما هي أسئلة الامتحانات الأكثر توقعاً على هذا الدرس؟')}
+              onClick={() => handleSendMessage('❓ ما هي أسئلة الامتحانات الأكثر توقعاً على هذا الدرس مع الإجابة؟')}
               className="px-2.5 py-1 bg-white border border-slate-200 hover:border-indigo-400 text-slate-700 rounded-lg shrink-0 transition"
             >
               ❓ توقع أسئلة امتحان
             </button>
             <button
-              onClick={() => handleSendMessage('🧪 اشرح التجربة أو المسألة الرياضية بخطوات الحل النموذجية')}
+              onClick={() => handleSendMessage('📝 لخص لي أهم النقاط والقواعد الجوهرية في هذا الدرس')}
               className="px-2.5 py-1 bg-white border border-slate-200 hover:border-purple-400 text-slate-700 rounded-lg shrink-0 transition"
             >
-              🧪 خطوات الحل والقوانين
+              📝 تلخيص الدرس
+            </button>
+            <button
+              onClick={() => handleSendMessage('🔍 اشرح لي بالتفصيل الفكرة الأساسية وخطوات تطبيقها')}
+              className="px-2.5 py-1 bg-white border border-slate-200 hover:border-amber-400 text-slate-700 rounded-lg shrink-0 transition"
+            >
+              🔍 شرح مفصل
             </button>
           </div>
 

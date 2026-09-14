@@ -659,11 +659,13 @@ export default function BookDetailsRoute({
           />
         )}
 
-        {/* 🌟 OMNISCIENT STEM AI TUTOR (FLOATING CHAT) */}
+        {/* 🌟 OMNISCIENT ACADEMIC AI TUTOR (FLOATING CHAT) */}
         <OmniscientStemAiTutor
           bookId={book.id}
           bookTitle={book.title}
           currentChapterTitle={book.chapters?.[0]?.title || 'المقدمة والتمهيد'}
+          chapterContent={book.chapters?.[0]?.content || book.description || ''}
+          bookCategory={book.category || ''}
         />
       </div>
     );
@@ -1400,11 +1402,13 @@ export default function BookDetailsRoute({
         />
       )}
 
-      {/* 🌟 OMNISCIENT STEM AI TUTOR (FLOATING CHAT) */}
+      {/* 🌟 OMNISCIENT ACADEMIC AI TUTOR (FLOATING CHAT) */}
       <OmniscientStemAiTutor
         bookId={book.id}
         bookTitle={book.title}
         currentChapterTitle={activeChapter?.title || 'الفصل الحالي'}
+        chapterContent={activeChapter?.content || ''}
+        bookCategory={book.category || ''}
       />
     </div>
   );

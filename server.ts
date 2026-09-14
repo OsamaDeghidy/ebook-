@@ -2487,43 +2487,90 @@ app.post("/api/books/:id/request-edit", async (req, res) => {
   }
 });
 
-// 1.5 Advanced STEM Omniscient AI Tutor with LaTeX and Code support
+// 1.5 Universal Domain-Adaptive Academic AI Tutor (القانون، العلوم، الهندسة، الطب، الإنسانيات، البرمجة)
 app.post("/api/ai/stem-tutor", async (req, res) => {
   try {
-    const { bookId, chapterTitle, question, selectedText } = req.body;
+    let { bookId, bookTitle, chapterTitle, chapterContent, bookCategory, question, selectedText } = req.body;
 
     if (!question && !selectedText) {
       return res.status(400).json({ error: "Question or text is required." });
     }
 
-    const ebooks = loadEbooks();
-    const book = ebooks.find((b: any) => b.id === bookId) || ebooks[0];
-    const chapter = book?.chapters?.find((c: any) => c.title === chapterTitle) || book?.chapters?.[0];
+    // 1. Resolve Book & Chapter context from Database / Local store if not fully passed
+    if ((!chapterContent || !bookTitle) && bookId) {
+      try {
+        const { data: dbBook } = await supabase.from("books").select("*").eq("id", bookId).maybeSingle();
+        if (dbBook) {
+          if (!bookTitle) bookTitle = dbBook.title;
+          if (!bookCategory) bookCategory = dbBook.category;
+          if (!chapterContent && Array.isArray(dbBook.chapters)) {
+            const ch = dbBook.chapters.find((c: any) => c.title === chapterTitle) || dbBook.chapters[0];
+            if (ch) chapterContent = ch.content || "";
+          }
+        }
+      } catch (e) {}
+    }
+
+    if (!bookTitle || !chapterContent) {
+      const ebooks = loadEbooks();
+      const localBook = ebooks.find((b: any) => b.id === bookId) || (ebooks.length > 0 ? ebooks[0] : null);
+      if (localBook) {
+        if (!bookTitle) bookTitle = localBook.title;
+        if (!bookCategory) bookCategory = localBook.category;
+        if (!chapterContent && Array.isArray(localBook.chapters)) {
+          const ch = localBook.chapters.find((c: any) => c.title === chapterTitle) || localBook.chapters[0];
+          if (ch) chapterContent = ch.content || "";
+        }
+      }
+    }
+
+    const effectiveBookTitle = bookTitle || "المقرر الدراسي";
+    const effectiveChapterTitle = chapterTitle || "هذا الفصل";
+    const effectiveCategory = bookCategory || "أكاديمي عام";
 
     const ai = getAiInstance();
-    const stemSystemPrompt = `
-أنت "المعلم الخصوصي الذكي الشامل Osera AI STEM Tutor" لمقرر (${book?.title || "المقرر العلمي"}).
-أنت خبير في تدريس العلوم والرياضيات والفيزياء والكيمياء والبرمجة والذكاء الاصطناعي.
+    const adaptiveSystemPrompt = `
+أنت "المعلم الأكاديمي الذكي Osera AI Tutor" لمقرر: (${effectiveBookTitle}).
+مهمتك: تقديم شروح دقيقة، ذكية، ومباشرة ومطابقة 100% لتخصص المادة وسياق الدرس الحالي، دون افتراضات مسبقة أو خلط بين التخصصات.
 
-سياق الفصل الدراسي الحالي (${chapter?.title || "الفصل"}):
+بيانات المادة والدرس:
+- اسم المقرر / الكتاب: ${effectiveBookTitle}
+- عنوان الدرس / الفصل: ${effectiveChapterTitle}
+- تصنيف المادة: ${effectiveCategory}
+
+سياق ومحتوى الدرس الحقيقي:
 """
-${chapter?.content?.substring(0, 3000) || "محتوى الدرس التفاعلي"}
+${(chapterContent || "").substring(0, 3500) || "اعتمد على موضوع وعنوان الدرس لتوليد الشرح المناسب بدقة وتخصصية."}
 """
 
-سؤال / استفسار الطالب:
-"${question || "اشرح هذا الجزء بالتفصيل"}"
+${selectedText ? `النص المحدد من قبل الطالب:\n"""\n${selectedText}\n"""` : ""}
 
-${selectedText ? `النص المحدد من المذكرة:\n"""\n${selectedText}\n"""` : ""}
+سؤال أو طلب الطالب:
+"${question || "اشرح هذا الدرس وقدم أمثلة واضحة"}"
 
-تعليمات الإجابة الصارمة للمواد العلمية والبرمجية:
-1. **الرياضيات والفيزياء والكيمياء:** استخدم صياغة LaTeX الواضحة المحاطة بعلامات الدولار \`$E = mc^2$\` أو \`$$...$$\` لكافة المعادلات والرموز الرياضية وتفاعلات الكيمياء لتظهر منسقة وجميلة للطالب.
-2. **البرمجة والـ AI:** اكتب الأكواد البرمجية داخل Code blocks منسقة مع تحديد لغة البرمجة (مثل \`\`\`python أو \`\`\`cpp) مع كتابة تعليقات توضيحية لأسطر الكود الصعبة.
-3. **التجارب والرسوم البيانية:** اشرح التجربة العلمية خطوة بخطوة (الأدوات، الخطوات، الملاحظة، الاستنتاج) مع تقديم تشبيه واقعي مبسط.
-4. **توقع الامتحانات:** اذكر في نهاية إجابتك سؤال امتحان شائع على هذه الجزئية وكيف يضمن الطالب درجته النهائية فيه.
+إرشادات التخصص والرد الذكي الصارم:
+1. **الالتزام الكامل بتخصص المقرر الدراسي:**
+   - **إذا كانت المادة قانونية أو حقوقية أو سياسية** (مثل: القانون الدولي، أشخاص الدعوى الدولية، الدستوري، الجنائي، المرافعات): اشرح حصرياً بالمفاهيم القانونية الدقيقة (الدول ذات السيادة، المنظمات الدولية، الأفراد، محكمة العدل الدولية، الاتفاقيات والمعاهدات، الحصانات القضائية). اضرب أمثلة واقعية من النزاعات الدولية أو القضايا الحقيقية. **ممنوع منعاً باتاً ذكر مصطلحات برمجة أو فيزياء أو كيمياء أو كود بايثون أو معادلات إلا إذا كانت المادة برمجية أو هندسية!**
+   - **إذا كانت المادة دينية أو شرعية**: اشرح بالأدلة الشرعية والأصول الفقهية واللغة العربية الرصينة.
+   - **إذا كانت المادة طبية أو صيدلانية أو حيوية**: اشرح بالآليات الفسيولوجية والتشريحية والأمثلة السريرية.
+   - **إذا كانت المادة أدبية أو لغوية**: اشرح بالتحليل البلاغي والنحوي والنقدي.
+   - **إذا كانت المادة علمية أو رياضية أو فيزيائية أو كيميائية (STEM)**: استخدم صياغة المعادلات بـ LaTeX الرياضي ($E = mc^2$ أو $$...$$).
+   - **إذا كانت المادة برمجة أو علوم حاسب**: اشرح بالخوارزميات والكود البرمجي المنسق مع تعليقات توضيحية.
+   - **إذا كانت المادة إدارة أو محاسبة أو اقتصاد**: اشرح بالمفاهيم الاقتصادية والمالية ونماذج الأعمال.
+
+2. **الاستجابة لطلب "بسطهالي بمثال واقعي":**
+   - قدم مثالاً واقعياً وملموساً من الحياة العملية المرتبطة مباشرة بتخصص الدرس (مثلاً في القانون الدولي: مثال نزاع بين دولتين أمام محكمة العدل الدولية أو دور منظمة الأمم المتحدة).
+
+3. **الاستجابة لطلب "توقع أسئلة الامتحان":**
+   - اذكر 1-2 من أهم الأسئلة الامتحانية المتوقعة على هذا الدرس بصيغة واضحة (مقالي أو قضية أو اختيار من متعدد)، مع الإجابة النموذجية وطريقة الحصول على الدرجة النهائية.
+
+4. **أسلوب الإجابة:**
+   - لغة عربية فصحى سلسة وراقية.
+   - تنسيق احترافي باستخدام العناوين والنقاط لتسهيل القراءة والمذاكرة.
 `;
 
     const response = await generateContentWithRetry(ai, {
-      contents: [stemSystemPrompt],
+      contents: [adaptiveSystemPrompt],
       config: {
         temperature: 0.3
       }
@@ -2531,13 +2578,13 @@ ${selectedText ? `النص المحدد من المذكرة:\n"""\n${selectedTex
 
     res.json({
       success: true,
-      answer: response.text || "تم تحليل وتوضيح المفهوم العلمي بنجاح."
+      answer: response.text || "تم تحليل وتوضيح المفهوم الأكاديمي بنجاح."
     });
   } catch (error: any) {
-    console.error("STEM tutor error:", error);
+    console.error("Academic tutor error:", error);
     res.json({
       success: true,
-      answer: `💡 **شرح المعلم الذكي Osera AI:**\n\nبناءً على درس **(${req.body.chapterTitle || "المقرر"})**:\n\n* **القاعدة الأساسية:** ${req.body.question || req.body.selectedText}\n* **التطبيق:** ركز على تطبيق القانون الرياضي وكتابة خطوات الحل النموذجية للحصول على الدرجة الكاملة.`
+      answer: `💡 **شرح المعلم الذكي Osera AI:**\n\nبناءً على درس **(${req.body.chapterTitle || req.body.bookTitle || "المقرر"})**:\n\n* **القاعدة الأساسية:** ${req.body.question || req.body.selectedText || "يرجى مراجعة عناصر الدرس الرئيسية"}\n* **التطبيق:** ركز على فهم المفاهيم المحورية والربط بين عناصر الدرس للحصول على أعلى الدرجات في الامتحان.`
     });
   }
 });
@@ -4729,119 +4776,245 @@ app.post("/api/admin/wallet/adjust", async (req, res) => {
 });
 
 // ==============================================================================
-// ⚙️ Platform Settings & Financial Configuration Endpoints
+// ⚙️ Platform Settings & Financial Configuration Endpoints (White-Label Admin)
 // ==============================================================================
 
+const PLATFORM_SETTINGS_FILE = path.join(process.cwd(), "platform_settings.json");
+
+const DEFAULT_SERVER_SETTINGS = {
+  brandName: "أوسيرا AI",
+  brandSubtitle: "المنصة الذكية للكتب والمذكرات التعليمية",
+  brandLogoUrl: "",
+  companyName: "شركة أوسيرا سوفت للحلول الذكية (Osera Soft AI)",
+  founderName: "فريق مهندسي أوسيرا AI",
+  supportPhone: "+201066906132",
+  supportEmail: "support@osera-ai.com",
+  whatsappNumber: "+201066906132",
+  copyrightText: "جميع الحقوق محفوظة © 2026 لشركة أوسيرا سوفت AI",
+  platformCommissionRate: 15,
+  minWithdrawalAmount: 100,
+  bookGenerationCost: 50,
+  allowWalletPayment: true,
+  minPayPalAmountUsd: 10,
+  paypalClientId: "",
+  paypalClientSecret: "",
+  showReels: true,
+  showGamification: true,
+  showInstructorHubShortcut: true,
+  showAiRobot: true,
+  showWalletAndCredits: true,
+  enableVoucherCodes: true
+};
+
+function loadPlatformSettingsFile(): any {
+  try {
+    if (fs.existsSync(PLATFORM_SETTINGS_FILE)) {
+      const data = fs.readFileSync(PLATFORM_SETTINGS_FILE, "utf-8");
+      return { ...DEFAULT_SERVER_SETTINGS, ...JSON.parse(data) };
+    }
+  } catch (e) {
+    console.warn("Failed to read platform_settings.json:", e);
+  }
+  return { ...DEFAULT_SERVER_SETTINGS };
+}
+
+function savePlatformSettingsFile(settings: any) {
+  try {
+    fs.writeFileSync(PLATFORM_SETTINGS_FILE, JSON.stringify(settings, null, 2), "utf-8");
+  } catch (e) {
+    console.warn("Failed to write platform_settings.json:", e);
+  }
+}
+
+// 1. GET Platform Settings
 app.get("/api/platform/settings", async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from("platform_settings")
-      .select("*")
-      .eq("id", "default_settings")
-      .maybeSingle();
+    const local = loadPlatformSettingsFile();
 
-    if (error || !data) {
-      return res.json({
-        success: true,
-        settings: {
-          brandName: "أوسيرا AI",
-          brandSubtitle: "المنصة الذكية للكتب والمذكرات التعليمية",
-          brandLogoUrl: "",
-          companyName: "شركة أوسيرا سوفت للحلول الذكية (Osera Soft AI)",
-          founderName: "فريق مهندسي أوسيرا AI",
-          supportPhone: "+201066906132",
-          supportEmail: "support@osera-ai.com",
-          whatsappNumber: "+201066906132",
-          copyrightText: "جميع الحقوق محفوظة © 2026 لشركة أوسيرا سوفت AI",
-          platformCommissionRate: 15,
-          minWithdrawalAmount: 100,
-          bookGenerationCost: 50,
-          allowWalletPayment: true,
-          showReels: true,
-          showGamification: true,
-          showInstructorHubShortcut: true,
-          showAiRobot: true,
-          showWalletAndCredits: true,
-          enableVoucherCodes: true
-        }
-      });
+    // Also attempt fetching from Supabase for sync
+    let dbSettings: any = null;
+    try {
+      const { data } = await supabase
+        .from("platform_settings")
+        .select("*")
+        .eq("id", "default_settings")
+        .maybeSingle();
+      if (data) dbSettings = data;
+    } catch (e) {}
+
+    if (dbSettings) {
+      const features = dbSettings.features || {};
+      const merged = {
+        ...local,
+        brandName: dbSettings.brand_name || local.brandName,
+        brandSubtitle: dbSettings.brand_subtitle || local.brandSubtitle,
+        brandLogoUrl: dbSettings.brand_logo_url || local.brandLogoUrl,
+        companyName: dbSettings.company_name || local.companyName,
+        founderName: dbSettings.founder_name || local.founderName,
+        supportPhone: dbSettings.support_phone || local.supportPhone,
+        supportEmail: dbSettings.support_email || local.supportEmail,
+        whatsappNumber: dbSettings.whatsapp_number || local.whatsappNumber,
+        copyrightText: dbSettings.copyright_text || local.copyrightText,
+        platformCommissionRate: dbSettings.commission_rate ?? features.platformCommissionRate ?? local.platformCommissionRate,
+        minWithdrawalAmount: dbSettings.min_withdrawal ?? features.minWithdrawalAmount ?? local.minWithdrawalAmount,
+        bookGenerationCost: dbSettings.generation_cost ?? features.bookGenerationCost ?? local.bookGenerationCost,
+        allowWalletPayment: features.allowWalletPayment ?? local.allowWalletPayment,
+        minPayPalAmountUsd: features.minPayPalAmountUsd ?? local.minPayPalAmountUsd,
+        paypalClientId: features.paypalClientId || local.paypalClientId,
+        paypalClientSecret: features.paypalClientSecret || local.paypalClientSecret,
+        showReels: features.showReels ?? local.showReels,
+        showGamification: features.showGamification ?? local.showGamification,
+        showInstructorHubShortcut: features.showInstructorHubShortcut ?? local.showInstructorHubShortcut,
+        showAiRobot: features.showAiRobot ?? local.showAiRobot,
+        showWalletAndCredits: features.showWalletAndCredits ?? local.showWalletAndCredits,
+        enableVoucherCodes: features.enableVoucherCodes ?? local.enableVoucherCodes
+      };
+      savePlatformSettingsFile(merged);
+      return res.json({ success: true, settings: merged });
     }
 
-    const features = data.features || {};
-    return res.json({
-      success: true,
-      settings: {
-        brandName: data.brand_name || "أوسيرا AI",
-        brandSubtitle: data.brand_subtitle || "المنصة الذكية للكتب والمذكرات التعليمية",
-        brandLogoUrl: data.brand_logo_url || "",
-        companyName: data.company_name || "شركة أوسيرا سوفت AI",
-        founderName: data.founder_name || "فريق أوسيرا AI",
-        supportPhone: data.support_phone || "+201066906132",
-        supportEmail: data.support_email || "support@osera-ai.com",
-        whatsappNumber: data.whatsapp_number || "+201066906132",
-        copyrightText: data.copyright_text || "جميع الحقوق محفوظة © 2026",
-        platformCommissionRate: data.commission_rate ?? features.platformCommissionRate ?? 15,
-        minWithdrawalAmount: data.min_withdrawal ?? features.minWithdrawalAmount ?? 100,
-        bookGenerationCost: data.generation_cost ?? features.bookGenerationCost ?? 50,
-        allowWalletPayment: features.allowWalletPayment ?? true,
-        showReels: features.showReels ?? true,
-        showGamification: features.showGamification ?? true,
-        showInstructorHubShortcut: features.showInstructorHubShortcut ?? true,
-        showAiRobot: features.showAiRobot ?? true,
-        showWalletAndCredits: features.showWalletAndCredits ?? true,
-        enableVoucherCodes: features.enableVoucherCodes ?? true
-      }
-    });
+    return res.json({ success: true, settings: local });
   } catch (err: any) {
     console.error("Fetch settings error:", err);
-    res.status(500).json({ error: err.message });
+    res.json({ success: true, settings: loadPlatformSettingsFile() });
   }
 });
 
+// 2. POST Platform Settings (حفظ وتطبيق فوري على القرص وقاعدة البيانات)
 app.post("/api/platform/settings", async (req, res) => {
   try {
     const s = req.body;
-    const updatePayload = {
-      id: "default_settings",
-      brand_name: s.brandName,
-      brand_subtitle: s.brandSubtitle,
-      brand_logo_url: s.brandLogoUrl || "",
-      company_name: s.companyName,
-      founder_name: s.founderName,
-      support_phone: s.supportPhone,
-      support_email: s.supportEmail,
-      whatsapp_number: s.whatsappNumber,
-      copyright_text: s.copyrightText,
-      commission_rate: Number(s.platformCommissionRate ?? 15),
-      min_withdrawal: Number(s.minWithdrawalAmount ?? 100),
-      generation_cost: Number(s.bookGenerationCost ?? 50),
-      features: {
-        platformCommissionRate: Number(s.platformCommissionRate ?? 15),
-        minWithdrawalAmount: Number(s.minWithdrawalAmount ?? 100),
-        bookGenerationCost: Number(s.bookGenerationCost ?? 50),
-        allowWalletPayment: s.allowWalletPayment ?? true,
-        showReels: s.showReels ?? true,
-        showGamification: s.showGamification ?? true,
-        showInstructorHubShortcut: s.showInstructorHubShortcut ?? true,
-        showAiRobot: s.showAiRobot ?? true,
-        showWalletAndCredits: s.showWalletAndCredits ?? true,
-        enableVoucherCodes: s.enableVoucherCodes ?? true
-      },
-      updated_at: new Date().toISOString()
+    const current = loadPlatformSettingsFile();
+    const updatedSettings = {
+      ...current,
+      ...s,
+      platformCommissionRate: Number(s.platformCommissionRate ?? current.platformCommissionRate ?? 15),
+      minWithdrawalAmount: Number(s.minWithdrawalAmount ?? current.minWithdrawalAmount ?? 100),
+      bookGenerationCost: Number(s.bookGenerationCost ?? current.bookGenerationCost ?? 50),
+      minPayPalAmountUsd: Number(s.minPayPalAmountUsd ?? current.minPayPalAmountUsd ?? 10),
+      updatedAt: new Date().toISOString()
     };
 
-    const { error } = await supabase
-      .from("platform_settings")
-      .upsert(updatePayload);
+    // 1. Immediately persist to server disk file (guaranteed fallback)
+    savePlatformSettingsFile(updatedSettings);
 
-    if (error) {
-      console.warn("Supabase settings update notice:", error.message);
+    // 2. Persist to Supabase platform_settings table
+    try {
+      const updatePayload = {
+        id: "default_settings",
+        brand_name: updatedSettings.brandName,
+        brand_subtitle: updatedSettings.brandSubtitle,
+        brand_logo_url: updatedSettings.brandLogoUrl || "",
+        company_name: updatedSettings.companyName,
+        founder_name: updatedSettings.founderName,
+        support_phone: updatedSettings.supportPhone,
+        support_email: updatedSettings.supportEmail,
+        whatsapp_number: updatedSettings.whatsappNumber,
+        copyright_text: updatedSettings.copyrightText,
+        commission_rate: updatedSettings.platformCommissionRate,
+        min_withdrawal: updatedSettings.minWithdrawalAmount,
+        generation_cost: updatedSettings.bookGenerationCost,
+        features: {
+          platformCommissionRate: updatedSettings.platformCommissionRate,
+          minWithdrawalAmount: updatedSettings.minWithdrawalAmount,
+          bookGenerationCost: updatedSettings.bookGenerationCost,
+          allowWalletPayment: updatedSettings.allowWalletPayment,
+          minPayPalAmountUsd: updatedSettings.minPayPalAmountUsd,
+          paypalClientId: updatedSettings.paypalClientId,
+          paypalClientSecret: updatedSettings.paypalClientSecret,
+          showReels: updatedSettings.showReels,
+          showGamification: updatedSettings.showGamification,
+          showInstructorHubShortcut: updatedSettings.showInstructorHubShortcut,
+          showAiRobot: updatedSettings.showAiRobot,
+          showWalletAndCredits: updatedSettings.showWalletAndCredits,
+          enableVoucherCodes: updatedSettings.enableVoucherCodes
+        },
+        updated_at: new Date().toISOString()
+      };
+
+      const { error } = await supabase
+        .from("platform_settings")
+        .upsert(updatePayload);
+
+      if (error) {
+        console.warn("Supabase platform_settings upsert notice:", error.message);
+      }
+    } catch (dbErr) {
+      console.warn("Supabase platform_settings exception:", dbErr);
     }
 
-    return res.json({ success: true, updated: s });
+    return res.json({ 
+      success: true, 
+      settings: updatedSettings,
+      message: "تم حفظ وتطبيق إعدادات المنصة والهوية بنجاح! ✓" 
+    });
   } catch (err: any) {
     console.error("Save platform settings error:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ success: false, error: err.message, message: "فشل حفظ الإعدادات: " + err.message });
+  }
+});
+
+// 3. POST Upload Logo (رفع صورة الشعار مباشرة من الجهاز)
+app.post("/api/platform/upload-logo", async (req, res) => {
+  try {
+    const { imageBase64, fileName = "platform_logo.png" } = req.body;
+    if (!imageBase64) {
+      return res.status(400).json({ success: false, message: "ملف الصورة مطلوب." });
+    }
+
+    // Extract raw base64 buffer
+    const matches = imageBase64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    let buffer: Buffer;
+    let extension = "png";
+
+    if (matches && matches.length === 3) {
+      const mimeType = matches[1];
+      if (mimeType.includes("jpeg") || mimeType.includes("jpg")) extension = "jpg";
+      else if (mimeType.includes("svg")) extension = "svg";
+      else if (mimeType.includes("webp")) extension = "webp";
+      buffer = Buffer.from(matches[2], "base64");
+    } else {
+      buffer = Buffer.from(imageBase64, "base64");
+    }
+
+    // Try uploading to Supabase Storage 'book-covers' / 'public'
+    let publicUrl: string | null = null;
+    const cleanFileName = `platform_logo_${Date.now()}.${extension}`;
+
+    try {
+      const { data: uploadData, error: uploadErr } = await supabase.storage
+        .from("book-covers")
+        .upload(`branding/${cleanFileName}`, buffer, {
+          contentType: `image/${extension === 'jpg' ? 'jpeg' : extension}`,
+          upsert: true
+        });
+
+      if (!uploadErr) {
+        const { data: urlData } = supabase.storage
+          .from("book-covers")
+          .getPublicUrl(`branding/${cleanFileName}`);
+        publicUrl = urlData?.publicUrl || null;
+      }
+    } catch (e) {}
+
+    // Fallback: If Supabase Storage is not configured, use Base64 Data URL directly
+    if (!publicUrl) {
+      publicUrl = imageBase64.startsWith("data:") ? imageBase64 : `data:image/${extension};base64,${imageBase64}`;
+    }
+
+    // Auto-update logo in platform_settings
+    const current = loadPlatformSettingsFile();
+    current.brandLogoUrl = publicUrl;
+    savePlatformSettingsFile(current);
+
+    res.json({
+      success: true,
+      logoUrl: publicUrl,
+      message: "تم رفع وتطبيق شعار المنصة بنجاح! 🖼️"
+    });
+  } catch (err: any) {
+    console.error("Logo upload error:", err);
+    res.status(500).json({ success: false, message: "فشل رفع الشعار: " + err.message });
   }
 });
 
