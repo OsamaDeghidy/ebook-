@@ -15,6 +15,8 @@ import {
 import { supabase } from '../lib/supabase';
 
 interface ContentUploaderProps {
+  currentUser?: any;
+  userRole?: string;
   onConvert: (payload: {
     promptText: string;
     fileUrl?: string;
@@ -37,7 +39,19 @@ interface ContentUploaderProps {
   progressStep?: string;
 }
 
+interface AiQuotaInfo {
+  usedCount: number;
+  freeLimit: number;
+  remainingFree: number;
+  isFree: boolean;
+  costPerBook: number;
+  walletBalance: number;
+  canGenerate: boolean;
+}
+
 export default function ContentUploader({
+  currentUser,
+  userRole = 'instructor',
   onConvert,
   isConverting,
   progressPercent,
@@ -56,6 +70,29 @@ export default function ContentUploader({
   } | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isUploadingCloud, setIsUploadingCloud] = useState(false);
+
+  // AI Quota & Pricing State
+  const [quotaInfo, setQuotaInfo] = useState<AiQuotaInfo | null>(null);
+  const [isLoadingQuota, setIsLoadingQuota] = useState<boolean>(false);
+
+  useEffect(() => {
+    const fetchQuota = async () => {
+      if (!currentUser?.id) return;
+      setIsLoadingQuota(true);
+      try {
+        const res = await fetch(`/api/user/ai-quota/${currentUser.id}?role=${userRole}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.quota) setQuotaInfo(data.quota);
+        }
+      } catch (err) {
+        console.warn('Could not fetch AI quota:', err);
+      } finally {
+        setIsLoadingQuota(false);
+      }
+    };
+    fetchQuota();
+  }, [currentUser?.id, userRole]);
 
   // Main Mode: Academic Curriculum vs General Digital Library Book
   const [isAcademicMode, setIsAcademicMode] = useState<boolean>(true);
@@ -241,6 +278,63 @@ export default function ContentUploader({
           ارفع ملف الـ PDF لتحويله إلى كتاب رقمي شامل بالصوت، الشرح، الخرائط المفاهيمية، وبنوك الأسئلة.
         </p>
       </div>
+
+      {/* 🎁 AI QUOTA & FREE BOOKS BANNER */}
+      {quotaInfo && (
+        userRole === 'admin' ? (
+          <div className="p-3 bg-gradient-to-r from-slate-900 to-indigo-950 border border-indigo-500/30 rounded-2xl text-white flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2">
+              <Shield className="w-4 h-4 text-amber-400" />
+              <span className="font-bold">حساب إدارة المنصة (Admin Mode):</span>
+              <span className="text-emerald-400 font-black">توليد غير محدود مجاناً 100% 🛡️</span>
+            </div>
+          </div>
+        ) : quotaInfo.remainingFree > 0 ? (
+          <div className="p-3.5 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-indigo-500/10 border border-emerald-500/30 rounded-2xl text-slate-800 space-y-2">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <span className="p-1 rounded-lg bg-emerald-100 text-emerald-700 font-black text-xs">🎁 هدية المعلم</span>
+                <span className="text-xs font-black text-slate-900">باقة المعلم المجانية بالذكاء الاصطناعي:</span>
+                <span className="text-xs font-black text-emerald-700 bg-emerald-100/90 px-2.5 py-0.5 rounded-full border border-emerald-300">
+                  متبقي لك {quotaInfo.remainingFree} من {quotaInfo.freeLimit} مذكرات مجانية (Free)!
+                </span>
+              </div>
+              <span className="text-[11px] font-bold text-slate-500">
+                أول {quotaInfo.freeLimit} مذكرات مجاناً 100%
+              </span>
+            </div>
+            <div className="w-full bg-slate-200/80 rounded-full h-1.5 overflow-hidden">
+              <div 
+                className="bg-gradient-to-r from-emerald-500 to-teal-500 h-full rounded-full transition-all duration-500"
+                style={{ width: `${Math.min(100, ((quotaInfo.freeLimit - quotaInfo.remainingFree) / quotaInfo.freeLimit) * 100)}%` }}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className={`p-3.5 rounded-2xl border ${quotaInfo.walletBalance >= quotaInfo.costPerBook ? 'bg-sky-50 border-sky-200 text-sky-900' : 'bg-amber-50 border-amber-200 text-amber-900'} space-y-2`}>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <span className="p-1 rounded-lg bg-indigo-100 text-indigo-700 font-black text-xs">⚡ باقة الإنتاج</span>
+                <span className="text-xs font-black">تكلفة التوليد (بعد استهلاك الـ {quotaInfo.freeLimit} مذكرات المجانية):</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black text-indigo-700 bg-white px-2.5 py-0.5 rounded-full border border-indigo-200">
+                  {quotaInfo.costPerBook} ج.م / مذكرة
+                </span>
+                <span className="text-xs font-bold text-slate-600">
+                  رصيد محفظتك: <strong className={quotaInfo.walletBalance >= quotaInfo.costPerBook ? 'text-emerald-600' : 'text-rose-600'}>{quotaInfo.walletBalance} ج.م</strong>
+                </span>
+              </div>
+            </div>
+            {quotaInfo.walletBalance < quotaInfo.costPerBook && (
+              <p className="text-[11px] text-amber-800 font-bold bg-amber-100/70 p-2 rounded-xl border border-amber-200 flex items-center gap-1.5">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>رصيد محفظتك الحالي ({quotaInfo.walletBalance} ج.م) غير كافٍ لتوليد المذكرة ({quotaInfo.costPerBook} ج.م). يرجى شحن الرصيد للمتابعة.</span>
+              </p>
+            )}
+          </div>
+        )
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-5">
         
@@ -632,11 +726,13 @@ export default function ContentUploader({
         {/* SUBMIT BUTTON */}
         <button
           type="submit"
-          disabled={isConverting || isUploadingCloud}
+          disabled={isConverting || isUploadingCloud || (quotaInfo !== null && !quotaInfo.canGenerate)}
           className={`w-full py-4 rounded-2xl font-black text-sm text-white transition flex items-center justify-center gap-2.5 shadow-md ${
             isConverting || isUploadingCloud
               ? 'bg-slate-800 cursor-not-allowed'
-              : 'bg-indigo-600 hover:bg-indigo-500 active:scale-95 shadow-indigo-200'
+              : (quotaInfo !== null && !quotaInfo.canGenerate)
+                ? 'bg-slate-400 cursor-not-allowed opacity-60'
+                : 'bg-indigo-600 hover:bg-indigo-500 active:scale-95 shadow-indigo-200 cursor-pointer'
           }`}
         >
           {isConverting || isUploadingCloud ? (
@@ -644,10 +740,19 @@ export default function ContentUploader({
               <RefreshCw className="w-5 h-5 animate-spin" />
               <span>{isUploadingCloud ? 'جاري فحص ورفع الملف السحابي...' : 'جاري التحليل والبناء بالذكاء الاصطناعي...'}</span>
             </>
+          ) : (quotaInfo !== null && !quotaInfo.canGenerate) ? (
+            <>
+              <AlertCircle className="w-5 h-5" />
+              <span>الرصيد غير كافٍ — يرجى شحن المحفظة للمتابعة ({quotaInfo.costPerBook} ج.م)</span>
+            </>
           ) : (
             <>
               <BookOpen className="w-5 h-5" />
-              <span>توليد وبناء الكتاب التفاعلي الآن</span>
+              <span>
+                {quotaInfo?.isFree 
+                  ? 'توليد وبناء الكتاب التفاعلي الآن (مجاناً 🎁)' 
+                  : `توليد وبناء الكتاب التفاعلي (${quotaInfo?.costPerBook || 50} ج.م)`}
+              </span>
             </>
           )}
         </button>

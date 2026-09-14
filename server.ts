@@ -930,14 +930,24 @@ User Guidance / Notes: "${promptText || `Convert ${fileName || 'the uploaded doc
 
 // 5. Convert content or create ebook from prompt / file upload (Synchronous & Serverless Resilient)
 app.post("/api/ebooks", async (req, res) => {
-  const { promptText, fileUrl, fileBase64, fileName, fileType, category, subcategory, grade_level, semester, academic_year, price, preview_video_url } = req.body;
+  const { promptText, fileUrl, fileBase64, fileName, fileType, category, subcategory, grade_level, semester, academic_year, price, preview_video_url, userId, userRole, userEmail } = req.body;
   
   if (!promptText && !fileBase64 && !fileUrl) {
     return res.status(400).json({ error: "Must provide either promptText, a file, or both to convert." });
   }
 
+  // Check Quota and Wallet for non-admin instructors / teachers
+  if (userId && userRole !== "admin") {
+    const quota = await getUserAiQuotaInfo(userId, userRole);
+    if (!quota.isFree && quota.walletBalance < quota.costPerBook) {
+      return res.status(402).json({
+        error: `رصيد المحفظة غير كافٍ. لقد استهلكت رصيدك المجاني (${quota.freeLimit} مذكرات). تكلفة توليد مذكرة جديدة بالذكاء الاصطناعي هي ${quota.costPerBook} ج.م ورصيدك الحالي هو ${quota.walletBalance} ج.م. يرجى شحن رصيد المحفظة أولاً.`
+      });
+    }
+  }
+
   const jobId = "job-" + Date.now() + "-" + Math.random().toString(36).substring(2, 7);
-  console.log(`[Task Dispatcher] Initiating ebook conversion: ${jobId}. File: ${fileName || "None"}, Cloud URL: ${fileUrl ? "Yes" : "No"}, Price: ${price || 0}`);
+  console.log(`[Task Dispatcher] Initiating ebook conversion: ${jobId}. User: ${userId || "Anonymous"} (${userRole || "Unknown"}), File: ${fileName || "None"}, Cloud URL: ${fileUrl ? "Yes" : "No"}, Price: ${price || 0}`);
 
   conversionJobs[jobId] = {
     id: jobId,
@@ -952,6 +962,45 @@ app.post("/api/ebooks", async (req, res) => {
       const job = conversionJobs[jobId];
       return res.status(500).json({ error: job?.error || "فشل توليد الكتاب بالذكاء الاصطناعي" });
     }
+
+    // Upon successful generation: Record usage and deduct fee if paid
+    if (userId && userRole !== "admin") {
+      try {
+        const quota = await getUserAiQuotaInfo(userId, userRole);
+        const usageDb = loadTeacherAiUsageFile();
+        const currentUsage = usageDb[userId] || { usedCount: 0, history: [] };
+        
+        if (!quota.isFree && quota.costPerBook > 0) {
+          // Deduct from wallet
+          const newBal = Math.max(0, quota.walletBalance - quota.costPerBook);
+          await supabase.from("profiles").update({ wallet_balance: newBal }).eq("id", userId);
+          await supabase.from("wallet_transactions").insert({
+            user_id: userId,
+            type: "ai_generation_fee",
+            amount: -quota.costPerBook,
+            description: `رسوم توليد مذكرة تفاعلية بالذكاء الاصطناعي (${finalizedEbook.title || fileName || "مقرر تفاعلي"})`,
+            status: "completed",
+            created_at: new Date().toISOString()
+          });
+          console.log(`[Billing] Deducted ${quota.costPerBook} EGP from instructor ${userId}. New balance: ${newBal}`);
+        }
+
+        currentUsage.usedCount = (currentUsage.usedCount || 0) + 1;
+        if (!currentUsage.history) currentUsage.history = [];
+        currentUsage.history.push({
+          bookId: finalizedEbook.id,
+          title: finalizedEbook.title,
+          cost: quota.isFree ? 0 : quota.costPerBook,
+          isFree: quota.isFree,
+          createdAt: new Date().toISOString()
+        });
+        usageDb[userId] = currentUsage;
+        saveTeacherAiUsageFile(usageDb);
+      } catch (trackErr) {
+        console.warn("Error tracking AI usage or deducting balance:", trackErr);
+      }
+    }
+
     res.json({ success: true, ebook: finalizedEbook, jobId });
   } catch (err: any) {
     console.error("Ebook generation error:", err);
@@ -4150,61 +4199,6 @@ app.post("/api/payment/paypal/capture-order", async (req, res) => {
   }
 });
 
-// 7. Platform Settings API (Sync & Persist to Supabase)
-app.get("/api/platform/settings", async (_req, res) => {
-  try {
-    const { data, error } = await supabase.from("platform_settings").select("*").eq("id", "default_settings").maybeSingle();
-    if (!error && data) {
-      return res.json({ success: true, settings: data });
-    }
-    res.json({ success: true, settings: null });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post("/api/platform/settings", async (req, res) => {
-  try {
-    const settings = req.body || {};
-    const { data, error } = await supabase.from("platform_settings").upsert({
-      id: "default_settings",
-      brand_name: settings.brandName,
-      brand_subtitle: settings.brandSubtitle,
-      brand_logo_url: settings.brandLogoUrl,
-      company_name: settings.companyName,
-      founder_name: settings.founderName,
-      support_phone: settings.supportPhone,
-      support_email: settings.supportEmail,
-      whatsapp_number: settings.whatsappNumber,
-      copyright_text: settings.copyrightText,
-      platform_commission_rate: settings.platformCommissionRate,
-      min_withdrawal_amount: settings.minWithdrawalAmount,
-      book_generation_cost: settings.bookGenerationCost,
-      allow_wallet_payment: settings.allowWalletPayment !== false,
-      features: {
-        showReels: settings.showReels !== false,
-        showGamification: settings.showGamification !== false,
-        showInstructorHubShortcut: settings.showInstructorHubShortcut !== false,
-        showAiRobot: settings.showAiRobot !== false,
-        showWalletAndCredits: settings.showWalletAndCredits !== false,
-        enableVoucherCodes: settings.enableVoucherCodes !== false,
-        paypalClientId: settings.paypalClientId || "",
-        paypalClientSecret: settings.paypalClientSecret || "",
-        minPayPalAmountUsd: settings.minPayPalAmountUsd || 10
-      },
-      updated_at: new Date().toISOString()
-    }, { onConflict: "id" }).select().maybeSingle();
-
-    if (error) {
-      console.warn("Settings upsert warning:", error);
-    }
-    return res.json({ success: true, data });
-  } catch (err: any) {
-    console.error("Settings save error:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
 // ==============================================================================
 // 🎟️ GUARANTEED VOUCHER REDEEM WITH ACCESS FULFILLMENT
 // ==============================================================================
@@ -4793,6 +4787,7 @@ const DEFAULT_SERVER_SETTINGS = {
   copyrightText: "جميع الحقوق محفوظة © 2026 لشركة أوسيرا سوفت AI",
   platformCommissionRate: 15,
   minWithdrawalAmount: 100,
+  freeAiBooksPerTeacher: 5,
   bookGenerationCost: 50,
   allowWalletPayment: true,
   minPayPalAmountUsd: 10,
@@ -4826,6 +4821,104 @@ function savePlatformSettingsFile(settings: any) {
   }
 }
 
+// ==============================================================================
+// 🤖 Teacher AI Generation Quota & Usage Engine
+// ==============================================================================
+const TEACHER_AI_USAGE_FILE = path.join(process.cwd(), "teacher_ai_usage.json");
+
+function loadTeacherAiUsageFile(): Record<string, { usedCount: number; history?: any[] }> {
+  try {
+    if (fs.existsSync(TEACHER_AI_USAGE_FILE)) {
+      const data = fs.readFileSync(TEACHER_AI_USAGE_FILE, "utf-8");
+      return JSON.parse(data);
+    }
+  } catch (e) {
+    console.warn("Failed to read teacher_ai_usage.json:", e);
+  }
+  return {};
+}
+
+function saveTeacherAiUsageFile(data: Record<string, any>) {
+  try {
+    fs.writeFileSync(TEACHER_AI_USAGE_FILE, JSON.stringify(data, null, 2), "utf-8");
+  } catch (e) {
+    console.warn("Failed to write teacher_ai_usage.json:", e);
+  }
+}
+
+async function getUserAiQuotaInfo(userId?: string, userRole?: string) {
+  const settings = loadPlatformSettingsFile();
+  const freeLimit = Number(settings.freeAiBooksPerTeacher ?? 5);
+  const costPerBook = Number(settings.bookGenerationCost ?? 50);
+
+  if (!userId) {
+    return {
+      userId: "",
+      userRole: userRole || "student",
+      usedCount: 0,
+      freeLimit,
+      remainingFree: freeLimit,
+      isFree: true,
+      costPerBook,
+      walletBalance: 0,
+      canGenerate: true
+    };
+  }
+
+  // Admin users have unlimited free generations
+  if (userRole === "admin") {
+    return {
+      userId,
+      userRole: "admin",
+      usedCount: 0,
+      freeLimit,
+      remainingFree: 9999,
+      isFree: true,
+      costPerBook: 0,
+      walletBalance: 999999,
+      canGenerate: true
+    };
+  }
+
+  // Fetch teacher's live wallet balance
+  let walletBalance = 0;
+  try {
+    const { data: prof } = await supabase.from("profiles").select("wallet_balance, role").eq("id", userId).maybeSingle();
+    if (prof) {
+      walletBalance = Number(prof.wallet_balance) || 0;
+    }
+  } catch (e) {}
+
+  const usageDb = loadTeacherAiUsageFile();
+  const userUsage = usageDb[userId] || { usedCount: 0, history: [] };
+  const usedCount = Number(userUsage.usedCount) || 0;
+  const remainingFree = Math.max(0, freeLimit - usedCount);
+  const isFree = remainingFree > 0;
+  const canGenerate = isFree || walletBalance >= costPerBook;
+
+  return {
+    userId,
+    userRole: userRole || "instructor",
+    usedCount,
+    freeLimit,
+    remainingFree,
+    isFree,
+    costPerBook,
+    walletBalance,
+    canGenerate
+  };
+}
+
+// AI Quota inspection endpoint for UI
+app.get("/api/user/ai-quota/:userId", async (req, res) => {
+  try {
+    const quota = await getUserAiQuotaInfo(req.params.userId, req.query.role as string);
+    res.json({ success: true, quota });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // 1. GET Platform Settings
 app.get("/api/platform/settings", async (req, res) => {
   try {
@@ -4857,6 +4950,7 @@ app.get("/api/platform/settings", async (req, res) => {
         copyrightText: dbSettings.copyright_text || local.copyrightText,
         platformCommissionRate: dbSettings.commission_rate ?? features.platformCommissionRate ?? local.platformCommissionRate,
         minWithdrawalAmount: dbSettings.min_withdrawal ?? features.minWithdrawalAmount ?? local.minWithdrawalAmount,
+        freeAiBooksPerTeacher: features.freeAiBooksPerTeacher ?? local.freeAiBooksPerTeacher,
         bookGenerationCost: dbSettings.generation_cost ?? features.bookGenerationCost ?? local.bookGenerationCost,
         allowWalletPayment: features.allowWalletPayment ?? local.allowWalletPayment,
         minPayPalAmountUsd: features.minPayPalAmountUsd ?? local.minPayPalAmountUsd,
@@ -4890,6 +4984,7 @@ app.post("/api/platform/settings", async (req, res) => {
       ...s,
       platformCommissionRate: Number(s.platformCommissionRate ?? current.platformCommissionRate ?? 15),
       minWithdrawalAmount: Number(s.minWithdrawalAmount ?? current.minWithdrawalAmount ?? 100),
+      freeAiBooksPerTeacher: Number(s.freeAiBooksPerTeacher ?? current.freeAiBooksPerTeacher ?? 5),
       bookGenerationCost: Number(s.bookGenerationCost ?? current.bookGenerationCost ?? 50),
       minPayPalAmountUsd: Number(s.minPayPalAmountUsd ?? current.minPayPalAmountUsd ?? 10),
       updatedAt: new Date().toISOString()
@@ -4917,6 +5012,7 @@ app.post("/api/platform/settings", async (req, res) => {
         features: {
           platformCommissionRate: updatedSettings.platformCommissionRate,
           minWithdrawalAmount: updatedSettings.minWithdrawalAmount,
+          freeAiBooksPerTeacher: updatedSettings.freeAiBooksPerTeacher,
           bookGenerationCost: updatedSettings.bookGenerationCost,
           allowWalletPayment: updatedSettings.allowWalletPayment,
           minPayPalAmountUsd: updatedSettings.minPayPalAmountUsd,

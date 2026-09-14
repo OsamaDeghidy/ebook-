@@ -412,11 +412,11 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
 
           {currentUser && (isAdminMode || userRole === 'admin' || userRole === 'instructor') && (
             <Link
-              to="/admin"
+              to={userRole === 'admin' || isAdminMode ? '/admin' : '/instructor'}
               className="px-5 py-2.5 rounded-2xl font-black text-sm flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-amber-600 hover:from-indigo-500 hover:to-amber-500 text-white shadow-md shadow-indigo-500/20 transition active:scale-95"
             >
               <Sparkles className="w-4 h-4 text-amber-200" />
-              <span>غرفة العمليات واستوديو السناتر ⚡</span>
+              <span>{userRole === 'admin' || isAdminMode ? 'غرفة العمليات ولوحة الإدارة 🛡️' : 'استوديو المعلم ولوحة السنتر 👨‍🏫'}</span>
             </Link>
           )}
         </div>

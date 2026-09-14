@@ -323,7 +323,7 @@ export const PlatformSettingsTab: React.FC = () => {
           <span className="text-[11px] text-emerald-400 font-bold">تطبق فورياً على كافة عمليات الدفع والسحب القادمة</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="space-y-1">
             <label className="block text-xs font-bold text-slate-300">نسبة عمولة المنصة من مبيعات المعلمين (%):</label>
             <div className="relative">
@@ -357,7 +357,23 @@ export const PlatformSettingsTab: React.FC = () => {
           </div>
 
           <div className="space-y-1">
-            <label className="block text-xs font-bold text-slate-300">تكلفة توليد الكتاب بالـ AI (Credits / ج.م):</label>
+            <label className="block text-xs font-bold text-slate-300">عدد المذكرات المجانية لكل معلم (Free AI Books):</label>
+            <div className="relative">
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={config.freeAiBooksPerTeacher ?? 5}
+                onChange={(e) => setConfig({ ...config, freeAiBooksPerTeacher: Number(e.target.value) })}
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-white/15 rounded-xl text-indigo-400 font-black text-sm outline-none focus:border-indigo-500 transition"
+              />
+              <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">مذكرات مجانية</span>
+            </div>
+            <p className="text-[10px] text-slate-400">أول (5) مذكرات توليد بالذكاء الاصطناعي مجانية لكل مدرس 🎁</p>
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-xs font-bold text-slate-300">تكلفة التوليد بعد انتهاء المجاني (ج.م / رصيد):</label>
             <div className="relative">
               <input
                 type="number"
@@ -367,9 +383,9 @@ export const PlatformSettingsTab: React.FC = () => {
                 onChange={(e) => setConfig({ ...config, bookGenerationCost: Number(e.target.value) })}
                 className="w-full px-3.5 py-2.5 bg-slate-950 border border-white/15 rounded-xl text-sky-400 font-black text-sm outline-none focus:border-sky-500 transition"
               />
-              <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">رصيد</span>
+              <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">ج.م / رصيد</span>
             </div>
-            <p className="text-[10px] text-slate-400">الرصيد المخصوم من المعلم عند بناء كتاب تفاعلي جديد.</p>
+            <p className="text-[10px] text-slate-400">تخصم من محفظة المعلم عند التوليد بعد استهلاك الباقة المجانية.</p>
           </div>
         </div>
 

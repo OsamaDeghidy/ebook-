@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useNavigate, useParams, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useNavigate, useParams, Link, useLocation, Navigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import {
   BookOpen, ArrowLeft, Brain, HelpCircle, Youtube, Edit, Radio, Shield, LogOut, User, X, Sparkles, Compass, ShoppingCart
@@ -475,7 +475,12 @@ function AppContent() {
       const res = await fetch('/api/ebooks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          ...payload,
+          userId: currentUser?.id,
+          userRole: userRole,
+          userEmail: currentUser?.email
+        })
       });
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
@@ -663,7 +668,7 @@ function AppContent() {
           {/* INSTRUCTOR / ADMIN HUB LINK */}
           {currentUser && (userRole === 'admin' || userRole === 'instructor' || isAdminMode) && (
             <Link
-              to="/admin"
+              to={userRole === 'admin' || isAdminMode ? '/admin' : '/instructor'}
               className={`px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 ${
                 location.pathname === '/admin' || location.pathname === '/instructor'
                   ? 'bg-indigo-600 text-white font-black shadow-xs'
@@ -671,7 +676,7 @@ function AppContent() {
               }`}
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              <span>{userRole === 'admin' ? 'لوحة التحكم والإدارة 🛡️' : 'لوحة المعلم والسنتر ⚡'}</span>
+              <span>{userRole === 'admin' || isAdminMode ? 'لوحة التحكم والإدارة 🛡️' : 'لوحة المعلم والسنتر ⚡'}</span>
             </Link>
           )}
         </nav>
@@ -773,18 +778,10 @@ function AppContent() {
                   تسجيل الدخول الآن 🔑
                 </button>
               </div>
+            ) : (userRole === 'instructor' && !isAdminMode) ? (
+              <Navigate to="/instructor" replace />
             ) : (userRole !== 'admin' && !isAdminMode) ? (
-              <div className="p-12 text-center bg-white border border-rose-100 rounded-3xl shadow-sm space-y-4 max-w-lg mx-auto my-12" dir="rtl">
-                <Shield className="w-12 h-12 text-rose-500 mx-auto" />
-                <h3 className="text-xl font-black text-slate-900">غير مصرح بالدخول للوحة الإدارة</h3>
-                <p className="text-xs text-slate-500">هذه اللوحة مخصصة لإدارة المنصة فقط. حسابك الحالي مسجل كـ ({userRole === 'student' ? 'طالب' : 'معلم'}).</p>
-                <button
-                  onClick={() => navigate(userRole === 'instructor' ? '/instructor' : '/marketplace')}
-                  className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs rounded-xl shadow-md transition cursor-pointer"
-                >
-                  {userRole === 'instructor' ? 'الانتقال للوحة المعلم 👨‍🏫' : 'العودة لمتجر المقررات 📚'}
-                </button>
-              </div>
+              <Navigate to="/marketplace" replace />
             ) : (
               <div className="p-4 sm:p-6 max-w-7xl mx-auto w-full space-y-6">
                 <AdminInstructorHub
@@ -943,6 +940,8 @@ function AppContent() {
               <X className="w-5 h-5" />
             </button>
             <ContentUploader
+              currentUser={currentUser}
+              userRole={userRole}
               onConvert={handleConvert}
               isConverting={isConverting}
               progressPercent={progressPercent}

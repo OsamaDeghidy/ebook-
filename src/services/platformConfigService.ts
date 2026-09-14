@@ -14,7 +14,8 @@ export interface PlatformConfig {
   // 💰 Financial & Commission Settings
   platformCommissionRate: number; // e.g. 15 (%)
   minWithdrawalAmount: number; // e.g. 100 (EGP)
-  bookGenerationCost: number; // e.g. 50 (Credits/EGP)
+  freeAiBooksPerTeacher: number; // e.g. 5 free books for every teacher
+  bookGenerationCost: number; // e.g. 50 (Credits/EGP) after free quota
   allowWalletPayment: boolean;
   minPayPalAmountUsd?: number; // Minimum PayPal payment (default $10)
   paypalClientId?: string;
@@ -45,6 +46,7 @@ export const DEFAULT_PLATFORM_CONFIG: PlatformConfig = {
   // Financial Defaults
   platformCommissionRate: 15,
   minWithdrawalAmount: 100,
+  freeAiBooksPerTeacher: 5,
   bookGenerationCost: 50,
   allowWalletPayment: true,
   minPayPalAmountUsd: 10,
