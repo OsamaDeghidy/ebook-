@@ -12,6 +12,7 @@ import { supabase } from '../../lib/supabase';
 import { EduReelPlayer } from '../reels/EduReelPlayer';
 import { PlatformSettingsTab } from './PlatformSettingsTab';
 import { UsersManagementTab } from './UsersManagementTab';
+import { SupportTicketsTab } from './SupportTicketsTab';
 
 interface AdminInstructorHubProps {
   books: MarketplaceBook[];
@@ -38,7 +39,7 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
   onOpenCreateModal,
   onOpenExternalModal
 }) => {
-  const [activeTab, setActiveTab] = useState<'analytics' | 'users' | 'exams' | 'vouchers' | 'approvals' | 'wallet' | 'reels' | 'settings'>('analytics');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'users' | 'support' | 'exams' | 'vouchers' | 'approvals' | 'wallet' | 'reels' | 'settings'>('analytics');
   const [booksList, setBooksList] = useState<MarketplaceBook[]>(initialBooks);
 
 
@@ -1010,6 +1011,20 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
             >
               <Users className="w-4 h-4 text-indigo-600" />
               <span>👥 إدارة الطلاب والمعلمين</span>
+            </button>
+          )}
+
+          {isAdmin && (
+            <button
+              onClick={() => setActiveTab('support')}
+              className={`px-3.5 py-2.5 rounded-xl transition flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                activeTab === 'support'
+                  ? 'bg-white text-rose-900 shadow-sm font-black'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <MessageSquare className="w-4 h-4 text-rose-600" />
+              <span>🎫 الشكاوى والدعم الفني</span>
             </button>
           )}
 
@@ -2693,6 +2708,13 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
           onLaunchBook={onLaunchBook} 
           onRefreshData={reloadWalletAndData} 
         />
+      )}
+
+      {/* ========================================================================= */}
+      {/* 🎫 TAB: SUPPORT & COMPLAINTS TICKETS */}
+      {/* ========================================================================= */}
+      {activeTab === 'support' && isAdmin && (
+        <SupportTicketsTab />
       )}
 
       {/* ========================================================================= */}

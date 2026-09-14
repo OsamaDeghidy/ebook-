@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useParams, Link, useLocation, Navigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import {
-  BookOpen, ArrowLeft, Brain, HelpCircle, Youtube, Edit, Radio, Shield, LogOut, User, X, Sparkles, Compass, ShoppingCart
+  BookOpen, ArrowLeft, Brain, HelpCircle, Youtube, Edit, Radio, Shield, LogOut, User, X, Sparkles, Compass, ShoppingCart, MessageSquare
 } from 'lucide-react';
 import { MarketplaceBook, UserRole } from './types';
 import ContentUploader from './components/ContentUploader';
@@ -20,6 +20,8 @@ import { AdminInstructorHub } from './components/admin/AdminInstructorHub';
 import { StudentStreakBadge } from './components/gamification/StudentStreakBadge';
 import { EduReelsFeedView } from './components/reels/EduReelsFeedView';
 import BookDetailsRoute from './routes/BookDetailsRoute';
+import { SupportModal } from './components/support/SupportModal';
+import { FloatingAiMascot } from './components/ai/FloatingAiMascot';
 import { supabase } from './lib/supabase';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { getPlatformConfig, PlatformConfig } from './services/platformConfigService';
@@ -49,6 +51,7 @@ function AppContent() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isExternalModalOpen, setIsExternalModalOpen] = useState(false);
   const [isAiCreateModalOpen, setIsAiCreateModalOpen] = useState(false);
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [isConverting, setIsConverting] = useState(false);
   const [progressPercent, setProgressPercent] = useState<number>(0);
   const [progressStep, setProgressStep] = useState<string>('');
@@ -518,6 +521,7 @@ function AppContent() {
         payload.preview_video_url ? `video:${payload.preview_video_url}` : ''
       ].filter(Boolean);
 
+      const isAutoPublished = isAdminMode || userRole === 'admin';
       const creatorAuthorName = currentUser?.user_metadata?.full_name || currentUser?.email?.split('@')[0] || 'د. كريم كامل';
       const newBook: MarketplaceBook = {
         ...generatedEbook,
@@ -536,7 +540,8 @@ function AppContent() {
         price: Number(payload.price) || 0,
         preview_video_url: payload.preview_video_url,
         is_external: false,
-        is_published: true,
+        is_published: isAutoPublished,
+        approval_status: isAutoPublished ? 'approved' : 'pending',
         thumbnail_url: 'https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=800&q=80',
         rating: 5.0,
         reviews_count: 1,
@@ -556,7 +561,8 @@ function AppContent() {
           tags: newBook.tags,
           price: newBook.price,
           is_external: false,
-          is_published: true,
+          is_published: isAutoPublished,
+          approval_status: isAutoPublished ? 'approved' : 'pending',
           thumbnail_url: newBook.thumbnail_url,
           rating: 5.0,
           reviews_count: 1,
@@ -686,6 +692,15 @@ function AppContent() {
           {/* 🌟 GAMIFICATION / DAILY STREAK BADGE */}
           <StudentStreakBadge currentUser={currentUser} />
 
+          {/* SUPPORT / COMPLAINTS BUTTON */}
+          <button
+            onClick={() => setIsSupportModalOpen(true)}
+            className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl transition flex items-center gap-1.5 cursor-pointer"
+            title="مركز الشكاوى والدعم الفني"
+          >
+            <MessageSquare className="w-3.5 h-3.5 text-rose-600" />
+            <span className="hidden sm:inline">الشكاوى والدعم 🎫</span>
+          </button>
 
           {isLandingPage && (
             <Link
@@ -950,6 +965,19 @@ function AppContent() {
           </div>
         </div>
       )}
+
+      {/* 🦉 FLOATING PARALLAX AI MASCOT BOT */}
+      <FloatingAiMascot
+        onOpenSupport={() => setIsSupportModalOpen(true)}
+      />
+
+      {/* 🎫 SUPPORT & COMPLAINTS MODAL */}
+      <SupportModal
+        isOpen={isSupportModalOpen}
+        onClose={() => setIsSupportModalOpen(false)}
+        currentUser={currentUser}
+        userRole={userRole}
+      />
     </div>
   );
 }

@@ -179,27 +179,51 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Quick Feature Grid */}
+                  {/* Quick Feature Bento Grid */}
                   <div className="grid grid-cols-2 gap-2.5">
-                    <div className="p-3 bg-teal-50/70 border border-teal-100 rounded-xl space-y-1">
+                    <button
+                      onClick={() => navigate('/reels')}
+                      className="p-3 bg-gradient-to-br from-purple-50 to-indigo-50/70 border border-purple-200/80 rounded-2xl text-right space-y-1 group hover:border-purple-400 transition cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">🎬</span>
+                        <span className="text-[9px] font-black px-1.5 py-0.2 rounded-full bg-purple-600 text-white animate-pulse">
+                          جديد
+                        </span>
+                      </div>
+                      <h5 className="font-black text-xs text-purple-950 group-hover:text-purple-700 transition">ريلز المعرفة (60s)</h5>
+                      <p className="text-[10px] text-purple-700 font-medium leading-tight">كبسولات سريعة وشروحات مركزة</p>
+                    </button>
+
+                    <div className="p-3 bg-teal-50/70 border border-teal-100 rounded-2xl text-right space-y-1">
                       <Brain className="w-4 h-4 text-teal-600" />
-                      <h5 className="font-black text-xs text-slate-800">خرائط ذهنية ذكية</h5>
-                      <p className="text-[10px] text-slate-500">تلخيص شامل لكل فصل</p>
+                      <h5 className="font-black text-xs text-slate-800">خرائط ومفاهيم ذكية</h5>
+                      <p className="text-[10px] text-slate-500 font-medium leading-tight">تلخيص تفاعلي لكل درس</p>
                     </div>
-                    <div className="p-3 bg-indigo-50/70 border border-indigo-100 rounded-xl space-y-1">
+
+                    <div className="p-3 bg-indigo-50/70 border border-indigo-100 rounded-2xl text-right space-y-1">
                       <Award className="w-4 h-4 text-indigo-600" />
-                      <h5 className="font-black text-xs text-slate-800">بنوك أسئلة وامتحانات</h5>
-                      <p className="text-[10px] text-slate-500">تصحيح فوري وتدريب</p>
+                      <h5 className="font-black text-xs text-slate-800">امتحانات ذكية موقوتة</h5>
+                      <p className="text-[10px] text-slate-500 font-medium leading-tight">تصحيح فوري وشهادات معتمدة</p>
+                    </div>
+
+                    <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-2xl text-right space-y-1">
+                      <div className="flex items-center gap-1 text-xs">
+                        <span>🦉</span>
+                        <span className="font-black text-amber-900">المعلم الذكي AI</span>
+                      </div>
+                      <h5 className="font-black text-xs text-slate-800">شرح أي مسألة أو كود</h5>
+                      <p className="text-[10px] text-amber-700 font-medium leading-tight">إجابات دقيقة وأمثلة حية</p>
                     </div>
                   </div>
 
                   {/* Action link */}
                   <button
                     onClick={() => navigate('/marketplace')}
-                    className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs rounded-xl transition flex items-center justify-center gap-2"
+                    className="w-full py-3.5 bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 text-white font-black text-xs rounded-xl shadow-lg shadow-teal-500/20 transition flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
                   >
                     <span>استكشف مكتبة المقررات الآن</span>
-                    <ArrowLeft className="w-3.5 h-3.5 text-teal-400" />
+                    <ArrowLeft className="w-3.5 h-3.5 text-teal-200" />
                   </button>
                 </div>
               </div>

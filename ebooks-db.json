@@ -1187,7 +1187,9 @@
           }
         ]
       }
-    ]
+    ],
+    "approval_status": "approved",
+    "is_published": true
   },
   {
     "id": "sample-space",
@@ -8328,7 +8330,9 @@
           }
         ]
       }
-    ]
+    ],
+    "approval_status": "approved",
+    "is_published": true
   },
   {
     "id": "eb-gloabo4",

@@ -139,17 +139,24 @@ app.use("/api/tts", aiRateLimiter);
 app.use("/api/generate", aiRateLimiter);
 app.use("/api/reels/generate", aiRateLimiter);
 
-// 🛡️ Route-specific Body Parser (100MB only for PDF upload, 2MB for everything else)
+// 🛡️ Route-specific Body Parser (100MB for PDF upload, ebooks generation, and large content)
 app.use((req, res, next) => {
-  if (req.path.includes("/api/upload-pdf") || req.path.includes("/api/extract-pdf") || req.path.includes("/api/upload")) {
+  if (
+    req.path.includes("/api/upload-pdf") ||
+    req.path.includes("/api/extract-pdf") ||
+    req.path.includes("/api/upload") ||
+    req.path.includes("/api/ebooks") ||
+    req.path.includes("/api/generate") ||
+    req.path.includes("/api/branding")
+  ) {
     express.json({ limit: "100mb" })(req, res, (err) => {
       if (err) return next(err);
       express.urlencoded({ limit: "100mb", extended: true })(req, res, next);
     });
   } else {
-    express.json({ limit: "2mb" })(req, res, (err) => {
+    express.json({ limit: "25mb" })(req, res, (err) => {
       if (err) return next(err);
-      express.urlencoded({ limit: "2mb", extended: true })(req, res, next);
+      express.urlencoded({ limit: "25mb", extended: true })(req, res, next);
     });
   }
 });
@@ -190,12 +197,23 @@ const getAiInstance = (keyOverride?: string) => getGenAIClient(keyOverride);
 
 /**
  * Executes a Gemini API call with instant failover across Multi-Keys and Lite & Fast models
- * Prioritizes high-quota (500 RPD / 15 RPM) models: gemini-3.5-flash-lite & gemini-3.1-flash-lite
+ * Prioritizes cost-effective & fast models: gemini-3.7-flash, gemini-3.5-flash, gemini-3.8-flash, etc.
  */
 const generateContentWithRetry = async (
   _ai: any,
   params: any,
-  modelsChain: string[] = ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-3.7-flash"]
+  modelsChain: string[] = [
+    "gemini-3.7-flash",
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-3.6-flash",
+    "gemini-3-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
+    "gemini-1.5-pro"
+  ]
 ): Promise<any> => {
   const keysPool = getApiKeysPool();
   let lastError: any = null;
@@ -809,7 +827,7 @@ User Guidance / Notes: "${promptText || `Convert ${fileName || 'the uploaded doc
         responseSchema: ebookResponseSchema,
         temperature: 0.2,
       },
-    }, ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-3.7-flash"]);
+    });
 
     const resultText = response.text;
     if (!resultText) {
@@ -5393,6 +5411,261 @@ app.post("/api/platform/upload-logo", async (req, res) => {
   } catch (err: any) {
     console.error("Logo upload error:", err);
     res.status(500).json({ success: false, message: "فشل رفع الشعار: " + err.message });
+  }
+});
+
+// ==============================================================================
+// 🎫 Support & Complaints Tickets Engine (نظام الشكاوى والمقترحات والدعم الفني)
+// ==============================================================================
+const SUPPORT_TICKETS_FILE = path.join(process.cwd(), "support_tickets.json");
+
+interface SupportTicket {
+  id: string;
+  full_name: string;
+  email: string;
+  phone_whatsapp: string;
+  category: 'technical' | 'payment_wallet' | 'feature_request' | 'content_report' | 'general';
+  priority: 'normal' | 'medium' | 'urgent';
+  subject: string;
+  message: string;
+  attachment_url?: string;
+  user_id?: string;
+  role?: string;
+  status: 'pending' | 'in_progress' | 'resolved' | 'closed';
+  created_at: string;
+  admin_notes?: string;
+  admin_reply?: string;
+  resolved_at?: string;
+}
+
+function loadSupportTicketsFile(): SupportTicket[] {
+  try {
+    if (fs.existsSync(SUPPORT_TICKETS_FILE)) {
+      const data = fs.readFileSync(SUPPORT_TICKETS_FILE, "utf-8");
+      return JSON.parse(data);
+    }
+  } catch (e) {
+    console.warn("Failed to read support_tickets.json:", e);
+  }
+  return [];
+}
+
+function saveSupportTicketsFile(tickets: SupportTicket[]) {
+  try {
+    fs.writeFileSync(SUPPORT_TICKETS_FILE, JSON.stringify(tickets, null, 2), "utf-8");
+  } catch (e) {
+    console.warn("Failed to write support_tickets.json:", e);
+  }
+}
+
+// 1. Submit a Support / Complaint Ticket
+app.post("/api/support/tickets", async (req, res) => {
+  try {
+    const {
+      full_name,
+      email,
+      phone_whatsapp,
+      category = 'general',
+      priority = 'normal',
+      subject,
+      message,
+      attachment_url,
+      user_id,
+      role = 'student'
+    } = req.body;
+
+    if (!full_name || !email || !phone_whatsapp || !message) {
+      return res.status(400).json({
+        success: false,
+        error: "يرجى ملء جميع الحقول الإلزامية: الاسم، البريد، رقم الواتساب، وتفاصيل الشكوى."
+      });
+    }
+
+    const newTicket: SupportTicket = {
+      id: `ticket_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      full_name: String(full_name).trim(),
+      email: String(email).trim().toLowerCase(),
+      phone_whatsapp: String(phone_whatsapp).trim(),
+      category,
+      priority,
+      subject: subject ? String(subject).trim() : (message.substring(0, 40) + '...'),
+      message: String(message).trim(),
+      attachment_url: attachment_url || undefined,
+      user_id: user_id || undefined,
+      role,
+      status: 'pending',
+      created_at: new Date().toISOString()
+    };
+
+    // Save to local JSON fallback
+    const tickets = loadSupportTicketsFile();
+    tickets.unshift(newTicket);
+    saveSupportTicketsFile(tickets);
+
+    // Also attempt saving to Supabase if table exists
+    try {
+      await supabase.from("support_tickets").insert({
+        id: newTicket.id,
+        full_name: newTicket.full_name,
+        email: newTicket.email,
+        phone_whatsapp: newTicket.phone_whatsapp,
+        category: newTicket.category,
+        priority: newTicket.priority,
+        subject: newTicket.subject,
+        message: newTicket.message,
+        attachment_url: newTicket.attachment_url || null,
+        user_id: newTicket.user_id || null,
+        role: newTicket.role,
+        status: newTicket.status,
+        created_at: newTicket.created_at
+      });
+    } catch (dbErr) {
+      console.warn("Supabase support ticket insert notice:", dbErr);
+    }
+
+    res.json({
+      success: true,
+      ticket: newTicket,
+      message: "تم تسجيل الشكوى/الطلب بنجاح! سيتم مراجعتها والتواصل معك عبر الواتساب أو البريد."
+    });
+  } catch (err: any) {
+    console.error("Submit support ticket error:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 2. GET All Support Tickets for Admin
+app.get("/api/admin/support/tickets", async (req, res) => {
+  try {
+    let tickets = loadSupportTicketsFile();
+
+    // Also sync from Supabase if available
+    try {
+      const { data, error } = await supabase
+        .from("support_tickets")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (!error && data && data.length > 0) {
+        const map = new Map<string, SupportTicket>();
+        tickets.forEach(t => map.set(t.id, t));
+        data.forEach((item: any) => {
+          map.set(item.id, {
+            id: item.id,
+            full_name: item.full_name,
+            email: item.email,
+            phone_whatsapp: item.phone_whatsapp,
+            category: item.category,
+            priority: item.priority || 'normal',
+            subject: item.subject,
+            message: item.message,
+            attachment_url: item.attachment_url,
+            user_id: item.user_id,
+            role: item.role,
+            status: item.status || 'pending',
+            created_at: item.created_at,
+            admin_notes: item.admin_notes,
+            admin_reply: item.admin_reply,
+            resolved_at: item.resolved_at
+          });
+        });
+        tickets = Array.from(map.values()).sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        saveSupportTicketsFile(tickets);
+      }
+    } catch (e) {}
+
+    res.json({ success: true, tickets });
+  } catch (err: any) {
+    console.error("Get support tickets error:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 3. Update Support Ticket Status
+app.post("/api/admin/support/tickets/:id/status", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, admin_notes, admin_reply } = req.body;
+
+    const tickets = loadSupportTicketsFile();
+    const ticket = tickets.find(t => t.id === id);
+    if (!ticket) {
+      return res.status(404).json({ success: false, error: "التذكرة غير موجودة." });
+    }
+
+    if (status) ticket.status = status;
+    if (admin_notes !== undefined) ticket.admin_notes = admin_notes;
+    if (admin_reply !== undefined) ticket.admin_reply = admin_reply;
+    if (status === 'resolved' || status === 'closed') {
+      ticket.resolved_at = new Date().toISOString();
+    }
+
+    saveSupportTicketsFile(tickets);
+
+    try {
+      await supabase.from("support_tickets").update({
+        status: ticket.status,
+        admin_notes: ticket.admin_notes || null,
+        admin_reply: ticket.admin_reply || null,
+        resolved_at: ticket.resolved_at || null
+      }).eq("id", id);
+    } catch (e) {}
+
+    res.json({
+      success: true,
+      ticket,
+      message: `تم تحديث حالة التذكرة إلى (${ticket.status}) بنجاح!`
+    });
+  } catch (err: any) {
+    console.error("Update ticket status error:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 4. Admin Reply to Support Ticket
+app.post("/api/admin/support/tickets/:id/reply", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { admin_reply, change_status_to } = req.body;
+
+    if (!admin_reply) {
+      return res.status(400).json({ success: false, error: "يرجى كتابة نص الرد." });
+    }
+
+    const tickets = loadSupportTicketsFile();
+    const ticket = tickets.find(t => t.id === id);
+    if (!ticket) {
+      return res.status(404).json({ success: false, error: "التذكرة غير موجودة." });
+    }
+
+    ticket.admin_reply = String(admin_reply).trim();
+    if (change_status_to) {
+      ticket.status = change_status_to;
+      if (change_status_to === 'resolved') {
+        ticket.resolved_at = new Date().toISOString();
+      }
+    }
+
+    saveSupportTicketsFile(tickets);
+
+    try {
+      await supabase.from("support_tickets").update({
+        admin_reply: ticket.admin_reply,
+        status: ticket.status,
+        resolved_at: ticket.resolved_at || null
+      }).eq("id", id);
+    } catch (e) {}
+
+    res.json({
+      success: true,
+      ticket,
+      message: "تم حفظ رد الإدارة بنجاح!"
+    });
+  } catch (err: any) {
+    console.error("Admin ticket reply error:", err);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
