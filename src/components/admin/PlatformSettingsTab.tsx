@@ -240,6 +240,60 @@ export const PlatformSettingsTab: React.FC = () => {
           </div>
         </div>
 
+        <div className="pt-3 border-t border-white/10 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Globe className="w-4 h-4 text-indigo-400" />
+              <h4 className="text-xs font-black text-white">إعدادات بوابة PayPal الدولية (PayPal REST API & Credentials):</h4>
+            </div>
+            <span className="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full font-bold">
+              دفع دولي بالدولار ($)
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="space-y-1 sm:col-span-1">
+              <label className="block text-xs font-bold text-slate-300">الحد الأدنى لعملية الدفع بـ PayPal ($ USD):</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={config.minPayPalAmountUsd ?? 10}
+                  onChange={(e) => setConfig({ ...config, minPayPalAmountUsd: Number(e.target.value) })}
+                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-white/15 rounded-xl text-indigo-400 font-black text-sm outline-none focus:border-indigo-500 transition"
+                />
+                <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">$ USD</span>
+              </div>
+              <p className="text-[10px] text-slate-400">أقل قيمة يُقبل تحصيلها عبر PayPal (افتراضياً 10$).</p>
+            </div>
+
+            <div className="space-y-1 sm:col-span-1">
+              <label className="block text-xs font-bold text-slate-300">PayPal Client ID:</label>
+              <input
+                type="text"
+                value={config.paypalClientId || ''}
+                onChange={(e) => setConfig({ ...config, paypalClientId: e.target.value })}
+                placeholder="ألصق Client ID من حسابك في PayPal Developer"
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-white/15 rounded-xl text-white font-mono text-[11px] outline-none focus:border-indigo-500 transition"
+              />
+              <p className="text-[10px] text-slate-400">من لوحة تحكم PayPal Developer (Live أو Sandbox).</p>
+            </div>
+
+            <div className="space-y-1 sm:col-span-1">
+              <label className="block text-xs font-bold text-slate-300">PayPal Client Secret:</label>
+              <input
+                type="password"
+                value={config.paypalClientSecret || ''}
+                onChange={(e) => setConfig({ ...config, paypalClientSecret: e.target.value })}
+                placeholder="ألصق Secret Key من PayPal Developer"
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-white/15 rounded-xl text-white font-mono text-[11px] outline-none focus:border-indigo-500 transition"
+              />
+              <p className="text-[10px] text-slate-400">المفتاح السري لتأكيد المعاملات واستلام الأموال.</p>
+            </div>
+          </div>
+        </div>
+
         <div className="pt-2 flex items-center justify-between border-t border-white/10">
           <div>
             <h4 className="text-xs font-bold text-white">تفعيل الدفع المباشر من رصيد المحفظة (1-Click Wallet Checkout):</h4>

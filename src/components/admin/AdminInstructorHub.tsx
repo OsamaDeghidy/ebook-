@@ -5,7 +5,7 @@ import {
   Eye, EyeOff, Edit, Trash2, Plus, Lock, Check, Layers, AlertCircle, HelpCircle, Search, Filter,
   Calendar, CreditCard, ChevronDown, CheckSquare, Zap, Smartphone, QrCode, CheckCheck, Wallet,
   RotateCcw, Send, CheckCircle, XCircle, Info, DollarSign, ArrowUpRight, ArrowDownLeft, ShieldCheck,
-  Building2, MessageSquare, Play, Film, Video, Sliders
+  Building2, MessageSquare, Play, Film, Video, Sliders, Globe
 } from 'lucide-react';
 import { MarketplaceBook, UserRole, EduReel, EduReelStyle } from '../../types';
 import { supabase } from '../../lib/supabase';
@@ -287,9 +287,10 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
   // ==========================================
   const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
   const [rechargeAmount, setRechargeAmount] = useState(100);
-  const [rechargeGateway, setRechargeGateway] = useState<'instapay' | 'vodafone_cash' | 'paymob' | 'fawry'>('instapay');
+  const [rechargeGateway, setRechargeGateway] = useState<'vodafone_cash'>('vodafone_cash');
   const [isProcessingRecharge, setIsProcessingRecharge] = useState(false);
 
+  // 💸 WITHDRAWAL REQUEST STATES
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState(100);
   const [withdrawMethod, setWithdrawMethod] = useState<'vodafone_cash' | 'instapay'>('vodafone_cash');
@@ -334,49 +335,35 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
       return;
     }
 
+    const walletNumber = prompt('أدخل رقم محفظة الكاش للدفع (فودافون / أورنج / اتصالات / وي كاش):', '01000000000');
+    if (!walletNumber || !walletNumber.trim()) return;
+
     setIsProcessingRecharge(true);
     try {
-      // If Paymob Card or Mobile Wallet selected, attempt direct payment session redirect
-      if (rechargeGateway === 'paymob' || rechargeGateway === 'vodafone_cash') {
-        const paymobRes = await fetch('/api/payment/paymob/initiate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            amount: rechargeAmount,
-            method: rechargeGateway === 'vodafone_cash' ? 'wallet' : 'card',
-            userId: currentUser.id,
-            userEmail: currentUser.email,
-            userName: currentUser.user_metadata?.full_name || 'مستخدم المنصة',
-            walletMobileNumber: rechargeGateway === 'vodafone_cash' ? (prompt('أدخل رقم محفظة الكاش (فودافون/أورنج/اتصالات/وي):', '01000000000') || undefined) : undefined
-          })
-        });
-
-        const paymobData = await paymobRes.json();
-        if (paymobRes.ok && (paymobData.redirectUrl || paymobData.iframeUrl)) {
-          window.location.href = paymobData.redirectUrl || paymobData.iframeUrl;
-          return;
-        }
-      }
-
-      const res = await fetch('/api/wallet/recharge', {
+      const paymobRes = await fetch('/api/payment/paymob/initiate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: currentUser.id,
           amount: rechargeAmount,
-          paymentGateway: rechargeGateway,
-          referenceNumber: `INV-${Date.now().toString().slice(-6)}`
+          method: 'wallet',
+          userId: currentUser.id,
+          userEmail: currentUser.email,
+          userName: currentUser.user_metadata?.full_name || 'معلم المنصة',
+          walletMobileNumber: walletNumber.trim()
         })
       });
 
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setStatusMsg(data.message || 'تم شحن المحفظة بنجاح! 💳');
+      const paymobData = await paymobRes.json();
+      if (paymobRes.ok && paymobData.redirectUrl) {
+        window.location.href = paymobData.redirectUrl;
+        return;
+      }
+
+      if (paymobRes.ok && paymobData.message) {
+        alert(paymobData.message);
         setIsRechargeModalOpen(false);
-        await reloadWalletAndData();
-        setTimeout(() => setStatusMsg(null), 4000);
       } else {
-        alert(data.error || data.message || 'فشل شحن المحفظة');
+        alert(paymobData.error || paymobData.message || 'تعذر بدء جلسة الدفع عبر المحفظة. يرجى المحاولة لاحقاً.');
       }
     } catch (err) {
       alert('حدث خطأ أثناء معالجة الشحن');
@@ -428,6 +415,14 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
     const ref = prompt('أدخل رقم مرجع أو إيصال التحويل (اختياري):', `TX-${Date.now().toString().slice(-6)}`);
     if (ref === null) return;
 
+    // Optimistically update local state immediately so buttons disappear right away
+    setWithdrawalsList(prev => prev.map(w => w.id === withdrawalId ? { 
+      ...w, 
+      status: 'completed', 
+      reference_number: ref, 
+      processed_at: new Date().toISOString() 
+    } : w));
+
     try {
       const res = await fetch('/api/withdrawals/approve', {
         method: 'POST',
@@ -441,20 +436,30 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
 
       const data = await res.json();
       if (res.ok && data.success) {
-        setStatusMsg(data.message);
+        setStatusMsg(data.message || 'تم اعتماد وتحويل المبلغ بنجاح! ✓');
         await loadWithdrawals();
         setTimeout(() => setStatusMsg(null), 4000);
       } else {
         alert(data.message || 'فشل اعتماد السحب');
+        await loadWithdrawals();
       }
     } catch (e) {
       alert('حدث خطأ أثناء الاعتماد');
+      await loadWithdrawals();
     }
   };
 
   const handleRejectWithdrawal = async (withdrawalId: string) => {
     const reason = prompt('أدخل سبب رفض طلب السحب (سيتم إرجاع الرصيد للمعلم):', 'بيانات المحفظة أو الحساب غير صحيحة');
     if (!reason) return;
+
+    // Optimistically update local state immediately so buttons disappear right away
+    setWithdrawalsList(prev => prev.map(w => w.id === withdrawalId ? { 
+      ...w, 
+      status: 'rejected', 
+      admin_notes: reason, 
+      processed_at: new Date().toISOString() 
+    } : w));
 
     try {
       const res = await fetch('/api/withdrawals/reject', {
@@ -468,15 +473,17 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
 
       const data = await res.json();
       if (res.ok && data.success) {
-        setStatusMsg(data.message);
+        setStatusMsg(data.message || 'تم رفض الطلب وإرجاع الرصيد للمعلم.');
         await loadWithdrawals();
         await reloadWalletAndData();
         setTimeout(() => setStatusMsg(null), 4000);
       } else {
         alert(data.message || 'فشل رفض الطلب');
+        await loadWithdrawals();
       }
     } catch (e) {
       alert('حدث خطأ أثناء معالجة الرفض');
+      await loadWithdrawals();
     }
   };
 
@@ -712,9 +719,20 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
   };
 
   // ==========================================
-  // ⚡ GENERATE BATCH VOUCHERS WITH COMMISSION
+  // ⚡ GENERATE BATCH VOUCHERS WITH COMMISSION & PRE-PAYMENT
   // ==========================================
   const handleGenerateVouchers = async () => {
+    const totalCardsValue = voucherCount * voucherPrice;
+    const standardCommissionRate = 15;
+    const totalCommission = Math.round(totalCardsValue * (standardCommissionRate / 100));
+
+    // Check wallet balance for instructors before requesting
+    if (!isAdmin && walletBalance < totalCommission) {
+      alert(`عفواً، رصيد محفظتك الحالي (${walletBalance} ج.م) لا يكفي لسداد عمولة إصدار الكروت (${totalCommission} ج.م بنسبة ${standardCommissionRate}%). يرجى شحن محفظتك أولاً لإتمام الإصدار.`);
+      setIsRechargeModalOpen(true);
+      return;
+    }
+
     setIsGeneratingVouchers(true);
     try {
       const res = await fetch('/api/vouchers/generate', {
@@ -728,18 +746,26 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
           pricePrinted: voucherPrice,
           createdBy: isAdmin ? 'admin' : (currentUser?.id || currentAuthorName),
           createdByUserId: currentUser?.id || null,
-          authorName: teacherName || currentAuthorName || 'إدارة المنصة'
+          authorName: teacherName || currentAuthorName || 'إدارة المنصة',
+          userRole: isAdmin ? 'admin' : 'instructor'
         })
       });
 
-      if (res.ok) {
-        const data = await res.json();
+      const data = await res.json();
+      if (res.ok && data.success) {
         setGeneratedVouchers(prev => [...(data.vouchers || []), ...prev]);
-        setStatusMsg(`تم إصدار ${voucherCount} كارت بنجاح وتوثيق عمولة المنصة! 🎟️`);
-        setTimeout(() => setStatusMsg(null), 4000);
+        setStatusMsg(data.message || `تم إصدار ${voucherCount} كارت بنجاح وخصم عمولة المنصة (${totalCommission} ج.م)! 🎟️`);
+        await reloadWalletAndData();
+        setTimeout(() => setStatusMsg(null), 5000);
+      } else {
+        alert(data.message || data.error || 'فشل إصدار الكروت.');
+        if (data.deficit || (data.message && data.message.includes('رصيد'))) {
+          setIsRechargeModalOpen(true);
+        }
       }
     } catch (e) {
       console.error('Failed to generate vouchers:', e);
+      alert('حدث خطأ أثناء إصدار الكروت.');
     } finally {
       setIsGeneratingVouchers(false);
     }
@@ -808,6 +834,22 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
   const totalRevenue = dbPurchases.reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
   const activeVouchersCount = generatedVouchers.filter(v => !v.is_used && !v.is_cancelled).length;
   const usedVouchersCount = generatedVouchers.filter(v => v.is_used).length;
+
+  if (userRole === 'student' && !isAdminMode) {
+    return (
+      <div className="p-12 text-center bg-white border border-rose-100 rounded-3xl shadow-sm space-y-4 max-w-lg mx-auto my-12" dir="rtl">
+        <Shield className="w-12 h-12 text-rose-500 mx-auto" />
+        <h3 className="text-xl font-black text-slate-900">غير مصرح بالدخول (مخصص للمعلمين والإدارة فقط)</h3>
+        <p className="text-xs text-slate-500">حسابك مسجل كطالب. هذه اللوحة مخصصة للمعلمين لإصدار الكتب وإدارة السناتر والكروت المالية.</p>
+        <button
+          onClick={onBackToMarketplace}
+          className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs rounded-xl shadow-md transition cursor-pointer"
+        >
+          العودة إلى متجر المقررات 📚
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-fade-in pb-20 text-right max-w-7xl mx-auto" dir="rtl">
@@ -1650,6 +1692,41 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
               </div>
             </div>
 
+            {/* FINANCIAL SUMMARY & COMMISSION PRE-PAYMENT BANNER */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs">
+              <div className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl">
+                <span className="text-slate-500 font-bold">إجمالي قيمة الكروت:</span>
+                <span className="font-mono font-black text-slate-900 text-sm">{voucherCount * voucherPrice} ج.م</span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-amber-50/70 border border-amber-100 rounded-xl text-amber-900">
+                <span className="font-bold">عمولة المنصة ({commissionRate}%):</span>
+                <span className="font-mono font-black text-amber-700 text-sm">{totalCommissionAmount} ج.م</span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-indigo-50/70 border border-indigo-100 rounded-xl text-indigo-900">
+                <span className="font-bold">رصيدك المتاح بالمحفظة:</span>
+                <span className="font-mono font-black text-indigo-700 text-sm">{walletBalance} ج.م</span>
+              </div>
+            </div>
+
+            {/* LOW BALANCE ALERT */}
+            {!isAdmin && walletBalance < totalCommissionAmount && (
+              <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl flex items-center justify-between flex-wrap gap-2 text-xs text-rose-900">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>
+                    عفواً، رصيدك المتاح (<strong>{walletBalance} ج.م</strong>) لا يكفي لسداد عمولة المنصة (<strong>{totalCommissionAmount} ج.م</strong>). يلزم شحن المحفظة لإصدار الكروت.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsRechargeModalOpen(true)}
+                  className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-black text-xs transition cursor-pointer shadow-xs"
+                >
+                  ⚡ شحن المحفظة الآن
+                </button>
+              </div>
+            )}
+
             {/* VOUCHER TYPE */}
             <div className="flex items-center gap-3 p-1.5 bg-slate-100 rounded-2xl w-fit">
               <button
@@ -1717,8 +1794,8 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
                   <option value={8}>8 كروت (صفحة A4)</option>
                   <option value={16}>16 كارت (صفحتين A4)</option>
                   <option value={24}>24 كارت (3 صفحات A4)</option>
-                  <option value={50}>50 كارت (عمولة مخفضة 7%)</option>
-                  <option value={100}>100 كارت (عمولة مخفضة 5%)</option>
+                  <option value={50}>50 كارت (عمولة 15%)</option>
+                  <option value={100}>100 كارت (عمولة 15%)</option>
                 </select>
               </div>
 
@@ -1735,18 +1812,18 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
               <div className="flex items-end">
                 <button
                   onClick={handleGenerateVouchers}
-                  disabled={isGeneratingVouchers}
+                  disabled={isGeneratingVouchers || (!isAdmin && walletBalance < totalCommissionAmount)}
                   className="w-full py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-black text-xs rounded-xl shadow-md transition active:scale-95 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {isGeneratingVouchers ? (
                     <>
                       <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>جاري الإصدار...</span>
+                      <span>جاري الخصم والإصدار...</span>
                     </>
                   ) : (
                     <>
                       <Ticket className="w-4 h-4" />
-                      <span>إصدار الكروت وتوثيقها</span>
+                      <span>إصدار الكروت وسداد العمولة ({totalCommissionAmount} ج.م)</span>
                     </>
                   )}
                 </button>
@@ -1928,37 +2005,40 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                           {withdrawalsList.map((w: any) => {
-                            const isPending = w.status === 'pending';
-                            const isApproved = w.status === 'approved';
+                            const isPending = w.status === 'pending' || w.status === 'processing';
+                            const isApproved = w.status === 'completed' || w.status === 'approved';
                             const isRejected = w.status === 'rejected';
 
                             return (
                               <tr key={w.id} className="hover:bg-slate-50/50">
                                 <td className="py-3 px-4 font-bold text-slate-900">
-                                  {w.user_name || w.user_email || w.user_id?.substring(0, 8)}
+                                  {w.profiles?.full_name || w.user_name || w.user_email || w.profiles?.email || w.user_id?.substring(0, 8)}
                                 </td>
                                 <td className="py-3 px-4 font-black font-mono text-emerald-600 text-sm">
                                   {w.amount} ج.م
                                 </td>
-                                <td className="py-3 px-4 text-slate-700">
-                                  {w.payout_method === 'vodafone_cash' ? '📱 كاش / محفظة' : (w.payout_method === 'instapay' ? '⚡ إنستاباي' : '🏛️ بنك')}
+                                <td className="py-3 px-4 text-slate-700 font-bold">
+                                  {w.payout_method === 'vodafone_cash' ? '📱 فودافون كاش / محفظة' : (w.payout_method === 'instapay' ? '⚡ إنستاباي' : '🏛️ تحويل بنكي')}
                                 </td>
-                                <td className="py-3 px-4 font-mono text-slate-800 font-bold select-all">
+                                <td className="py-3 px-4 font-mono text-slate-800 font-bold select-all bg-slate-50 rounded-lg px-2">
                                   {w.payout_details}
                                 </td>
                                 <td className="py-3 px-4 text-slate-500 text-[11px]">
                                   {w.created_at ? new Date(w.created_at).toLocaleDateString('ar-EG') : 'الآن'}
                                 </td>
                                 <td className="py-3 px-4">
-                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                                  <span className={`px-2.5 py-1 rounded-full text-[11px] font-black inline-flex items-center gap-1 ${
                                     isApproved 
-                                      ? 'bg-emerald-100 text-emerald-800' 
-                                      : (isRejected ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800 animate-pulse')
+                                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
+                                      : (isRejected ? 'bg-rose-100 text-rose-800 border border-rose-200' : 'bg-amber-100 text-amber-800 border border-amber-200 animate-pulse')
                                   }`}>
-                                    {isApproved ? '✓ تم التحويل' : (isRejected ? '✕ مرفوض' : '⏳ قيد المراجعة')}
+                                    {isApproved ? '✓ تم الاعتماد والتحويل' : (isRejected ? '✕ تم الرفض' : '⏳ قيد المراجعة')}
                                   </span>
                                   {w.reference_number && (
-                                    <div className="text-[10px] text-slate-400 font-mono mt-0.5">مرجع: {w.reference_number}</div>
+                                    <div className="text-[10px] text-emerald-700 font-mono mt-1 font-bold">مرجع: {w.reference_number}</div>
+                                  )}
+                                  {w.admin_notes && (
+                                    <div className="text-[10px] text-slate-500 mt-0.5">{w.admin_notes}</div>
                                   )}
                                 </td>
                                 <td className="py-3 px-4 text-center">
@@ -1966,22 +2046,22 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
                                     <div className="flex items-center justify-center gap-1.5">
                                       <button
                                         onClick={() => handleApproveWithdrawal(w.id)}
-                                        className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[11px] font-black shadow-xs transition cursor-pointer"
+                                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black shadow-xs transition cursor-pointer flex items-center gap-1"
                                         title="اعتماد وتأكيد التحويل"
                                       >
-                                        اعتماد ✓
+                                        <span>اعتماد ✓</span>
                                       </button>
                                       <button
                                         onClick={() => handleRejectWithdrawal(w.id)}
-                                        className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-[11px] font-black transition cursor-pointer"
+                                        className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-black transition cursor-pointer"
                                         title="رفض وإرجاع الرصيد للمحفظة"
                                       >
-                                        رفض ✕
+                                        <span>رفض ✕</span>
                                       </button>
                                     </div>
                                   ) : (
-                                    <span className="text-[11px] text-slate-400 font-medium">
-                                      {isApproved ? 'مكتمل' : (w.admin_note || 'مرفوض')}
+                                    <span className="text-[11px] font-bold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-lg">
+                                      {isApproved ? 'معتمد ومحوّل ✓' : 'مرفوض ✕'}
                                     </span>
                                   )}
                                 </td>
@@ -2093,8 +2173,9 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
                 ) : (
                   <div className="divide-y divide-slate-100 border border-slate-200 rounded-2xl overflow-hidden bg-white">
                     {withdrawalsList.map((w: any) => {
-                      const isApproved = w.status === 'approved';
+                      const isApproved = w.status === 'completed' || w.status === 'approved';
                       const isRejected = w.status === 'rejected';
+                      const isPending = w.status === 'pending' || w.status === 'processing';
 
                       return (
                         <div key={w.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/50">
@@ -2107,8 +2188,8 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
                             {w.reference_number && (
                               <p className="text-[11px] text-emerald-600 font-bold">رقم مرجع التحويل: {w.reference_number}</p>
                             )}
-                            {w.admin_note && (
-                              <p className="text-[11px] text-rose-600 font-bold">ملاحظة الإدارة: {w.admin_note}</p>
+                            {w.admin_notes && (
+                              <p className="text-[11px] text-slate-600 font-bold">ملاحظة الإدارة: {w.admin_notes}</p>
                             )}
                           </div>
 
@@ -2118,10 +2199,10 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
                             </span>
                             <span className={`px-2.5 py-1 rounded-full text-xs font-black ${
                               isApproved 
-                                ? 'bg-emerald-100 text-emerald-800' 
-                                : (isRejected ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800')
+                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
+                                : (isRejected ? 'bg-rose-100 text-rose-800 border border-rose-200' : 'bg-amber-100 text-amber-800 border border-amber-200')
                             }`}>
-                              {isApproved ? '✓ تم التحويل لحسابك' : (isRejected ? '✕ تم الرفض واسترداد الرصيد' : '⏳ قيد المعالجة')}
+                              {isApproved ? '✓ تم التحويل والاعتماد' : (isRejected ? '✕ تم الرفض واسترداد الرصيد' : '⏳ قيد المراجعة')}
                             </span>
                           </div>
                         </div>
@@ -2214,45 +2295,16 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">طريقة الدفع والشحن:</label>
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setRechargeGateway('vodafone_cash' as any)}
-                    className={`p-2.5 rounded-xl border text-xs font-bold transition flex flex-col items-center justify-center gap-1 cursor-pointer ${
-                      rechargeGateway === 'vodafone_cash' ? 'bg-rose-50 border-rose-500 text-rose-950 font-black shadow-2xs' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                    }`}
-                  >
-                    <Smartphone className="w-4 h-4 text-rose-600" />
-                    <span>📱 فودافون كاش</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setRechargeGateway('paymob')}
-                    className={`p-2.5 rounded-xl border text-xs font-bold transition flex flex-col items-center justify-center gap-1 cursor-pointer ${
-                      rechargeGateway === 'paymob' ? 'bg-sky-50 border-sky-500 text-sky-950 font-black shadow-2xs' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                    }`}
-                  >
-                    <CreditCard className="w-4 h-4 text-sky-600" />
-                    <span>💳 فيزا / كارت</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setRechargeGateway('paypal' as any)}
-                    className={`p-2.5 rounded-xl border text-xs font-bold transition flex flex-col items-center justify-center gap-1 cursor-pointer ${
-                      (rechargeGateway as any) === 'paypal' ? 'bg-indigo-50 border-indigo-500 text-indigo-950 font-black shadow-2xs' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                    }`}
-                  >
-                    <Globe className="w-4 h-4 text-indigo-600" />
-                    <span>🅿️ PayPal</span>
-                  </button>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">طريقة الدفع والشحن المعتمدة:</label>
+                <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center font-black">
+                    <Smartphone className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h5 className="font-black text-xs text-rose-950">المحافظ الإلكترونية (فودافون / أورنج / اتصالات / وي كاش)</h5>
+                    <p className="text-[11px] text-rose-800">الدفع المباشر الفوري وإضافة الرصيد لمحفظتك في ثوانٍ 📱</p>
+                  </div>
                 </div>
-              </div>
-
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-600">
-                سيتم إضافة المبلغ فورياً إلى رصيد محفظتك وتحديث قاعدة البيانات.
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2">
@@ -2266,15 +2318,16 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
                 <button
                   type="submit"
                   disabled={isProcessingRecharge}
-                  className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black shadow-md transition disabled:opacity-50 cursor-pointer"
+                  className="px-6 py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-black shadow-md transition disabled:opacity-50 cursor-pointer"
                 >
-                  {isProcessingRecharge ? 'جاري الدفع...' : `تأكيد شحن ${rechargeAmount} ج.م ✓`}
+                  {isProcessingRecharge ? 'جاري التوجيه للدفع...' : `تأكيد شحن (${rechargeAmount} ج.م) بـ فودافون كاش ✓`}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
 
       {/* 🌟 WITHDRAWAL PAYOUT MODAL */}
       {isWithdrawModalOpen && (

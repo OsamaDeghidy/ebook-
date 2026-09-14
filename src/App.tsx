@@ -88,14 +88,67 @@ function AppContent() {
     }
   };
 
+  const fetchUserPurchasedBooks = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_purchases')
+        .select('book_id')
+        .eq('user_id', userId);
+
+      if (!error && data && data.length > 0) {
+        const ids = data.map((item: any) => item.book_id).filter(Boolean);
+        setPurchasedBookIds(prev => {
+          const combined = Array.from(new Set([...prev, ...ids]));
+          localStorage.setItem('purchased_book_ids', JSON.stringify(combined));
+          return combined;
+        });
+      }
+    } catch (e) {
+      console.warn("User purchases fetch notice:", e);
+    }
+  };
+
   useEffect(() => {
     fetchSupabaseCatalog();
     checkAuthSession();
+
+    // 🌐 Handle payment return redirects (PayPal / Paymob)
+    const params = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get('payment_status');
+    const bookId = params.get('bookId');
+    const amount = params.get('amount');
+    const reason = params.get('reason');
+
+    if (paymentStatus) {
+      if (paymentStatus === 'success') {
+        if (bookId) {
+          setPurchasedBookIds(prev => {
+            const updated = Array.from(new Set([...prev, bookId]));
+            localStorage.setItem('purchased_book_ids', JSON.stringify(updated));
+            return updated;
+          });
+          alert('🎉 تم تأكيد الدفع بنجاح عبر PayPal! تم تفعيل وتوفير الوصول الكامل للمقرر.');
+          navigate(`/book/${bookId}?tab=read`);
+        } else {
+          alert('🎉 تم تأكيد الدفع بنجاح عبر PayPal!');
+        }
+      } else if (paymentStatus === 'recharge_success') {
+        alert(`💳 تم شحن محفظتك بنجاح عبر PayPal ($${amount || ''} USD)!`);
+      } else if (paymentStatus === 'cancelled') {
+        alert('ℹ️ تم إلغاء عملية الدفع من قبل المستخدم.');
+      } else if (paymentStatus === 'failed') {
+        alert(`❌ تعذر إتمام عملية الدفع عبر PayPal: ${reason || 'يرجى المحاولة مرة أخرى.'}`);
+      }
+
+      // Clean query parameters from URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         setCurrentUser(session.user);
         await fetchUserProfile(session.user.id, session.user);
+        await fetchUserPurchasedBooks(session.user.id);
       } else {
         setCurrentUser(null);
         setUserRole('student');
@@ -114,6 +167,7 @@ function AppContent() {
       if (session?.user) {
         setCurrentUser(session.user);
         await fetchUserProfile(session.user.id, session.user);
+        await fetchUserPurchasedBooks(session.user.id);
       } else {
         // No active Supabase session
         setCurrentUser(null);
@@ -710,13 +764,25 @@ function AppContent() {
             !currentUser ? (
               <div className="p-12 text-center bg-white border border-gray-200 rounded-3xl shadow-sm space-y-4 max-w-lg mx-auto my-12" dir="rtl">
                 <Shield className="w-12 h-12 text-amber-500 mx-auto" />
-                <h3 className="text-xl font-black text-slate-900">هذه المنطقة مخصصة للمعلمين وإدارة المنصة</h3>
-                <p className="text-xs text-slate-500">يرجى تسجيل الدخول بحساب المعلم أو المسؤول العام للوصول إلى لوحة العمليات والاستوديو.</p>
+                <h3 className="text-xl font-black text-slate-900">هذه المنطقة مخصصة لإدارة المنصة</h3>
+                <p className="text-xs text-slate-500">يرجى تسجيل الدخول بحساب المسؤول العام للوصول إلى لوحة التحكم المركزية.</p>
                 <button
                   onClick={() => setIsAuthModalOpen(true)}
                   className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs rounded-xl shadow-md transition cursor-pointer"
                 >
                   تسجيل الدخول الآن 🔑
+                </button>
+              </div>
+            ) : (userRole !== 'admin' && !isAdminMode) ? (
+              <div className="p-12 text-center bg-white border border-rose-100 rounded-3xl shadow-sm space-y-4 max-w-lg mx-auto my-12" dir="rtl">
+                <Shield className="w-12 h-12 text-rose-500 mx-auto" />
+                <h3 className="text-xl font-black text-slate-900">غير مصرح بالدخول للوحة الإدارة</h3>
+                <p className="text-xs text-slate-500">هذه اللوحة مخصصة لإدارة المنصة فقط. حسابك الحالي مسجل كـ ({userRole === 'student' ? 'طالب' : 'معلم'}).</p>
+                <button
+                  onClick={() => navigate(userRole === 'instructor' ? '/instructor' : '/marketplace')}
+                  className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs rounded-xl shadow-md transition cursor-pointer"
+                >
+                  {userRole === 'instructor' ? 'الانتقال للوحة المعلم 👨‍🏫' : 'العودة لمتجر المقررات 📚'}
                 </button>
               </div>
             ) : (
@@ -741,12 +807,24 @@ function AppContent() {
               <div className="p-12 text-center bg-white border border-gray-200 rounded-3xl shadow-sm space-y-4 max-w-lg mx-auto my-12" dir="rtl">
                 <Shield className="w-12 h-12 text-amber-500 mx-auto" />
                 <h3 className="text-xl font-black text-slate-900">هذه المنطقة مخصصة للمعلمين</h3>
-                <p className="text-xs text-slate-500">يرجى تسجيل الدخول بحسابك للوصول إلى استوديو المعلم.</p>
+                <p className="text-xs text-slate-500">يرجى تسجيل الدخول بحساب المعلم للوصول إلى استوديو المعلم وإصدار الكروت.</p>
                 <button
                   onClick={() => setIsAuthModalOpen(true)}
                   className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs rounded-xl shadow-md transition cursor-pointer"
                 >
                   تسجيل الدخول كمعلم 👨‍🏫
+                </button>
+              </div>
+            ) : (userRole === 'student' && !isAdminMode) ? (
+              <div className="p-12 text-center bg-white border border-rose-100 rounded-3xl shadow-sm space-y-4 max-w-lg mx-auto my-12" dir="rtl">
+                <Shield className="w-12 h-12 text-rose-500 mx-auto" />
+                <h3 className="text-xl font-black text-slate-900">عفواً، هذه اللوحة مخصصة للمعلمين فقط</h3>
+                <p className="text-xs text-slate-500">حسابك مسجل كطالب. لوحة المعلم مخصصة للمدرسين لنشر المقررات التعليمية وإدارة كروت السنتر.</p>
+                <button
+                  onClick={() => navigate('/marketplace')}
+                  className="px-6 py-2.5 bg-teal-600 hover:bg-teal-500 text-white font-black text-xs rounded-xl shadow-md transition cursor-pointer"
+                >
+                  تصفح ومتابعة المقررات 📚
                 </button>
               </div>
             ) : (

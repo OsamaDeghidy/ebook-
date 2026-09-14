@@ -16,6 +16,9 @@ export interface PlatformConfig {
   minWithdrawalAmount: number; // e.g. 100 (EGP)
   bookGenerationCost: number; // e.g. 50 (Credits/EGP)
   allowWalletPayment: boolean;
+  minPayPalAmountUsd?: number; // Minimum PayPal payment (default $10)
+  paypalClientId?: string;
+  paypalClientSecret?: string;
 
   // 🎛️ Feature Flags (التحكم في إظهار وإخفاء الخصائص)
   showReels: boolean;
@@ -44,6 +47,9 @@ export const DEFAULT_PLATFORM_CONFIG: PlatformConfig = {
   minWithdrawalAmount: 100,
   bookGenerationCost: 50,
   allowWalletPayment: true,
+  minPayPalAmountUsd: 10,
+  paypalClientId: '',
+  paypalClientSecret: '',
 
   // Default Flags
   showReels: true,
