@@ -26074,5 +26074,494 @@
       }
     ],
     "is_published": false
+  },
+  {
+    "id": "5e0242d8-c839-4a22-a3f0-00452bfbb167",
+    "title": "دليل الأنظمة البرمجية ومصادر الأكواد المفتوحة لتطوير وتخصيص منتجات الشركة",
+    "description": "دليل استراتيجي شامل يضم أفضل الأنظمة ومستودعات الأكواد مفتوحة المصدر (Open Source) القابلة للتخصيص الكامل وإعادة البيع كمنتجات برمجية وحلول ذكاء اصطناعي (AI SaaS) للشركات في السوق المصري والعربي.",
+    "sizeCategory": "long",
+    "createdAt": "2026-09-14T20:37:00.355Z",
+    "chapters": [
+      {
+        "id": "ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-1",
+        "title": "أنظمة الذكاء الاصطناعي، الـ RAG، وبناء الوكالء (Workflows & Custom Chatbots)",
+        "content": "# أنظمة الذكاء الاصطناعي ومسارات العمل\n\nيُعد الاستثمار في أنظمة الذكاء الاصطناعي ومحركات الاسترجاع التوليدي (RAG) وتطوير الوكالء الأذكياء (Agentic Workflows) ركيزة أساسية لأي شركة تقنية حديثة تسعى لتقديم حلول مبتكرة لعملائها.\n\n### Dify.ai و Flowise\n* **Dify.ai**: منصة متقدمة لبناء مسارات العمل المعتمدة على الوكالء، وربط قواعد البيانات ومستندات العملاء بنماذج الذكاء الاصطناعي. تستخدم تقنيات حديثة مثل Next.js و Python وقواعد بيانات مثل PostgreSQL (pgvector).\n* **Flowise**: تمكن المطورين من بناء روبوتات الدردشة والوكلاء الذكية بالسحب والإفالت (Drag-and-Drop) بالاعتماد على LangChain و LlamaIndex.\n\nتسمح هذه الأدوات بالتخصيص الكامل واستضافة البيانات ذاتياً (Self-hosted) لضمان سيادة البيانات وتقليل التكاليف المرتبطة بالمنصات المغلقة.",
+        "originalContent": "1. أنظمة الذكاء الاصطناعي، الـ RAG، وبناء الوكالء (AI Workflows & Custom Chatbots) Dify.ai 1.1 المجال: بناء مسارات العمل المعتمدة على الوكالء (Agentic Workflows)، محركات الـ RAG المتقدمة، وربط قواعد البيانات ومستندات العملاء بنماذج الذكاء الاصطناعي.",
+        "summary": "يتناول هذا الفصل أنظمة الذكاء الاصطناعي المتقدمة مثل Dify.ai و Flowise لبناء وكلاء ذكيين ومسارات RAG قابلة للتخصيص.",
+        "concepts": [
+          {
+            "concept": "Agentic Workflows",
+            "explanation": "مسارات العمل المعتمدة على الوكالء الأذكياء لتنفيذ المهام المعقدة تلقائياً."
+          },
+          {
+            "concept": "RAG",
+            "explanation": "استرجاع المعلومات المعززة توليدياً لربط النماذج بمستندات العملاء الخاصة."
+          }
+        ],
+        "imagePrompt": "A futuristic glowing neural network connecting databases and custom chat workflows on multiple holographic screens, futuristic software engineering office, professional lighting.",
+        "videos": [
+          {
+            "id": "v-ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-1-1",
+            "title": "شرح منصة Dify.ai وبناء مسارات الـ RAG",
+            "url": "https://www.youtube.com/results?search_query=Dify.ai+tutorial+RAG",
+            "description": "فيديو استعراضي لكيفية بناء تطبيقات الذكاء الاصطناعي باستخدام Dify."
+          },
+          {
+            "id": "v-ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-1-2",
+            "title": "دورة تدريبية على Flowise و LangChain",
+            "url": "https://www.youtube.com/results?search_query=Flowise+AI+tutorial",
+            "description": "تعلم بناء الشات بوت والوكلاء الذكية بالسحب والإفالت."
+          }
+        ],
+        "quiz": [
+          {
+            "id": "q-ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-1-1",
+            "question": "ما هو الغرض الأساسي من استخدام منصة Dify.ai في الشركات؟",
+            "options": [
+              "تصميم واجهات المستخدم الرسومية فقط",
+              "بناء مسارات العمل المعتمدة على الوكالء ومحركات الـ RAG",
+              "إدارة الرواتب وشؤون الموظفين",
+              "إصدار الفواتير الإلكترونية والضرائب"
+            ],
+            "correctOptionIndex": 1,
+            "explanation": "Dify.ai مخصصة لبناء مسارات العمل المعتمدة على الوكالء (Agentic Workflows) ومحركات الـ RAG وربط قواعد البيانات بنماذج الذكاء الاصطناعي."
+          },
+          {
+            "id": "q-ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-1-2",
+            "question": "ما هي المكتبات التي تعتمد عليها منصة Flowise في البناء؟",
+            "options": [
+              "Django و Flask",
+              "LangChain و LlamaIndex",
+              "React Native و Flutter",
+              "Spring Boot و Hibernate"
+            ],
+            "correctOptionIndex": 1,
+            "explanation": "تعتمد Flowise بشكل أساسي على مكتبتي LangChain و LlamaIndex لتسهيل بناء روبوتات الدردشة والوكلاء."
+          },
+          {
+            "id": "q-ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-1-3",
+            "question": "ما هي الميزة التنافسية للاستضافة الذاتية (Self-hosted) في أنظمة الذكاء الاصطناعي؟",
+            "options": [
+              "زيادة سرعة الإنترنت للمستخدم",
+              "ضمان سيادة البيانات للمؤسسات الحساسة وتقليل تكلفة الاشتراكات",
+              "إلغاء الحاجة لبرمجة الواجهات الأمامية",
+              "الربط التلقائي ببوابات الدفع المحلية"
+            ],
+            "correctOptionIndex": 1,
+            "explanation": "الاستضافة الذاتية تضمن للمؤسسات سيادة كاملة على بياناتها وتحميها من تكاليف الاشتراكات الشهرية الباهظة."
+          }
+        ],
+        "mindMap": [
+          {
+            "id": "node-1",
+            "label": "أنظمة الذكاء الاصطناعي",
+            "parentId": "null",
+            "description": "أنظمة الذكاء الاصطناعي وبناء الوكالء ومحركات الـ RAG"
+          },
+          {
+            "id": "node-2",
+            "label": "Dify.ai",
+            "parentId": "node-1",
+            "description": "بناء مسارات العمل والربط بقواعد البيانات Vector DB"
+          },
+          {
+            "id": "node-3",
+            "label": "Flowise",
+            "parentId": "node-1",
+            "description": "بناء الروبوتات بالسحب والإفالت باستخدام LangChain"
+          },
+          {
+            "id": "node-4",
+            "label": "الاستضافة الذاتية",
+            "parentId": "node-1",
+            "description": "حماية بيانات المؤسسات وتقليل التكاليف"
+          }
+        ]
+      },
+      {
+        "id": "ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-2",
+        "title": "خدمة العملاء وأتمتة الواتساب (WhatsApp Automation & Omnichannel Support)",
+        "content": "# أتمتة خدمة العملاء ومنصات الدعم الموحد\n\nتُعد إدارة علاقات العملاء والرد الفوري عبر قنوات التواصل الاجتماعي وتطبيقات التراسل مثل واتساب أمراً حيوياً للنمو التجاري في أسواق مصر والخليج.\n\n### Chatwoot و Typebot\n* **Chatwoot**: منصة إدارة محادثات بديلة لـ Intercom و Zendesk تجمع قنوات WhatsApp Business API، Messenger، Telegram في صندوق موحد مع إمكانية White-Labeling وتوجيه Webhooks.\n* **Typebot**: لبناء روبوتات ونماذج تفاعلية توليدية مخصصة لجمع العملاء المحتملين وتأهيلهم عبر الويب والواتساب مباشرة.\n\nتتميز هذه الحلول بحل أزمة الاعتماد الهائل على الواتساب دون دفع اشتراكات شهرية متصاعدة لكل موظف.",
+        "originalContent": "2. خدمة العملاء وأتمتة الواتساب (WhatsApp Automation & Omnichannel Support) Chatwoot 2.1 المجال: منصة إدارة محادثات وخدمة عملاء بديلة لـ Intercom و Zendesk تجمع قنوات WhatsApp Business API، Messenger، Instagram، Telegram والشات المباشر في صندوق موحد.",
+        "summary": "يستعرض هذا الفصل كيفية أتمتة خدمة العملاء عبر منصات مثل Chatwoot و Typebot لجمع العملاء وربط قنوات الاتصال بكفاءة عالية.",
+        "concepts": [
+          {
+            "concept": "Omnichannel Support",
+            "explanation": "إدارة جميع قنوات التواصل مع العملاء من منصة واحدة مركزية."
+          },
+          {
+            "concept": "Interactive Bots",
+            "explanation": "روبوتات تفاعلية تجمع بيانات العملاء وتؤهلهم آلياً."
+          }
+        ],
+        "imagePrompt": "A modern customer support dashboard on a computer screen showing multiple live chat channels like WhatsApp, Telegram, and Messenger with sleek UI.",
+        "videos": [
+          {
+            "id": "v-ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-2-1",
+            "title": "شرح تثبيت وتخصيص منصة Chatwoot",
+            "url": "https://www.youtube.com/results?search_query=Chatwoot+open+source+tutorial",
+            "description": "كيفية إعداد صندوق الوارد الموحد لإدارة خدمة العملاء."
+          },
+          {
+            "id": "v-ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-2-2",
+            "title": "بناء شات بوت تفاعلي باستخدام Typebot",
+            "url": "https://www.youtube.com/results?search_query=Typebot.io+tutorial",
+            "description": "دورة عملية لإنشاء نماذج تفاعلية وربطها بالواتساب."
+          }
+        ],
+        "quiz": [
+          {
+            "id": "q-ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-2-1",
+            "question": "ما هي المنصة التي تُعد بديلاً مفتوح المصدر لـ Intercom و Zendesk؟",
+            "options": [
+              "Chatwoot",
+              "Saleor",
+              "Horilla",
+              "Plane"
+            ],
+            "correctOptionIndex": 0,
+            "explanation": "Chatwoot هي منصة إدارة محادثات وخدمة عملاء بديلة لـ Intercom و Zendesk وتجمع قنوات التواصل في صندوق موحد."
+          },
+          {
+            "id": "q-ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-2-2",
+            "question": "ما هو الغرض من استخدام Typebot؟",
+            "options": [
+              "إدارة المخازن وحسابات المصانع",
+              "بناء روبوتات ونماذج تفاعلية لجمع العملاء المحتملين وتأهيلهم عبر الواتساب",
+              "تصميم الألعاب ثلاثية الأبعاد",
+              "إصدار الفواتير الإلكترونية للضرائب"
+            ],
+            "correctOptionIndex": 1,
+            "explanation": "يستخدم Typebot لبناء نماذج تفاعلية وروبوتات لجمع وتأهيل العملاء المحتملين عبر الويب والواتساب مباشرة."
+          },
+          {
+            "id": "q-ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-2-3",
+            "question": "ما هي الميزة التنافسية لاستخدام Chatwoot للشركات في مصر والخليج؟",
+            "options": [
+              "إلغاء الحاجة لوجود موظفين خدمة عملاء",
+              "حل أزمة الاعتماد على الواتساب دون دفع اشتراكات شهرية متصاعدة لكل موظف",
+              "توليد الفيديوهات السينمائية بالذكاء الاصطناعي",
+              "إدارة حجز الفنادق وشاليهات القرى السياحية"
+            ],
+            "correctOptionIndex": 1,
+            "explanation": "يوفر Chatwoot إمكانية ربط واتساب وتوفير الاشتراكات الشهرية الباهظة المتصاعدة لكل موظف مقارنة بالمنصات المغلقة."
+          }
+        ],
+        "mindMap": [
+          {
+            "id": "node-1",
+            "label": "خدمة العملاء وأتمتة الواتساب",
+            "parentId": "null",
+            "description": "أنظمة إدارة المحادثات وخدمة العملاء الموحدة"
+          },
+          {
+            "id": "node-2",
+            "label": "Chatwoot",
+            "parentId": "node-1",
+            "description": "صندوق موحد لقنوات واتساب وتليجرام وميسنجر"
+          },
+          {
+            "id": "node-3",
+            "label": "Typebot",
+            "parentId": "node-1",
+            "description": "نماذج تفاعلية لجمع وتأهيل العملاء"
+          },
+          {
+            "id": "node-4",
+            "label": "توفير التكاليف",
+            "parentId": "node-1",
+            "description": "تجنب الاشتراكات الشهرية لكل موظف"
+          }
+        ]
+      },
+      {
+        "id": "ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-3",
+        "title": "توليد المحتوى والوسائط والبودكاست بالذكاء الاصطناعي (AI Media, Podcasts & EdTech)",
+        "content": "# توليد المحتوى والوسائط والبودكاست الذكي\n\nتُحدث تقنيات الذكاء الاصطناعي التوليدي ثورة حقيقية في قطاع تكنولوجيا التعليم (EdTech) وتوليد الوسائط المتعددة والبودكاست الفوري من الملفات النصية.\n\n### Podcastfy و ComfyUI و LiveKit Agents\n* **Podcastfy**: بديل مفتوح المصدر لـ Google NotebookLM، يحول الملفات المتعددة (PDFs، مقالات، روابط) إلى حوار صوتي وبودكاست تفاعلي متعدد اللغات والأصوات.\n* **ComfyUI**: محرك قوي لتوليد الصور والفيديو الاحترافي الداعم لنماذج مثل Wan2.1 و HunyuanVideo و Flux مع واجهة Web API.\n* **LiveKit Agents**: لبناء وكلاء اتصالات صوتية فائقة السرعة للمكالمات الهاتفية وخدمة العملاء باللهجة المصرية والعربية عبر WebRTC.",
+        "originalContent": "3. توليد المحتوى والوسائط والبودكاست بالذكاء الاصطناعي (AI Media, Podcasts & EdTech) 3.1 Podcastfy (بديل مفتوح المصدر لـ NotebookLM Podcast) المجال: تحويل الملفات المتعددة (PDFs، مقالات، روابط، مستندات) إلى حوار صوتي وبودكاست تفاعلي متعدد اللغات والأصوات.",
+        "summary": "يغطي هذا الفصل تقنيات توليد الوسائط والبودكاست عبر Podcastfy و ComfyUI والوكلاء الصوتيين عبر LiveKit.",
+        "concepts": [
+          {
+            "concept": "Text-to-Speech",
+            "explanation": "تحويل النصوص المكتوبة إلى أصوات بشرية طبيعية متعددة اللغات."
+          },
+          {
+            "concept": "Real-Time Voice AI",
+            "explanation": "إجراء محادثات صوتية فورية بالذكاء الاصطناعي للمكالمات الهاتفية."
+          }
+        ],
+        "imagePrompt": "An advanced audio podcast studio setup with sound waves, glowing neural microphones, and holographic video generation screens.",
+        "videos": [
+          {
+            "id": "v-ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-3-1",
+            "title": "شرح إنشاء بودكاست من ملفات الـ PDF باستخدام Podcastfy",
+            "url": "https://www.youtube.com/results?search_query=Podcastfy+open+source+podcast",
+            "description": "كيفية تحويل المستندات إلى ملفات صوتية وحوارات تفاعلية."
+          },
+          {
+            "id": "v-ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-3-2",
+            "title": "دورة ComfyUI لتوليد الصور والفيديو الاحترافي",
+            "url": "https://www.youtube.com/results?search_query=ComfyUI+tutorial+for+beginners",
+            "description": "دليل شامل للتعامل مع العقد (Nodes) في ComfyUI."
+          }
+        ],
+        "quiz": [
+          {
+            "id": "q-ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-3-1",
+            "question": "ما هو الغرض من منصة Podcastfy؟",
+            "options": [
+              "إدارة المخازن والمشتريات",
+              "تحويل ملفات الـ PDF والمقالات إلى حوار صوتي وبودكاست تفاعلي",
+              "إصدار الفواتير الإلكترونية",
+              "إدارة شؤون الموظفين ورواتبهم"
+            ],
+            "correctOptionIndex": 1,
+            "explanation": "Podcastfy هو البديل المفتوح المصدر لـ NotebookLM لتحويل المستندات والروابط إلى بودكاست تفاعلي."
+          },
+          {
+            "id": "q-ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-3-2",
+            "question": "ما هي النماذج التي يدعمها محرك ComfyUI لتوليد الوسائط؟",
+            "options": [
+              "Django و Laravel",
+              "Wan2.1 و HunyuanVideo و Flux",
+              "PostgreSQL و Redis",
+              "Flutter و React Native"
+            ],
+            "correctOptionIndex": 1,
+            "explanation": "ComfyUI يدعم نماذج توليد الصور والفيديو الحديثة مثل Wan2.1 و Flux و HunyuanVideo."
+          },
+          {
+            "id": "q-ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-3-3",
+            "question": "ما هي التقنية المستخدمة في LiveKit Agents للمكالمات الصوتية؟",
+            "options": [
+              "Python / WebRTC / Real-Time Multimodal AI",
+              "HTML / CSS / JavaScript",
+              "Ruby on Rails / MySQL",
+              "Java / Spring Boot"
+            ],
+            "correctOptionIndex": 0,
+            "explanation": "تعتمد LiveKit Agents على Python و WebRTC والذكاء الاصطناعي متعدد الوسائط في الوقت الفعلي."
+          }
+        ],
+        "mindMap": [
+          {
+            "id": "node-1",
+            "label": "توليد المحتوى والوسائط",
+            "parentId": "null",
+            "description": "أدوات الذكاء الاصطناعي للوسائط والتعليم"
+          },
+          {
+            "id": "node-2",
+            "label": "Podcastfy",
+            "parentId": "node-1",
+            "description": "تحويل المستندات إلى بودكاست صوتي"
+          },
+          {
+            "id": "node-3",
+            "label": "ComfyUI",
+            "parentId": "node-1",
+            "description": "توليد الصور والفيديو الاحترافي"
+          },
+          {
+            "id": "node-4",
+            "label": "LiveKit Agents",
+            "parentId": "node-1",
+            "description": "الوكلاء الصوتيون في الوقت الفعلي"
+          }
+        ]
+      },
+      {
+        "id": "ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-4",
+        "title": "الأسواق الإلكترونية والمتاجر متعددة البائعين (Marketplaces & E-Commerce)",
+        "content": "# منصات التجارة الإلكترونية المتقدمة وأسواق البائعين\n\nتعتبر التجارة الإلكترونية بدون رأس (Headless Commerce) وقوالب الأسواق متعددة البائعين الحل الأمثل لإطلاق منصات تجارية ضخمة بسرعة وكفاءة عالية.\n\n### Saleor Commerce و Sharetribe Web Template\n* **Saleor Commerce**: منصة تجارة إلكترونية سريعة جداً تعتمد على Headless Commerce ومبنية بـ Next.js و Python (Django) مع دعم بوابات الدفع المحلية (Paymob, Fawry, Tap, Tabby).\n* **Sharetribe Web Template**: قالب ويب مرن لبناء منصات وأسواق تأجير، خدمات، وحجوزات متعددة البائعين في العقارات والسياحة بسرعة قياسية.",
+        "originalContent": "4. الأسواق الإلكترونية والمتاجر متعددة البائعين (Marketplaces & E-Commerce) Saleor Commerce 4.1 المجال: منصة تجارة إلكترونية سريعة جداً بدون رأس (Headless Commerce).",
+        "summary": "يستعرض هذا الفصل أنظمة التجارة الإلكترونية المتقدمة مثل Saleor و Sharetribe لبناء أسواق إلكترونية متعددة البائعين.",
+        "concepts": [
+          {
+            "concept": "Headless Commerce",
+            "explanation": "فصل واجهة العرض الأمامية عن محرك التجارة الخلفي لمرونة فائقة."
+          },
+          {
+            "concept": "Vendor Portals",
+            "explanation": "لوحات تحكم مخصصة للبائعين لإدارة منتجاتهم وطلباتهم بأنفسهم."
+          }
+        ],
+        "imagePrompt": "A modern multi-vendor e-commerce dashboard showing live sales, vendor management portals, and local payment gateway integrations.",
+        "videos": [
+          {
+            "id": "v-ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-4-1",
+            "title": "شرح منصة Saleor Commerce وطريقة تخصيصها",
+            "url": "https://www.youtube.com/results?search_query=Saleor+commerce+tutorial",
+            "description": "دليل المطورين لبناء متجر إلكتروني باستخدام Saleor و Next.js."
+          },
+          {
+            "id": "v-ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-4-2",
+            "title": "إطلاق سوق متعدد البائعين باستخدام Sharetribe",
+            "url": "https://www.youtube.com/results?search_query=Sharetribe+web+template+tutorial",
+            "description": "كيفية تخصيص وتشغيل منصة تأجير وخدمات رقمية."
+          }
+        ],
+        "quiz": [
+          {
+            "id": "q-ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-4-1",
+            "question": "ما هي التقنية المعمارية التي تعتمد عليها منصة Saleor Commerce؟",
+            "options": [
+              "Monolithic Architecture",
+              "Headless Commerce",
+              "Static HTML Sites",
+              "Legacy Mainframes"
+            ],
+            "correctOptionIndex": 1,
+            "explanation": "Saleor تعتمد على بنية التجارة الإلكترونية بدون رأس (Headless Commerce) لفصل الواجهة الأمامية عن الخلفية."
+          },
+          {
+            "id": "q-ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-4-2",
+            "question": "ما هو الاستخدام الرئيسي لـ Sharetribe Web Template؟",
+            "options": [
+              "إدارة شبكات إنترنت الأشياء والمصانع",
+              "بناء منصات وأسواق تأجير وخدمات وحجوزات متعددة البائعين",
+              "توليد الفيديوهات بالذكاء الاصطناعي",
+              "إدارة السجلات الطبية للمستشفيات"
+            ],
+            "correctOptionIndex": 1,
+            "explanation": "Sharetribe مصممة خصيصاً لإطلاق منصات الأسواق التجارية متعددة البائعين وخدمات التأجير والحجوزات."
+          },
+          {
+            "id": "q-ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-4-3",
+            "question": "ما هي بوابات الدفع المحلية التي يمكن ربطها بمنصة Saleor؟",
+            "options": [
+              "Paymob, Fawry, Tap, Tabby",
+              "PayPal فقط",
+              "Bitcoin فقط",
+              "بطاقات الهدايا المحلية"
+            ],
+            "correctOptionIndex": 0,
+            "explanation": "تتدعم Saleor إمكانية ربط بوابات الدفع الشهيرة في مصر والخليج مثل Paymob و Fawry و Tap و Tabby."
+          }
+        ],
+        "mindMap": [
+          {
+            "id": "node-1",
+            "label": "الأسواق والمتاجر",
+            "parentId": "null",
+            "description": "منصات التجارة الإلكترونية متعددة البائعين"
+          },
+          {
+            "id": "node-2",
+            "label": "Saleor Commerce",
+            "parentId": "node-1",
+            "description": "تجارة إلكترونية سريعة بدون رأس Headless"
+          },
+          {
+            "id": "node-3",
+            "label": "Sharetribe",
+            "parentId": "node-1",
+            "description": "منصات التأجير والحجوزات متعددة البائعين"
+          },
+          {
+            "id": "node-4",
+            "label": "بوابات الدفع",
+            "parentId": "node-1",
+            "description": "ربط Paymob و Fawry و Tap و Tabby"
+          }
+        ]
+      },
+      {
+        "id": "ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-5",
+        "title": "أنظمة إدارة الموارد البشرية والرواتب (HRMS & Payroll)",
+        "content": "# أنظمة إدارة الموارد البشرية والرواتب المتكاملة\n\nتعتبر إدارة شؤون الموظفين، الحضور والانصراف، الإجازات، وحساب الرواتب وفقاً لوائح العمل المحلية في مصر والخليج أمراً بالغ الأهمية لاستقرار المؤسسات.\n\n### Horilla HRMS و Frappe HR\n* **Horilla HRMS**: نظام إدارة موارد بشرية متكامل ومجاني 100% لإدارة شؤون الموظفين، الحضور، الإجازات، والرواتب، مع تطبيق موبايل مبني بـ Flutter ودعم لوائح العمل المصرية والخليجية.\n* **Frappe HR**: نظام HRMS مؤسسي متقدم وشامل لأكثر من 13 موديول للمؤسسات والشركات المتوسطة والضخمة مبني باستخدام Python (Frappe Framework) و Vue.js.",
+        "originalContent": "5. أنظمة إدارة الموارد البشرية والرواتب (HRMS & Payroll) Horilla HRMS 5.1 المجال: نظام إدارة موارد بشرية متكامل ومجاني 100% لإدارة شؤون الموظفين، الحضور والانصراف، الإجازات، والرواتب.",
+        "summary": "يتناول هذا الفصل أنظمة إدارة الموارد البشرية والرواتب مثل Horilla و Frappe HR لتنظيم شؤون الموظفين وفق القوانين المحلية.",
+        "concepts": [
+          {
+            "concept": "Payroll Management",
+            "explanation": "حساب رواتب الموظفين والبدلات والخصومات والضرائب بدقة."
+          },
+          {
+            "concept": "Attendance Tracking",
+            "explanation": "متابعة حضور والانصراف وساعات العمل اليومية للموظفين."
+          }
+        ],
+        "imagePrompt": "A professional HR management dashboard displaying employee attendance charts, payroll calculation sheets, and leave requests.",
+        "videos": [
+          {
+            "id": "v-ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-5-1",
+            "title": "شرح نظام Horilla HRMS لإدارة الموارد البشرية",
+            "url": "https://www.youtube.com/results?search_query=Horilla+HRMS+tutorial",
+            "description": "دليل استخدام وتثبيت نظام إدارة الموارد البشرية المفتوح المصدر."
+          },
+          {
+            "id": "v-ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-5-2",
+            "title": "نظام Frappe HR لإدارة شؤون الموظفين والرواتب",
+            "url": "https://www.youtube.com/results?search_query=Frappe+HR+tutorial",
+            "description": "كيفية إدارة الرواتب والحضور والانصراف باستخدام Frappe."
+          }
+        ],
+        "quiz": [
+          {
+            "id": "q-ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-5-1",
+            "question": "ما هي التقنيات التي يبنى بها تطبيق الموبايل لنظام Horilla HRMS؟",
+            "options": [
+              "Flutter",
+              "Swift الأصلي",
+              "Java الأصلي",
+              "Unity 3D"
+            ],
+            "correctOptionIndex": 0,
+            "explanation": "يأتي تطبيق موبايل Horilla مبنياً بالكامل باستخدام إطار العمل Flutter."
+          },
+          {
+            "id": "q-ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-5-2",
+            "question": "ما هو النظام المناسب للشركات المتوسطة والضخمة بأكثر من 13 موديول؟",
+            "options": [
+              "Frappe HR",
+              "Horilla HRMS النسخة البسيطة",
+              "Typebot",
+              "Chatwoot"
+            ],
+            "correctOptionIndex": 0,
+            "explanation": "Frappe HR هو نظام مؤسسي متقدم يضم أكثر من 13 موديول لإدارة الشركات الضخمة."
+          },
+          {
+            "id": "q-ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-5-3",
+            "question": "ما هي الميزة التنافسية لأنظمة HRMS المفتوحة المصدر مثل Horilla؟",
+            "options": [
+              "توفير بديل محلي منخفض التكلفة لأنظمة HR العالمية مع دعم لوائح العمل المصرية والخليجية",
+              "الاستغناء عن أجهزة الكمبيوتر تماماً",
+              "توليد صور بالذكاء الاصطناعي",
+              "تشغيل البودكاست التفاعلي"
+            ],
+            "correctOptionIndex": 0,
+            "explanation": "تقدم هذه الأنظمة بدائل محلية منخفضة التكلفة تتوافق مع لوائح التأمينات وقوانين العمل المحلية."
+          }
+        ],
+        "mindMap": [
+          {
+            "id": "node-1",
+            "label": "الموارد البشرية HRMS",
+            "parentId": "null",
+            "description": "أنظمة إدارة الموظفين والرواتب"
+          },
+          {
+            "id": "node-2",
+            "label": "Horilla HRMS",
+            "parentId": "node-1",
+            "description": "نظام مجاني متكامل مع تطبيق Flutter"
+          },
+          {
+            "id": "node-3",
+            "label": "Frappe HR",
+            "parentId": "node-1",
+            "description": "نظام مؤسسي متقدم بأكثر من 13 موديول"
+          },
+          {
+            "id": "node-4",
+            "label": "لوائح العمل",
+            "parentId": "node-1",
+            "description": "التوافق مع قوانين مصر والخليج والتأمينات"
+          }
+        ]
+      }
+    ]
   }
 ]

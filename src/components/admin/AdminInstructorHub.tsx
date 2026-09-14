@@ -11,6 +11,7 @@ import { MarketplaceBook, UserRole, EduReel, EduReelStyle } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { EduReelPlayer } from '../reels/EduReelPlayer';
 import { PlatformSettingsTab } from './PlatformSettingsTab';
+import { UsersManagementTab } from './UsersManagementTab';
 
 interface AdminInstructorHubProps {
   books: MarketplaceBook[];
@@ -37,7 +38,7 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
   onOpenCreateModal,
   onOpenExternalModal
 }) => {
-  const [activeTab, setActiveTab] = useState<'analytics' | 'exams' | 'vouchers' | 'approvals' | 'wallet' | 'reels' | 'settings'>('analytics');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'users' | 'exams' | 'vouchers' | 'approvals' | 'wallet' | 'reels' | 'settings'>('analytics');
   const [booksList, setBooksList] = useState<MarketplaceBook[]>(initialBooks);
 
 
@@ -895,8 +896,32 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
           </div>
         </div>
 
-        {/* 🌟 TABS SELECTOR */}
-        <div className="flex items-center gap-1.5 p-1.5 bg-slate-100 rounded-2xl text-xs font-bold w-full sm:w-auto overflow-x-auto">
+        {/* 🌟 ACTION BUTTONS (AI GENERATION & ADD BOOK) */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {onOpenCreateModal && (
+            <button
+              onClick={onOpenCreateModal}
+              className="px-4 py-2.5 bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 text-white font-black text-xs rounded-xl flex items-center gap-2 shadow-md shadow-teal-500/20 transition active:scale-95 cursor-pointer"
+            >
+              <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+              <span>توليد مقرر بالذكاء الاصطناعي ✨</span>
+            </button>
+          )}
+
+          {onOpenExternalModal && (
+            <button
+              onClick={onOpenExternalModal}
+              className="px-3.5 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-xs transition active:scale-95 cursor-pointer"
+            >
+              <Plus className="w-4 h-4 text-emerald-600" />
+              <span>إضافة مقرر تفاعلي ➕</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 🌟 TABS SELECTOR */}
+      <div className="flex items-center gap-1.5 p-1.5 bg-slate-100 rounded-2xl text-xs font-bold w-full overflow-x-auto print:hidden">
           <button
             onClick={() => setActiveTab('analytics')}
             className={`px-3.5 py-2.5 rounded-xl transition flex items-center gap-1.5 shrink-0 ${
@@ -976,6 +1001,20 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
 
           {isAdmin && (
             <button
+              onClick={() => setActiveTab('users')}
+              className={`px-3.5 py-2.5 rounded-xl transition flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                activeTab === 'users'
+                  ? 'bg-white text-indigo-900 shadow-sm font-black'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Users className="w-4 h-4 text-indigo-600" />
+              <span>👥 إدارة الطلاب والمعلمين</span>
+            </button>
+          )}
+
+          {isAdmin && (
+            <button
               onClick={() => setActiveTab('settings')}
               className={`px-3.5 py-2.5 rounded-xl transition flex items-center gap-1.5 shrink-0 cursor-pointer ${
                 activeTab === 'settings'
@@ -988,8 +1027,6 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
             </button>
           )}
         </div>
-      </div>
-
 
       {/* STATUS ALERT NOTIFICATION */}
       {statusMsg && (
@@ -2645,6 +2682,17 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
             )}
           </div>
         </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 👥 TAB: USERS & STUDENTS/TEACHERS MONITORING & MODERATION */}
+      {/* ========================================================================= */}
+      {activeTab === 'users' && isAdmin && (
+        <UsersManagementTab 
+          books={booksList} 
+          onLaunchBook={onLaunchBook} 
+          onRefreshData={reloadWalletAndData} 
+        />
       )}
 
       {/* ========================================================================= */}

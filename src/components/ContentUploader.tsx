@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Upload, FileText, Sparkles, X, GraduationCap, BookMarked, Wand2, School, Building2, BookOpen, RefreshCw, AlertCircle } from 'lucide-react';
 import { BookCategory, BookTrack } from '../types';
 import { 

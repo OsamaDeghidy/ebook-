@@ -4770,6 +4770,288 @@ app.post("/api/admin/wallet/adjust", async (req, res) => {
 });
 
 // ==============================================================================
+// 👥 Admin User Management & Content Moderation Engine
+// ==============================================================================
+const BLOCKED_USERS_FILE = path.join(process.cwd(), "blocked_users.json");
+const BLOCKED_BOOKS_FILE = path.join(process.cwd(), "blocked_books.json");
+
+function loadBlockedUsersFile(): Record<string, { isBlocked: boolean; reason?: string; blockedAt?: string }> {
+  try {
+    if (fs.existsSync(BLOCKED_USERS_FILE)) {
+      return JSON.parse(fs.readFileSync(BLOCKED_USERS_FILE, "utf-8"));
+    }
+  } catch (e) {}
+  return {};
+}
+
+function saveBlockedUsersFile(data: any) {
+  try {
+    fs.writeFileSync(BLOCKED_USERS_FILE, JSON.stringify(data, null, 2), "utf-8");
+  } catch (e) {}
+}
+
+function loadBlockedBooksFile(): Record<string, { isBlocked: boolean; reason?: string; blockedAt?: string }> {
+  try {
+    if (fs.existsSync(BLOCKED_BOOKS_FILE)) {
+      return JSON.parse(fs.readFileSync(BLOCKED_BOOKS_FILE, "utf-8"));
+    }
+  } catch (e) {}
+  return {};
+}
+
+function saveBlockedBooksFile(data: any) {
+  try {
+    fs.writeFileSync(BLOCKED_BOOKS_FILE, JSON.stringify(data, null, 2), "utf-8");
+  } catch (e) {}
+}
+
+// 1. GET Detailed Users List with purchases, uploads, stats, and activity
+app.get("/api/admin/users-detailed", async (req, res) => {
+  try {
+    // 1. Fetch profiles from Supabase
+    let profiles: any[] = [];
+    try {
+      const { data } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
+      if (data) profiles = data;
+    } catch (e) {}
+
+    // 2. Fetch purchases from Supabase
+    let purchases: any[] = [];
+    try {
+      const { data } = await supabase.from("purchases").select("*").order("created_at", { ascending: false });
+      if (data) purchases = data;
+    } catch (e) {}
+
+    // 3. Fetch quiz attempts
+    let quizzes: any[] = [];
+    try {
+      const { data } = await supabase.from("quiz_attempts").select("*").order("created_at", { ascending: false });
+      if (data) quizzes = data;
+    } catch (e) {}
+
+    // 4. Fetch wallet transactions
+    let transactions: any[] = [];
+    try {
+      const { data } = await supabase.from("wallet_transactions").select("*").order("created_at", { ascending: false });
+      if (data) transactions = data;
+    } catch (e) {}
+
+    // 5. Fetch vouchers
+    let vouchers: any[] = [];
+    try {
+      const { data } = await supabase.from("voucher_codes").select("*").order("created_at", { ascending: false });
+      if (data) vouchers = data;
+    } catch (e) {}
+
+    const blockedUsersDb = loadBlockedUsersFile();
+    const blockedBooksDb = loadBlockedBooksFile();
+    const teacherAiUsageDb = loadTeacherAiUsageFile();
+
+    // Map profiles and attach aggregated intelligence
+    const usersDetailed = profiles.map(profile => {
+      const isBlocked = !!(profile.is_blocked || blockedUsersDb[profile.id]?.isBlocked || blockedUsersDb[profile.email?.toLowerCase()]?.isBlocked);
+
+      // Student-specific data:
+      const userPurchases = purchases.filter(p => p.user_id === profile.id || p.user_email === profile.email);
+      const userQuizzes = quizzes.filter(q => q.user_id === profile.id || q.user_email === profile.email);
+      const userTransactions = transactions.filter(t => t.user_id === profile.id);
+      const userRedeemedVouchers = vouchers.filter(v => v.used_by_user_id === profile.id || v.used_by_user_email === profile.email);
+
+      const purchasedBooks = userPurchases.map(p => {
+        const matchingBook = ebooks.find(b => b.id === p.book_id);
+        return {
+          bookId: p.book_id,
+          title: matchingBook?.title || p.book_title || "مقرر دراسي",
+          amount: Number(p.amount) || 0,
+          date: p.created_at || p.purchased_at || new Date().toISOString(),
+          paymentMethod: p.payment_method || p.gateway || "مباشر"
+        };
+      });
+
+      // Teacher-specific data:
+      const userAuthoredBooks = ebooks.filter(b => 
+        (b.author_id && b.author_id === profile.id) ||
+        (b.author_email && b.author_email === profile.email) ||
+        (profile.full_name && b.author_name && b.author_name.toLowerCase().includes(profile.full_name.toLowerCase()))
+      ).map(b => {
+        const isBookBlocked = !!(b.is_blocked_by_admin || blockedBooksDb[b.id]?.isBlocked);
+        const bookSales = purchases.filter(p => p.book_id === b.id).length;
+        const bookRevenue = purchases.filter(p => p.book_id === b.id).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+        return {
+          id: b.id,
+          title: b.title,
+          price: Number(b.price) || 0,
+          category: b.category,
+          is_published: !!b.is_published,
+          is_blocked: isBookBlocked,
+          salesCount: bookSales,
+          revenue: bookRevenue,
+          created_at: b.created_at || new Date().toISOString()
+        };
+      });
+
+      const userGeneratedVouchers = vouchers.filter(v => v.created_by_user_id === profile.id || v.created_by === profile.id);
+      const aiUsage = teacherAiUsageDb[profile.id] || { usedCount: 0, history: [] };
+
+      // Calculate total spent & total earnings
+      const totalSpent = userPurchases.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+      const totalTeacherEarnings = userAuthoredBooks.reduce((sum, b) => sum + b.revenue, 0);
+
+      // Last active timestamp
+      const timestamps = [
+        profile.created_at,
+        profile.updated_at,
+        userPurchases[0]?.created_at,
+        userQuizzes[0]?.created_at,
+        userTransactions[0]?.created_at
+      ].filter(Boolean);
+
+      const latestTime = timestamps.sort().reverse()[0] || profile.created_at;
+
+      return {
+        id: profile.id,
+        email: profile.email || "بدون بريد",
+        full_name: profile.full_name || profile.email?.split("@")[0] || "مستخدم",
+        phone: profile.phone || profile.whatsapp_number || "",
+        role: profile.role || "student",
+        wallet_balance: Number(profile.wallet_balance) || 0,
+        is_blocked: isBlocked,
+        created_at: profile.created_at || new Date().toISOString(),
+        last_active: latestTime,
+        purchasedBooks,
+        authoredBooks: userAuthoredBooks,
+        quizAttempts: userQuizzes.map(q => ({
+          id: q.id,
+          bookId: q.book_id,
+          score: Number(q.score) || 0,
+          totalQuestions: Number(q.total_questions) || 10,
+          passed: q.score >= 50,
+          date: q.created_at
+        })),
+        transactions: userTransactions.map(t => ({
+          id: t.id,
+          type: t.transaction_type || t.type,
+          amount: Number(t.amount) || 0,
+          balance_after: Number(t.balance_after) || 0,
+          description: t.description,
+          date: t.created_at
+        })),
+        vouchersRedeemed: userRedeemedVouchers.length,
+        vouchersGenerated: userGeneratedVouchers.length,
+        aiUsage: {
+          usedCount: aiUsage.usedCount || 0,
+          history: aiUsage.history || []
+        },
+        totalSpent,
+        totalTeacherEarnings
+      };
+    });
+
+    res.json({ success: true, users: usersDetailed });
+  } catch (err: any) {
+    console.error("Admin detailed users fetch error:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 2. POST Toggle Block/Unblock User
+app.post("/api/admin/users/:userId/toggle-block", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { isBlocked, reason = "إجراء إداري من لوحة التحكم" } = req.body;
+
+    // 1. Update in local file
+    const blockedDb = loadBlockedUsersFile();
+    blockedDb[userId] = {
+      isBlocked: !!isBlocked,
+      reason,
+      blockedAt: new Date().toISOString()
+    };
+    saveBlockedUsersFile(blockedDb);
+
+    // 2. Update in Supabase
+    try {
+      await supabase.from("profiles").update({ is_blocked: !!isBlocked }).eq("id", userId);
+    } catch (e) {}
+
+    res.json({
+      success: true,
+      isBlocked: !!isBlocked,
+      message: isBlocked ? "تم حظر المستخدم بنجاح 🚫" : "تم إلغاء حظر المستخدم بنجاح ✓"
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 3. POST Change User Role (Promote/Demote)
+app.post("/api/admin/users/:userId/change-role", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { role } = req.body;
+
+    if (!["student", "instructor", "admin"].includes(role)) {
+      return res.status(400).json({ success: false, message: "الرتبة المحددة غير صالحة." });
+    }
+
+    try {
+      await supabase.from("profiles").update({ role }).eq("id", userId);
+    } catch (e) {}
+
+    res.json({
+      success: true,
+      role,
+      message: `تم تغيير رتبة المستخدم إلى (${role === 'instructor' ? 'معلم' : role === 'student' ? 'طالب' : 'مسؤول'}) بنجاح! ✓`
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 4. POST Toggle Block/Unblock Book Content by Admin
+app.post("/api/admin/books/:bookId/toggle-block", async (req, res) => {
+  try {
+    const { bookId } = req.params;
+    const { isBlocked, reason = "مخالفة معايير النشر" } = req.body;
+
+    // 1. Update in local disk ebooks
+    const bookIndex = ebooks.findIndex(b => b.id === bookId);
+    if (bookIndex !== -1) {
+      ebooks[bookIndex].is_blocked_by_admin = !!isBlocked;
+      if (isBlocked) {
+        ebooks[bookIndex].is_published = false;
+      }
+      saveEbooks(ebooks);
+    }
+
+    // 2. Update in blocked_books.json
+    const blockedBooksDb = loadBlockedBooksFile();
+    blockedBooksDb[bookId] = {
+      isBlocked: !!isBlocked,
+      reason,
+      blockedAt: new Date().toISOString()
+    };
+    saveBlockedBooksFile(blockedBooksDb);
+
+    // 3. Update Supabase
+    try {
+      await supabase.from("books").update({
+        is_blocked_by_admin: !!isBlocked,
+        is_published: isBlocked ? false : true
+      }).eq("id", bookId);
+    } catch (e) {}
+
+    res.json({
+      success: true,
+      isBlocked: !!isBlocked,
+      message: isBlocked ? "تم حظر المقرر وإيقاف نشره بنجاح 🚫" : "تم إلغاء حظر المقرر وإعادته للنشر ✓"
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ==============================================================================
 // ⚙️ Platform Settings & Financial Configuration Endpoints (White-Label Admin)
 // ==============================================================================
 

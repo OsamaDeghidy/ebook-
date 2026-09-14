@@ -330,19 +330,19 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
 
           {/* ADMIN & STATS PANEL */}
           <div className="flex flex-col gap-4 shrink-0 w-full lg:w-auto">
-            {isAdminMode && (
+            {(isAdminMode || userRole === 'instructor' || userRole === 'admin') && (
               <div className="flex flex-wrap items-center gap-3">
                 <button
                   onClick={onOpenCreateModal}
-                  className="px-5 py-3.5 bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 text-white font-black text-sm rounded-2xl flex items-center gap-2 shadow-lg shadow-teal-500/25 transition active:scale-95"
+                  className="px-5 py-3.5 bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 text-white font-black text-sm rounded-2xl flex items-center gap-2 shadow-lg shadow-teal-500/25 transition active:scale-95 cursor-pointer"
                 >
-                  <Sparkles className="w-4 h-4" />
+                  <Sparkles className="w-4 h-4 text-amber-300" />
                   <span>توليد كتاب جديد بالـ AI</span>
                 </button>
 
                 <button
                   onClick={onOpenExternalModal}
-                  className="px-4 py-3.5 bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold text-sm rounded-2xl flex items-center gap-2 transition active:scale-95"
+                  className="px-4 py-3.5 bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold text-sm rounded-2xl flex items-center gap-2 transition active:scale-95 cursor-pointer"
                 >
                   <Plus className="w-4 h-4 text-emerald-400" />
                   <span>إضافة مقرر تفاعلي مدمج</span>
@@ -795,12 +795,12 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
                   ? 'قاعدة البيانات فارغة حالياً. يمكنك توليد كتاب جديد بالذكاء الاصطناعي الآن عبر زر "توليد كتاب بالـ AI".'
                   : 'جرب تغيير معايير التصفية أو اضغط على "إعادة ضبط" لعرض كافة المقررات.'}
               </p>
-              {books.length === 0 && isAdminMode && (
+              {books.length === 0 && (isAdminMode || userRole === 'instructor' || userRole === 'admin') && (
                 <button
                   onClick={onOpenCreateModal}
-                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl inline-flex items-center gap-2 shadow-sm transition active:scale-95"
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl inline-flex items-center gap-2 shadow-sm transition active:scale-95 cursor-pointer"
                 >
-                  <Sparkles className="w-4 h-4" />
+                  <Sparkles className="w-4 h-4 text-amber-300" />
                   <span>توليد أول مقرر بالذكاء الاصطناعي</span>
                 </button>
               )}
@@ -1017,7 +1017,7 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
                         );
                       })()}
 
-                      {isAdminMode && (
+                      {(isAdminMode || userRole === 'admin' || (userRole === 'instructor' && (book.author_id === currentUser?.id || !book.author_id))) && (
                         <div className="flex items-center justify-between pt-2 mt-2 border-t border-gray-100 text-[11px]">
                           <button
                             onClick={() => setEditingBook(book)}
