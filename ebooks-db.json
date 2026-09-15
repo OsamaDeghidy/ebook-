@@ -26567,5 +26567,518 @@
         ]
       }
     ]
+  },
+  {
+    "id": "75a19d19-e466-4c0a-b9f7-fef8f8463211",
+    "title": "KG 1 English: Interactive Term 1 Adventure",
+    "description": "An engaging, interactive English language learning journey for Kindergarten 1 (Term 1). Children will learn basic greetings, classroom objects, body parts, family members, phonics, numbers 1-5, shapes, colors, and healthy habits through fun stories, songs, and hands-on projects.",
+    "sizeCategory": "medium",
+    "createdAt": "2026-09-15T05:18:08.003Z",
+    "chapters": [
+      {
+        "id": "ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-1",
+        "title": "Meet and Greet!",
+        "content": "### Welcome to School!\n\nStarting school is an exciting adventure! In this chapter, we will learn how to greet our new friends and teachers. Saying **'Hello'** and **'Good morning'** helps us make friends. When it is time to go home, we wave and say **'Goodbye'**.\n\n#### Expressing Our Feelings\nWe all have different feelings every day. Sometimes we feel **happy** and want to smile and laugh. Other times, we might feel **sad** and need a hug or a helping hand. It is important to share how we feel with our friends and teachers!\n\n#### Phonics Fun: Letters Tt and Ii\nLet's learn the sounds of our first letters:\n*   **Letter Tt**: Makes the sound /t/ as in *train*, *toys*, and *turtle*.\n*   **Letter Ii**: Makes the sound /i/ as in *in*, *insect*, and *ink*.\n\n#### Math: Number 1, Circles, and Red\n*   **Number 1**: Can you show me one finger? We can see **1 train** and **1 turtle**.\n*   **Shape**: A **circle** is round like a ball or a balloon.\n*   **Color**: **Red** is a bright color, just like a delicious red apple!",
+        "originalContent": "Unit 1: Meet and Greet! Vocabulary: hello, good morning, goodbye, boy, girl, friends, happy, sad. Phonics: t (train, toys), T (turtle), i (in, insect), I (ink). Math: Number 1, Shape: Circle, Color: red. Everyday Skills: Self-Introduction, Expressing your feelings.",
+        "summary": "Learn how to say hello, express feelings, recognize the letters T and I, count to 1, and identify the color red and circle shape.",
+        "concepts": [
+          {
+            "concept": "Greetings",
+            "explanation": "Social expressions used to welcome others (Hello, Good morning) or bid farewell (Goodbye)."
+          },
+          {
+            "concept": "Phonics",
+            "explanation": "The relationship between letters and their spoken sounds, helping children learn to read."
+          }
+        ],
+        "imagePrompt": "A cheerful cartoon of a young boy and girl waving hello in front of a colorful school building, with a bright red circle and the number 1 floating happily in the sky, vector illustration style.",
+        "videos": [
+          {
+            "id": "v-ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-1-1",
+            "title": "Phonics Letter T Song",
+            "url": "https://www.youtube.com/results?search_query=phonics+letter+t+song+for+kids",
+            "description": "A fun, musical way for children to practice the /t/ sound and learn words starting with T."
+          },
+          {
+            "id": "v-ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-1-2",
+            "title": "Greetings Song for Kindergarten",
+            "url": "https://www.youtube.com/results?search_query=greetings+song+for+kindergarten",
+            "description": "An interactive song teaching kids how to say Hello, Good Morning, and Goodbye."
+          }
+        ],
+        "quiz": [
+          {
+            "id": "q-ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-1-1",
+            "question": "What do we say when we see our friends in the morning?",
+            "options": [
+              "Goodbye",
+              "Good morning",
+              "Sad",
+              "Ink"
+            ],
+            "correctOptionIndex": 1,
+            "explanation": "We say 'Good morning' to greet people when we see them in the morning."
+          },
+          {
+            "id": "q-ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-1-2",
+            "question": "Which word starts with the sound of the letter T?",
+            "options": [
+              "Insect",
+              "Ink",
+              "Turtle",
+              "Red"
+            ],
+            "correctOptionIndex": 2,
+            "explanation": "'Turtle' starts with the letter T, which makes the /t/ sound."
+          },
+          {
+            "id": "q-ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-1-3",
+            "question": "What shape is round like a balloon?",
+            "options": [
+              "Square",
+              "Triangle",
+              "Star",
+              "Circle"
+            ],
+            "correctOptionIndex": 3,
+            "explanation": "A circle is a perfectly round shape with no corners."
+          }
+        ],
+        "mindMap": [
+          {
+            "id": "node-1",
+            "label": "Meet & Greet",
+            "parentId": "null",
+            "description": "The core theme of Unit 1 focusing on greetings, feelings, and basic concepts."
+          },
+          {
+            "id": "node-2",
+            "label": "Greetings",
+            "parentId": "node-1",
+            "description": "Learning to say Hello, Good morning, and Goodbye."
+          },
+          {
+            "id": "node-3",
+            "label": "Feelings",
+            "parentId": "node-1",
+            "description": "Identifying and expressing Happy and Sad emotions."
+          },
+          {
+            "id": "node-4",
+            "label": "Phonics T & I",
+            "parentId": "node-1",
+            "description": "Recognizing the sounds and words for letters Tt and Ii."
+          },
+          {
+            "id": "node-5",
+            "label": "Number 1 & Circle",
+            "parentId": "node-1",
+            "description": "Counting to 1, identifying circles, and the color red."
+          }
+        ]
+      },
+      {
+        "id": "ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-2",
+        "title": "I Can Find it at School!",
+        "content": "### Exploring Our Classroom\n\nOur classroom is full of wonderful things to help us learn! Let's look around and name the objects we see every day:\n*   **Teacher**: The friendly guide who helps us learn new things.\n*   **Desk & Chair**: Where we sit comfortably to draw and write.\n*   **Board**: Where we look to see pictures and letters.\n*   **Book, Pencil, Eraser, & Crayon**: The tools we use to read, write, and color!\n\n#### Playground Fun\nWhen it is time to play, we go to the **playground**! We can ride on the **swing** or slide down the **slide**. Playing with friends helps us build confidence and learn to share.\n\n#### Phonics Fun: Letters Ss, Aa, and Nn\nLet's practice these letter sounds:\n*   **Letter Ss**: Makes the sound /s/ as in *star*, *sun*, and *school*.\n*   **Letter Aa**: Makes the sound /æ/ as in *apple* and *ant*.\n*   **Letter Nn**: Makes the sound /n/ as in *nest*, *night*, and *numbers*.\n\n#### Math: Number 2, Squares, and Blue\n*   **Number 2**: We have two eyes and two ears! Can you find **2 chairs** or **2 pencils**?\n*   **Shape**: A **square** has four equal sides, like a classroom window.\n*   **Color**: **Blue** is the color of the beautiful sky!",
+        "originalContent": "Unit 2: I Can Find it at School! Vocabulary: classroom, teacher, chair, desk, board, book, pencil, eraser, crayon, playground, swing, slide. Phonics: s (star, sun), S (school), a (apple, ant), n (nest, night), N (numbers). Math: Number 2, Shape: Square, Color: blue.",
+        "summary": "Explore school vocabulary, classroom items, playground equipment, phonics for S, A, and N, the number 2, squares, and the color blue.",
+        "concepts": [
+          {
+            "concept": "Classroom Vocabulary",
+            "explanation": "Words used to describe common objects found in a school learning environment."
+          },
+          {
+            "concept": "Geometric Shapes",
+            "explanation": "Basic forms like squares that help children understand spatial structures and geometry."
+          }
+        ],
+        "imagePrompt": "A vibrant classroom scene with a desk, chair, book, and pencil, with a friendly teacher pointing to a blue square on the board, cartoon style.",
+        "videos": [
+          {
+            "id": "v-ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-2-1",
+            "title": "Classroom Objects Vocabulary for Kids",
+            "url": "https://www.youtube.com/results?search_query=classroom+objects+vocabulary+for+kids",
+            "description": "An animated video showing common school supplies and classroom items with clear pronunciation."
+          },
+          {
+            "id": "v-ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-2-2",
+            "title": "The Letter S Song",
+            "url": "https://www.youtube.com/results?search_query=the+letter+s+song+phonics",
+            "description": "A fun phonics song teaching the sound of letter S with words like sun, star, and school."
+          }
+        ],
+        "quiz": [
+          {
+            "id": "q-ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-2-1",
+            "question": "Which object do we use to color a picture?",
+            "options": [
+              "Eraser",
+              "Crayon",
+              "Board",
+              "Chair"
+            ],
+            "correctOptionIndex": 1,
+            "explanation": "We use crayons to color drawings and pictures."
+          },
+          {
+            "id": "q-ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-2-2",
+            "question": "What letter does the word 'apple' start with?",
+            "options": [
+              "S",
+              "N",
+              "T",
+              "A"
+            ],
+            "correctOptionIndex": 3,
+            "explanation": "'Apple' starts with the letter A, making the short /æ/ sound."
+          },
+          {
+            "id": "q-ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-2-3",
+            "question": "How many sides does a square have?",
+            "options": [
+              "1",
+              "2",
+              "3",
+              "4"
+            ],
+            "correctOptionIndex": 3,
+            "explanation": "A square is a shape with 4 equal sides."
+          }
+        ],
+        "mindMap": [
+          {
+            "id": "node-2-1",
+            "label": "School Life",
+            "parentId": "null",
+            "description": "Exploring classroom objects, playground activities, and related math/phonics."
+          },
+          {
+            "id": "node-2-2",
+            "label": "Classroom Objects",
+            "parentId": "node-2-1",
+            "description": "Learning vocabulary for desk, chair, book, pencil, eraser, and crayon."
+          },
+          {
+            "id": "node-2-3",
+            "label": "Playground",
+            "parentId": "node-2-1",
+            "description": "Identifying playground equipment like swings and slides."
+          },
+          {
+            "id": "node-2-4",
+            "label": "Phonics S, A, N",
+            "parentId": "node-2-1",
+            "description": "Practicing sounds for Ss, Aa, and Nn."
+          },
+          {
+            "id": "node-2-5",
+            "label": "Number 2 & Square",
+            "parentId": "node-2-1",
+            "description": "Counting to 2, identifying squares, and the color blue."
+          }
+        ]
+      },
+      {
+        "id": "ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-3",
+        "title": "My Body, My Care!",
+        "content": "### Discovering My Body\n\nOur bodies are amazing! Let's learn the names of our body parts so we can talk about them:\n*   **Face Parts**: We have **hair** on our head, **eyes** to see, **ears** to hear, a **nose** to smell, and a **mouth** with **teeth** to smile and eat.\n*   **Body Parts**: We use our **arms** and **hands** to wave and hold things, and our **legs** and **feet** to run and jump!\n\n#### Keeping Clean and Healthy\nTaking care of our body is called **hygiene**. Here are some simple actions to stay healthy:\n1.  **Wash hands**: Use soap and water before eating and after playing.\n2.  **Brush teeth**: Keep your smile bright by brushing morning and night.\n3.  **Comb hair**: Keep your hair neat and tidy.\n4.  **Sneeze safely**: Cover your nose with a tissue when you sneeze.\n\n#### Phonics Fun: Letters Pp, Hh, Dd, and Rr\n*   **Letter Pp**: Sound /p/ as in *pen*, *pan*, and *pants*.\n*   **Letter Hh**: Sound /h/ as in *heart*, *honey*, and *helicopter*.\n*   **Letter Dd**: Sound /d/ as in *dog*, *desk*, and *dress*.\n*   **Letter Rr**: Sound /r/ as in *rabbit*, *robot*, and *rice*.\n\n#### Math: Number 3, Stars, and Yellow\n*   **Number 3**: Can you count three objects? We can see **3 pans** or **3 helicopters**.\n*   **Shape**: A **star** has five points and shines brightly.\n*   **Color**: **Yellow** is bright and warm, like the sun!",
+        "originalContent": "Unit 3: My Body, My Care! Vocabulary: hair, face, eyes, ears, nose, mouth, teeth, arms, hands, legs, feet. Phonics: p (pen, pants), P (pan), h (heart, honey), H (helicopter), d (dog, desk), D (dress), r (rabbit, robot), R (rice). Math: Number 3, Shape: star, Color: yellow. Everyday Skills: Hygiene actions.",
+        "summary": "Identify body and face parts, practice healthy hygiene habits like washing hands and brushing teeth, learn letters P, H, D, R, count to 3, and recognize yellow stars.",
+        "concepts": [
+          {
+            "concept": "Hygiene",
+            "explanation": "Practices and habits that help maintain health and prevent the spread of diseases, such as washing hands."
+          },
+          {
+            "concept": "Anatomy Basics",
+            "explanation": "Simple identification of external body parts to build self-awareness and communication skills."
+          }
+        ],
+        "imagePrompt": "A cute cartoon child happily brushing their teeth in front of a bathroom mirror, with yellow stars and the number 3 decorated on the wall, bright and friendly vector art.",
+        "videos": [
+          {
+            "id": "v-ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-3-1",
+            "title": "Parts of the Body Song for Kids",
+            "url": "https://www.youtube.com/results?search_query=parts+of+the+body+song+for+kids",
+            "description": "An active, sing-along song that helps children identify head, shoulders, knees, and toes."
+          },
+          {
+            "id": "v-ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-3-2",
+            "title": "Brush Your Teeth Song",
+            "url": "https://www.youtube.com/results?search_query=brush+your+teeth+song+for+kids",
+            "description": "A catchy tune that encourages children to brush their teeth for a full two minutes."
+          }
+        ],
+        "quiz": [
+          {
+            "id": "q-ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-3-1",
+            "question": "Which body part do we use to hear sounds?",
+            "options": [
+              "Eyes",
+              "Ears",
+              "Nose",
+              "Mouth"
+            ],
+            "correctOptionIndex": 1,
+            "explanation": "We use our ears to listen and hear sounds around us."
+          },
+          {
+            "id": "q-ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-3-2",
+            "question": "What is a good hygiene action after playing outside?",
+            "options": [
+              "Eating chocolate",
+              "Washing hands",
+              "Sleeping",
+              "Running"
+            ],
+            "correctOptionIndex": 1,
+            "explanation": "Washing hands with soap and water removes dirt and germs after playing."
+          },
+          {
+            "id": "q-ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-3-3",
+            "question": "Which word starts with the letter H?",
+            "options": [
+              "Rabbit",
+              "Dog",
+              "Honey",
+              "Pen"
+            ],
+            "correctOptionIndex": 2,
+            "explanation": "'Honey' starts with the letter H, which makes the /h/ sound."
+          }
+        ],
+        "mindMap": [
+          {
+            "id": "node-3-1",
+            "label": "My Body",
+            "parentId": "null",
+            "description": "Learning about body parts, hygiene habits, and related phonics/math."
+          },
+          {
+            "id": "node-3-2",
+            "label": "Face & Body Parts",
+            "parentId": "node-3-1",
+            "description": "Identifying eyes, ears, nose, mouth, hands, and feet."
+          },
+          {
+            "id": "node-3-3",
+            "label": "Hygiene Actions",
+            "parentId": "node-3-1",
+            "description": "Practicing washing hands, brushing teeth, and combing hair."
+          },
+          {
+            "id": "node-3-4",
+            "label": "Phonics P, H, D, R",
+            "parentId": "node-3-1",
+            "description": "Learning letter sounds for Pp, Hh, Dd, and Rr."
+          },
+          {
+            "id": "node-3-5",
+            "label": "Number 3 & Star",
+            "parentId": "node-3-1",
+            "description": "Counting to 3, identifying stars, and the color yellow."
+          }
+        ]
+      },
+      {
+        "id": "ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-4",
+        "title": "My Family Picnic!",
+        "content": "### My Wonderful Family\n\nFamilies love and care for each other. Let's learn the names of our family members:\n*   **Parents**: Our **father** (dad) and **mother** (mom).\n*   **Siblings**: Our **brother** and **sister**.\n*   **Grandparents**: Our **grandfather** (grandpa) and **grandmother** (grandma).\n\n#### A Picnic in the Garden\nGoing on a picnic is a great way to spend time together! In a **garden**, we can see green **grass**, tall **trees**, and beautiful **flowers**. \n\n#### Healthy vs. Unhealthy Food\nWhen we pack our picnic basket, we should choose healthy foods:\n*   **Healthy Foods**: Fresh **fruits** (like apples and oranges), **sandwiches**, and fresh **juice** give us energy.\n*   **Unhealthy Foods**: **Chips** and **chocolate** are tasty treats, but we should only eat them sometimes.\n\n#### Phonics Fun: Letters Ee, Cc, Kk, and Mm\n*   **Letter Ee**: Sound /e/ as in *egg*, *eagle*, and *elephant*.\n*   **Letter Cc**: Sound /k/ as in *cap*, *cow*, and *cloud*.\n*   **Letter Kk**: Sound /k/ as in *kiwi*, *kite*, and *kick*.\n*   **Letter Mm**: Sound /m/ as in *mom*, *man*, and *monkey*.\n\n#### Math: Numbers 4 & 5, Shapes, and Colors\n*   **Numbers 4 & 5**: Count to five! Can you find **4 clouds** or **5 flowers**?\n*   **Shapes**: A **heart** represents love, and a **triangle** has three sides.\n*   **Colors**: **Green** is the color of grass, and **orange** is the color of a juicy orange fruit!",
+        "originalContent": "Unit 4: My Family Picnic! Vocabulary: grandfather, grandmother, father, mother, sister, brother, garden, tree, flower, grass, fruits, chocolate, chips, juice, sandwich. Phonics: e (egg, eagle), E (elephant), c (cow, cloud), C (cap), k (kiwi, kick), K (kite), m (mom, man), M (mud). Math: Numbers 4 and 5, Shapes: heart and triangle, Colors: green and orange.",
+        "summary": "Learn family vocabulary, explore nature in a garden, distinguish between healthy and unhealthy picnic foods, practice letters E, C, K, M, count to 5, and identify hearts, triangles, green, and orange.",
+        "concepts": [
+          {
+            "concept": "Family Structure",
+            "explanation": "Understanding the roles of different family members within a supportive household."
+          },
+          {
+            "concept": "Nutrition Awareness",
+            "explanation": "Developing early habits of choosing healthy, nutrient-rich foods over processed snacks."
+          }
+        ],
+        "imagePrompt": "A happy family having a picnic on green grass under a tree, with a picnic basket filled with fruits and sandwiches, colorful cartoon style.",
+        "videos": [
+          {
+            "id": "v-ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-4-1",
+            "title": "Family Members Song for Kids",
+            "url": "https://www.youtube.com/results?search_query=family+members+song+for+kids",
+            "description": "A sweet song introducing family vocabulary: mommy, daddy, brother, sister, grandpa, grandma."
+          },
+          {
+            "id": "v-ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-4-2",
+            "title": "Healthy vs Unhealthy Food for Kids",
+            "url": "https://www.youtube.com/results?search_query=healthy+vs+unhealthy+food+for+kids",
+            "description": "An educational cartoon explaining the difference between healthy foods and occasional treats."
+          }
+        ],
+        "quiz": [
+          {
+            "id": "q-ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-4-1",
+            "question": "Which of these is a healthy food for a picnic?",
+            "options": [
+              "Chips",
+              "Chocolate",
+              "Fruits",
+              "Soda"
+            ],
+            "correctOptionIndex": 2,
+            "explanation": "Fruits are healthy, natural foods that provide vitamins and energy."
+          },
+          {
+            "id": "q-ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-4-2",
+            "question": "What shape has three sides?",
+            "options": [
+              "Circle",
+              "Square",
+              "Triangle",
+              "Heart"
+            ],
+            "correctOptionIndex": 2,
+            "explanation": "A triangle is a geometric shape with exactly three sides and three corners."
+          },
+          {
+            "id": "q-ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-4-3",
+            "question": "Which family member is the father of your mother or father?",
+            "options": [
+              "Brother",
+              "Grandfather",
+              "Sister",
+              "Grandmother"
+            ],
+            "correctOptionIndex": 1,
+            "explanation": "Your grandfather is the father of your parent."
+          }
+        ],
+        "mindMap": [
+          {
+            "id": "node-4-1",
+            "label": "Family Picnic",
+            "parentId": "null",
+            "description": "Exploring family relationships, nature, healthy eating, and advanced shapes/numbers."
+          },
+          {
+            "id": "node-4-2",
+            "label": "Family Members",
+            "parentId": "node-4-1",
+            "description": "Identifying mother, father, brother, sister, grandfather, and grandmother."
+          },
+          {
+            "id": "node-4-3",
+            "label": "Healthy Foods",
+            "parentId": "node-4-1",
+            "description": "Distinguishing healthy fruits and sandwiches from unhealthy chips and chocolate."
+          },
+          {
+            "id": "node-4-4",
+            "label": "Phonics E, C, K, M",
+            "parentId": "node-4-1",
+            "description": "Practicing sounds for Ee, Cc, Kk, and Mm."
+          },
+          {
+            "id": "node-4-5",
+            "label": "Numbers 4 & 5",
+            "parentId": "node-4-1",
+            "description": "Counting to 4 and 5, identifying hearts and triangles, and green/orange colors."
+          }
+        ]
+      },
+      {
+        "id": "ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-5",
+        "title": "Review and Interactive Projects",
+        "content": "### Let's Review and Create!\n\nCongratulations! You have learned so many letters, numbers, shapes, and words. Let's do a quick review and then make some fun crafts!\n\n#### Phonics Review\nCan you make the sounds for all these letters?\n*   **Tt, Ii, Ss, Aa, Nn**\n*   **Pp, Hh, Dd, Rr**\n*   **Ee, Cc, Kk, Mm**\n\n#### Number Review\nLet's count from 1 to 5 together:\n*   **1** (One circle)\n*   **2** (Two squares)\n*   **3** (Three stars)\n*   **4** (Four hearts)\n*   **5** (Five triangles)\n\n#### Creative Hands-On Projects\nLet's use paper, glue, scissors, and crayons to make these fun projects:\n1.  **My School Bag**: Draw a school bag and glue pictures of classroom objects inside it.\n2.  **My Face**: Create a paper plate face with eyes, ears, a nose, hair, and a happy mouth.\n3.  **My Family Tree**: Draw a big tree and paste photos or drawings of your family members on the leaves!\n4.  **My Classroom Craft**: Color, cut, and glue classroom objects to build your own classroom scene.",
+        "originalContent": "Review units 1-4. Review letters: Tt, Ii, Ss, Aa, Nn, Pp, Hh, Dd, Rr, Ee, Cc, Kk, Mm. Review Numbers: 1, 2, 3, 4, and 5. Projects: School Bag, My Face, Family Tree, My Classroom.",
+        "summary": "Consolidate learning from all four units with comprehensive reviews of letters Tt through Mm, numbers 1 to 5, and step-by-step guides for creative hands-on projects.",
+        "concepts": [
+          {
+            "concept": "Synthesis & Review",
+            "explanation": "Revisiting previously learned material to strengthen memory retention and mastery."
+          },
+          {
+            "concept": "Project-Based Learning",
+            "explanation": "Using hands-on art and craft activities to apply vocabulary and concepts in a creative context."
+          }
+        ],
+        "imagePrompt": "A colorful display of children's crafts including a paper school bag, a paper plate face, and a family tree drawing on a classroom wall, cheerful educational setting.",
+        "videos": [
+          {
+            "id": "v-ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-5-1",
+            "title": "Phonics Alphabet Review A to Z",
+            "url": "https://www.youtube.com/results?search_query=phonics+alphabet+review+for+kindergarten",
+            "description": "A comprehensive review of all letter sounds to reinforce phonics skills."
+          },
+          {
+            "id": "v-ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-5-2",
+            "title": "Easy Family Tree Craft for Kids",
+            "url": "https://www.youtube.com/results?search_query=easy+family+tree+craft+for+kids",
+            "description": "A step-by-step craft tutorial showing how kids can make their own family tree."
+          }
+        ],
+        "quiz": [
+          {
+            "id": "q-ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-5-1",
+            "question": "Which letter makes the sound we hear at the start of 'monkey'?",
+            "options": [
+              "T",
+              "S",
+              "M",
+              "P"
+            ],
+            "correctOptionIndex": 2,
+            "explanation": "The letter M makes the /m/ sound, as in 'monkey'."
+          },
+          {
+            "id": "q-ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-5-2",
+            "question": "What number comes after 4?",
+            "options": [
+              "2",
+              "3",
+              "5",
+              "1"
+            ],
+            "correctOptionIndex": 2,
+            "explanation": "When counting up, the number 5 comes directly after 4."
+          },
+          {
+            "id": "q-ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-5-3",
+            "question": "What do we paste on a Family Tree project?",
+            "options": [
+              "Pictures of toys",
+              "Pictures of family members",
+              "Classroom objects",
+              "Insects"
+            ],
+            "correctOptionIndex": 1,
+            "explanation": "A Family Tree displays the members of our family to show how we are related."
+          }
+        ],
+        "mindMap": [
+          {
+            "id": "node-5-1",
+            "label": "Review & Projects",
+            "parentId": "null",
+            "description": "Consolidating all Term 1 knowledge through reviews and creative crafts."
+          },
+          {
+            "id": "node-5-2",
+            "label": "Phonics Review",
+            "parentId": "node-5-1",
+            "description": "Reviewing letters Tt, Ii, Ss, Aa, Nn, Pp, Hh, Dd, Rr, Ee, Cc, Kk, Mm."
+          },
+          {
+            "id": "node-5-3",
+            "label": "Math Review",
+            "parentId": "node-5-1",
+            "description": "Reviewing numbers 1 to 5, shapes, and colors."
+          },
+          {
+            "id": "node-5-4",
+            "label": "Hands-on Projects",
+            "parentId": "node-5-1",
+            "description": "Creating the School Bag, My Face, and Family Tree crafts."
+          }
+        ]
+      }
+    ]
   }
 ]

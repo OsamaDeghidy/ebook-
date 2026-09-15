@@ -12813,5 +12813,812 @@
     "completions_count": 45,
     "is_public_teaser": true,
     "created_at": "2026-09-14T08:43:01.502Z"
+  },
+  {
+    "id": "reel-1789449209593",
+    "book_id": "5e0242d8-c839-4a22-a3f0-00452bfbb167",
+    "book_title": "دليل الأنظمة البرمجية ومصادر الأكواد المفتوحة لتطوير وتخصيص منتجات الشركة",
+    "author_name": "خبير المادة",
+    "category": "تعليمي",
+    "subcategory": "",
+    "thumbnail_url": "",
+    "chapter_id": "ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-1",
+    "chapter_title": "أنظمة الذكاء الاصطناعي، الـ RAG، وبناء الوكالء (Workflows & Custom Chatbots)",
+    "style_type": "chalkboard",
+    "style": "chalkboard",
+    "voice": "ar-SA-HamedNeural",
+    "duration_seconds": 45,
+    "audio_url": "https://ydlzvuutjgelpxueufgn.supabase.co/storage/v1/object/public/book-audios/reel_5e0242d8-c839-4a22-a3f0-00452bfbb167_ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-1_1789449203494.mp3",
+    "narration_script": "إن الاستثمار في أنظمة الذكاء الاصطناعي ومحركات الاسترجاع التوليدي وبناء الوكلاء الأذكياء هو ركيزة الابتكار التقني المعاصر. عبر منصات مفتوحة المصدر مثل Dify.ai، التي تربط قواعد بياناتكم بنماذج الذكاء الاصطناعي باستخدام تقنيات حديثة، ومنصة Flowise التي تتيح بناء روبوتات الدردشة بالسحب والإفلات، نصل إلى التخصيص الكامل والاستضافة الذاتية. هذا يضمن سيادة بيانات الشركة ويقلل التكاليف بشكل ملموس مقارنة بالمنصات المغلقة.",
+    "scenes": [
+      {
+        "id": "scene-1",
+        "act": "hook",
+        "title": "ثورة الوكلاء الأذكياء",
+        "badgeText": "🔥 فكرة محورية",
+        "visualType": "quote",
+        "visualData": {
+          "highlightQuote": "الاستثمار في أنظمة الذكاء الاصطناعي وبناء الوكلاء الأذكياء ركيزة أساسية للابتكار التقني."
+        },
+        "startSec": 0,
+        "endSec": 10
+      },
+      {
+        "id": "scene-2",
+        "act": "concept",
+        "title": "منصات التطوير المفتوحة",
+        "badgeText": "🧠 الشرح العميق",
+        "visualType": "bullet_points",
+        "visualData": {
+          "bullets": [
+            "منصة Dify.ai: لبناء مسارات العمل وربط قواعد البيانات بالاعتماد على Next.js وPython.",
+            "منصة Flowise: لبناء روبوتات الدردشة بالسحب والإفلات باستخدام LangChain وLlamaIndex.",
+            "الاستضافة الذاتية (Self-hosted): تضمن سيادة البيانات الكاملة للشركات."
+          ],
+          "formulaLatex": "",
+          "codeSnippet": "",
+          "imagePrompt": "A clean, modern chalkboard diagram showing Dify.ai and Flowise connecting databases to AI models, with icons for Next.js, Python, and LangChain, academic style, high resolution."
+        },
+        "startSec": 10,
+        "endSec": 30
+      },
+      {
+        "id": "scene-3",
+        "act": "takeaway",
+        "title": "السيادة والتحكم الكامل",
+        "badgeText": "🏆 التطبيق والنتيجة",
+        "visualType": "bullet_points",
+        "visualData": {
+          "highlightQuote": "التخصيص الكامل والاستضافة الذاتية يضمنان سيادة البيانات ويقللان تكاليف التشغيل مقارنة بالمنصات المغلقة."
+        },
+        "startSec": 30,
+        "endSec": 45
+      }
+    ],
+    "word_timings": [
+      {
+        "word": "إن",
+        "startMs": 0,
+        "endMs": 667
+      },
+      {
+        "word": "الاستثمار",
+        "startMs": 667,
+        "endMs": 1333
+      },
+      {
+        "word": "في",
+        "startMs": 1333,
+        "endMs": 2000
+      },
+      {
+        "word": "أنظمة",
+        "startMs": 2000,
+        "endMs": 2667
+      },
+      {
+        "word": "الذكاء",
+        "startMs": 2667,
+        "endMs": 3333
+      },
+      {
+        "word": "الاصطناعي",
+        "startMs": 3333,
+        "endMs": 4000
+      },
+      {
+        "word": "ومحركات",
+        "startMs": 4000,
+        "endMs": 4667
+      },
+      {
+        "word": "الاسترجاع",
+        "startMs": 4667,
+        "endMs": 5333
+      },
+      {
+        "word": "التوليدي",
+        "startMs": 5333,
+        "endMs": 6000
+      },
+      {
+        "word": "وبناء",
+        "startMs": 6000,
+        "endMs": 6667
+      },
+      {
+        "word": "الوكلاء",
+        "startMs": 6667,
+        "endMs": 7333
+      },
+      {
+        "word": "الأذكياء",
+        "startMs": 7333,
+        "endMs": 8000
+      },
+      {
+        "word": "هو",
+        "startMs": 8000,
+        "endMs": 8667
+      },
+      {
+        "word": "ركيزة",
+        "startMs": 8667,
+        "endMs": 9333
+      },
+      {
+        "word": "الابتكار",
+        "startMs": 9333,
+        "endMs": 10000
+      },
+      {
+        "word": "التقني",
+        "startMs": 10000,
+        "endMs": 10667
+      },
+      {
+        "word": "المعاصر.",
+        "startMs": 10667,
+        "endMs": 11333
+      },
+      {
+        "word": "عبر",
+        "startMs": 11333,
+        "endMs": 12000
+      },
+      {
+        "word": "منصات",
+        "startMs": 12000,
+        "endMs": 12667
+      },
+      {
+        "word": "مفتوحة",
+        "startMs": 12667,
+        "endMs": 13333
+      },
+      {
+        "word": "المصدر",
+        "startMs": 13333,
+        "endMs": 14000
+      },
+      {
+        "word": "مثل",
+        "startMs": 14000,
+        "endMs": 14667
+      },
+      {
+        "word": "Dify.ai،",
+        "startMs": 14667,
+        "endMs": 15333
+      },
+      {
+        "word": "التي",
+        "startMs": 15333,
+        "endMs": 16000
+      },
+      {
+        "word": "تربط",
+        "startMs": 16000,
+        "endMs": 16667
+      },
+      {
+        "word": "قواعد",
+        "startMs": 16667,
+        "endMs": 17333
+      },
+      {
+        "word": "بياناتكم",
+        "startMs": 17333,
+        "endMs": 18000
+      },
+      {
+        "word": "بنماذج",
+        "startMs": 18000,
+        "endMs": 18667
+      },
+      {
+        "word": "الذكاء",
+        "startMs": 18667,
+        "endMs": 19333
+      },
+      {
+        "word": "الاصطناعي",
+        "startMs": 19333,
+        "endMs": 20000
+      },
+      {
+        "word": "باستخدام",
+        "startMs": 20000,
+        "endMs": 20667
+      },
+      {
+        "word": "تقنيات",
+        "startMs": 20667,
+        "endMs": 21333
+      },
+      {
+        "word": "حديثة،",
+        "startMs": 21333,
+        "endMs": 22000
+      },
+      {
+        "word": "ومنصة",
+        "startMs": 22000,
+        "endMs": 22667
+      },
+      {
+        "word": "Flowise",
+        "startMs": 22667,
+        "endMs": 23333
+      },
+      {
+        "word": "التي",
+        "startMs": 23333,
+        "endMs": 24000
+      },
+      {
+        "word": "تتيح",
+        "startMs": 24000,
+        "endMs": 24667
+      },
+      {
+        "word": "بناء",
+        "startMs": 24667,
+        "endMs": 25333
+      },
+      {
+        "word": "روبوتات",
+        "startMs": 25333,
+        "endMs": 26000
+      },
+      {
+        "word": "الدردشة",
+        "startMs": 26000,
+        "endMs": 26667
+      },
+      {
+        "word": "بالسحب",
+        "startMs": 26667,
+        "endMs": 27333
+      },
+      {
+        "word": "والإفلات،",
+        "startMs": 27333,
+        "endMs": 28000
+      },
+      {
+        "word": "نصل",
+        "startMs": 28000,
+        "endMs": 28667
+      },
+      {
+        "word": "إلى",
+        "startMs": 28667,
+        "endMs": 29333
+      },
+      {
+        "word": "التخصيص",
+        "startMs": 29333,
+        "endMs": 30000
+      },
+      {
+        "word": "الكامل",
+        "startMs": 30000,
+        "endMs": 30667
+      },
+      {
+        "word": "والاستضافة",
+        "startMs": 30667,
+        "endMs": 31333
+      },
+      {
+        "word": "الذاتية.",
+        "startMs": 31333,
+        "endMs": 32000
+      },
+      {
+        "word": "هذا",
+        "startMs": 32000,
+        "endMs": 32667
+      },
+      {
+        "word": "يضمن",
+        "startMs": 32667,
+        "endMs": 33333
+      },
+      {
+        "word": "سيادة",
+        "startMs": 33333,
+        "endMs": 34000
+      },
+      {
+        "word": "بيانات",
+        "startMs": 34000,
+        "endMs": 34667
+      },
+      {
+        "word": "الشركة",
+        "startMs": 34667,
+        "endMs": 35333
+      },
+      {
+        "word": "ويقلل",
+        "startMs": 35333,
+        "endMs": 36000
+      },
+      {
+        "word": "التكاليف",
+        "startMs": 36000,
+        "endMs": 36667
+      },
+      {
+        "word": "بشكل",
+        "startMs": 36667,
+        "endMs": 37333
+      },
+      {
+        "word": "ملموس",
+        "startMs": 37333,
+        "endMs": 38000
+      },
+      {
+        "word": "مقارنة",
+        "startMs": 38000,
+        "endMs": 38667
+      },
+      {
+        "word": "بالمنصات",
+        "startMs": 38667,
+        "endMs": 39333
+      },
+      {
+        "word": "المغلقة.",
+        "startMs": 39333,
+        "endMs": 40000
+      }
+    ],
+    "visual_cards": [
+      {
+        "title": "أدوات بناء الوكلاء",
+        "content": "Dify.ai (Next.js, Python, pgvector) + Flowise (LangChain, LlamaIndex)",
+        "type": "formula",
+        "startSec": 5,
+        "endSec": 20
+      },
+      {
+        "title": "الميزة الاستراتيجية",
+        "content": "الاستضافة الذاتية = سيادة البيانات + تقليل التكاليف",
+        "type": "diagram",
+        "startSec": 21,
+        "endSec": 35
+      }
+    ],
+    "interactive_quiz": {
+      "question": "ما الفائدة الأساسية من استخدام منصات مثل Dify.ai و Flowise واستضافتها ذاتياً؟",
+      "options": [
+        "أ) زيادة الاعتماد على المنصات المغلقة والمكلفة",
+        "ب) ضمان سيادة البيانات، التخصيص الكامل، وتقليل التكاليف",
+        "ج) إلغاء الحاجة لاستخدام قواعد البيانات تماماً"
+      ],
+      "correctIndex": 1,
+      "triggerSec": 32,
+      "explanation": "تتيح هذه الأدوات مفتوحة المصدر استضافة البيانات ذاتياً (Self-hosted) مما يضمن سيادة البيانات الكاملة للشركة ويقلل التكاليف المرتبطة بالمنصات المغلقة."
+    },
+    "likes_count": 32,
+    "views_count": 182,
+    "completions_count": 45,
+    "is_public_teaser": true,
+    "created_at": "2026-09-15T05:13:29.593Z"
+  },
+  {
+    "id": "reel-1789449247805",
+    "book_id": "5e0242d8-c839-4a22-a3f0-00452bfbb167",
+    "book_title": "دليل الأنظمة البرمجية ومصادر الأكواد المفتوحة لتطوير وتخصيص منتجات الشركة",
+    "author_name": "خبير المادة",
+    "category": "تعليمي",
+    "subcategory": "",
+    "thumbnail_url": "",
+    "chapter_id": "ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-2",
+    "chapter_title": "خدمة العملاء وأتمتة الواتساب (WhatsApp Automation & Omnichannel Support)",
+    "style_type": "chalkboard",
+    "style": "chalkboard",
+    "voice": "ar-SA-HamedNeural",
+    "duration_seconds": 45,
+    "audio_url": "https://ydlzvuutjgelpxueufgn.supabase.co/storage/v1/object/public/book-audios/reel_5e0242d8-c839-4a22-a3f0-00452bfbb167_ch-5e0242d8-c839-4a22-a3f0-00452bfbb167-2_1789449240051.mp3",
+    "narration_script": "في أسواق مصر والخليج، يمثل الرد الفوري عبر الواتساب شريان النمو التجاري الحقيقي. للتغلب على أزمة الاشتراكات المتصاعدة لكل موظف، نعتمد على منصة Chatwoot كصندوق رسائل موحد بديل لـ Intercom يجمع قنوات التواصل مع ميزة White-Labeling، وبجانبها أداة Typebot لبناء روبوتات تفاعلية ذكية لتأهيل العملاء المحتملين مباشرة. هكذا نضمن أتمتة متكاملة، مرنة، وبأقل التكاليف التشغيلية، مما يمنح شركتنا السيادة الكاملة على بياناتها وقنواتها.",
+    "scenes": [
+      {
+        "id": "scene-1",
+        "act": "hook",
+        "title": "تحدي خدمة العملاء في الخليج ومصر",
+        "badgeText": "🔥 فكرة محورية",
+        "visualType": "quote",
+        "visualData": {
+          "highlightQuote": "إدارة علاقات العملاء والرد الفوري عبر الواتساب وتطبيقات التراسل أمر حيوي للنمو التجاري في أسواق مصر والخليج."
+        },
+        "startSec": 0,
+        "endSec": 10
+      },
+      {
+        "id": "scene-2",
+        "act": "concept",
+        "title": "ثنائية الأتمتة الذكية",
+        "badgeText": "🧠 الشرح العميق",
+        "visualType": "bullet_points",
+        "visualData": {
+          "bullets": [
+            "Chatwoot: صندوق موحد لقنوات WhatsApp API وMessenger وTelegram بديل لـ Intercom.",
+            "Typebot: لبناء روبوتات تفاعلية توليدية لجمع وتأهيل العملاء المحتملين مباشرة.",
+            "المرونة: إمكانية تخصيص كامل عبر White-Labeling وتوجيه الـ Webhooks."
+          ],
+          "formulaLatex": "",
+          "codeSnippet": "",
+          "imagePrompt": "A clean, modern 3D vector illustration showing a unified digital inbox dashboard with WhatsApp, Telegram, and Messenger icons merging into one screen, alongside a friendly chatbot avatar interacting with users, chalkboard style, dark background."
+        },
+        "startSec": 10,
+        "endSec": 30
+      },
+      {
+        "id": "scene-3",
+        "act": "takeaway",
+        "title": "السيادة والوفر المالي",
+        "badgeText": "🏆 التطبيق والنتيجة",
+        "visualType": "bullet_points",
+        "visualData": {
+          "highlightQuote": "حل أزمة الاعتماد الهائل على الواتساب دون دفع اشتراكات شهرية متصاعدة لكل موظف."
+        },
+        "startSec": 30,
+        "endSec": 45
+      }
+    ],
+    "word_timings": [
+      {
+        "word": "في",
+        "startMs": 0,
+        "endMs": 635
+      },
+      {
+        "word": "أسواق",
+        "startMs": 635,
+        "endMs": 1270
+      },
+      {
+        "word": "مصر",
+        "startMs": 1270,
+        "endMs": 1905
+      },
+      {
+        "word": "والخليج،",
+        "startMs": 1905,
+        "endMs": 2540
+      },
+      {
+        "word": "يمثل",
+        "startMs": 2540,
+        "endMs": 3175
+      },
+      {
+        "word": "الرد",
+        "startMs": 3175,
+        "endMs": 3810
+      },
+      {
+        "word": "الفوري",
+        "startMs": 3810,
+        "endMs": 4444
+      },
+      {
+        "word": "عبر",
+        "startMs": 4444,
+        "endMs": 5079
+      },
+      {
+        "word": "الواتساب",
+        "startMs": 5079,
+        "endMs": 5714
+      },
+      {
+        "word": "شريان",
+        "startMs": 5714,
+        "endMs": 6349
+      },
+      {
+        "word": "النمو",
+        "startMs": 6349,
+        "endMs": 6984
+      },
+      {
+        "word": "التجاري",
+        "startMs": 6984,
+        "endMs": 7619
+      },
+      {
+        "word": "الحقيقي.",
+        "startMs": 7619,
+        "endMs": 8254
+      },
+      {
+        "word": "للتغلب",
+        "startMs": 8254,
+        "endMs": 8889
+      },
+      {
+        "word": "على",
+        "startMs": 8889,
+        "endMs": 9524
+      },
+      {
+        "word": "أزمة",
+        "startMs": 9524,
+        "endMs": 10159
+      },
+      {
+        "word": "الاشتراكات",
+        "startMs": 10159,
+        "endMs": 10794
+      },
+      {
+        "word": "المتصاعدة",
+        "startMs": 10794,
+        "endMs": 11429
+      },
+      {
+        "word": "لكل",
+        "startMs": 11429,
+        "endMs": 12063
+      },
+      {
+        "word": "موظف،",
+        "startMs": 12063,
+        "endMs": 12698
+      },
+      {
+        "word": "نعتمد",
+        "startMs": 12698,
+        "endMs": 13333
+      },
+      {
+        "word": "على",
+        "startMs": 13333,
+        "endMs": 13968
+      },
+      {
+        "word": "منصة",
+        "startMs": 13968,
+        "endMs": 14603
+      },
+      {
+        "word": "Chatwoot",
+        "startMs": 14603,
+        "endMs": 15238
+      },
+      {
+        "word": "كصندوق",
+        "startMs": 15238,
+        "endMs": 15873
+      },
+      {
+        "word": "رسائل",
+        "startMs": 15873,
+        "endMs": 16508
+      },
+      {
+        "word": "موحد",
+        "startMs": 16508,
+        "endMs": 17143
+      },
+      {
+        "word": "بديل",
+        "startMs": 17143,
+        "endMs": 17778
+      },
+      {
+        "word": "لـ",
+        "startMs": 17778,
+        "endMs": 18413
+      },
+      {
+        "word": "Intercom",
+        "startMs": 18413,
+        "endMs": 19048
+      },
+      {
+        "word": "يجمع",
+        "startMs": 19048,
+        "endMs": 19683
+      },
+      {
+        "word": "قنوات",
+        "startMs": 19683,
+        "endMs": 20317
+      },
+      {
+        "word": "التواصل",
+        "startMs": 20317,
+        "endMs": 20952
+      },
+      {
+        "word": "مع",
+        "startMs": 20952,
+        "endMs": 21587
+      },
+      {
+        "word": "ميزة",
+        "startMs": 21587,
+        "endMs": 22222
+      },
+      {
+        "word": "White-Labeling،",
+        "startMs": 22222,
+        "endMs": 22857
+      },
+      {
+        "word": "وبجانبها",
+        "startMs": 22857,
+        "endMs": 23492
+      },
+      {
+        "word": "أداة",
+        "startMs": 23492,
+        "endMs": 24127
+      },
+      {
+        "word": "Typebot",
+        "startMs": 24127,
+        "endMs": 24762
+      },
+      {
+        "word": "لبناء",
+        "startMs": 24762,
+        "endMs": 25397
+      },
+      {
+        "word": "روبوتات",
+        "startMs": 25397,
+        "endMs": 26032
+      },
+      {
+        "word": "تفاعلية",
+        "startMs": 26032,
+        "endMs": 26667
+      },
+      {
+        "word": "ذكية",
+        "startMs": 26667,
+        "endMs": 27302
+      },
+      {
+        "word": "لتأهيل",
+        "startMs": 27302,
+        "endMs": 27937
+      },
+      {
+        "word": "العملاء",
+        "startMs": 27937,
+        "endMs": 28571
+      },
+      {
+        "word": "المحتملين",
+        "startMs": 28571,
+        "endMs": 29206
+      },
+      {
+        "word": "مباشرة.",
+        "startMs": 29206,
+        "endMs": 29841
+      },
+      {
+        "word": "هكذا",
+        "startMs": 29841,
+        "endMs": 30476
+      },
+      {
+        "word": "نضمن",
+        "startMs": 30476,
+        "endMs": 31111
+      },
+      {
+        "word": "أتمتة",
+        "startMs": 31111,
+        "endMs": 31746
+      },
+      {
+        "word": "متكاملة،",
+        "startMs": 31746,
+        "endMs": 32381
+      },
+      {
+        "word": "مرنة،",
+        "startMs": 32381,
+        "endMs": 33016
+      },
+      {
+        "word": "وبأقل",
+        "startMs": 33016,
+        "endMs": 33651
+      },
+      {
+        "word": "التكاليف",
+        "startMs": 33651,
+        "endMs": 34286
+      },
+      {
+        "word": "التشغيلية،",
+        "startMs": 34286,
+        "endMs": 34921
+      },
+      {
+        "word": "مما",
+        "startMs": 34921,
+        "endMs": 35556
+      },
+      {
+        "word": "يمنح",
+        "startMs": 35556,
+        "endMs": 36190
+      },
+      {
+        "word": "شركتنا",
+        "startMs": 36190,
+        "endMs": 36825
+      },
+      {
+        "word": "السيادة",
+        "startMs": 36825,
+        "endMs": 37460
+      },
+      {
+        "word": "الكاملة",
+        "startMs": 37460,
+        "endMs": 38095
+      },
+      {
+        "word": "على",
+        "startMs": 38095,
+        "endMs": 38730
+      },
+      {
+        "word": "بياناتها",
+        "startMs": 38730,
+        "endMs": 39365
+      },
+      {
+        "word": "وقنواتها.",
+        "startMs": 39365,
+        "endMs": 40000
+      }
+    ],
+    "visual_cards": [
+      {
+        "title": "المنصة الموحدة",
+        "content": "Chatwoot يجمع WhatsApp Business API و Messenger و Telegram في صندوق واحد مع دعم الـ Webhooks.",
+        "type": "formula",
+        "startSec": 5,
+        "endSec": 20
+      },
+      {
+        "title": "التأهيل التفاعلي",
+        "content": "Typebot يبني نماذج تفاعلية لجمع وتأهيل العملاء عبر الويب والواتساب مباشرة دون تكاليف إضافية.",
+        "type": "diagram",
+        "startSec": 21,
+        "endSec": 35
+      }
+    ],
+    "interactive_quiz": {
+      "question": "ما هي الميزة الأساسية التي تقدمها منصة Chatwoot كبديل لـ Intercom و Zendesk؟",
+      "options": [
+        "تجميع قنوات التواصل مثل WhatsApp و Messenger في صندوق موحد مع دعم الـ White-Labeling",
+        "تطوير تطبيقات الهواتف الذكية من الصفر دون أكواد",
+        "تقديم خدمات استضافة المواقع السحابية المجانية"
+      ],
+      "correctIndex": 0,
+      "triggerSec": 32,
+      "explanation": "تتميز منصة Chatwoot بقدرتها على جمع قنوات التواصل المتعددة (WhatsApp API, Messenger, Telegram) في صندوق وارد موحد مع إمكانية إعادة تسمية العلامة التجارية (White-Labeling) وتوجيه الـ Webhooks."
+    },
+    "likes_count": 32,
+    "views_count": 182,
+    "completions_count": 45,
+    "is_public_teaser": true,
+    "created_at": "2026-09-15T05:14:07.805Z"
   }
 ]
