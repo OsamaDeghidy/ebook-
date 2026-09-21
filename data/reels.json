@@ -13620,5 +13620,802 @@
     "completions_count": 45,
     "is_public_teaser": true,
     "created_at": "2026-09-15T05:14:07.805Z"
+  },
+  {
+    "id": "reel-1789449789185",
+    "book_id": "75a19d19-e466-4c0a-b9f7-fef8f8463211",
+    "book_title": "KG 1 English: Interactive Term 1 Adventure",
+    "author_name": "خبير المادة",
+    "category": "تعليمي",
+    "subcategory": "",
+    "thumbnail_url": "",
+    "chapter_id": "ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-1",
+    "chapter_title": "Meet and Greet!",
+    "style_type": "chalkboard",
+    "style": "chalkboard",
+    "voice": "ar-SA-HamedNeural",
+    "duration_seconds": 45,
+    "audio_url": "https://ydlzvuutjgelpxueufgn.supabase.co/storage/v1/object/public/book-audios/reel_75a19d19-e466-4c0a-b9f7-fef8f8463211_ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-1_1789449784388.mp3",
+    "narration_script": "مرحبًا بكم في مغامرتنا المدرسية الأولى! هنا نتعلم كيف نلقي التحية بمودة فنقول Hello وGood morning، ونعبر بصدق عن مشاعرنا سواء كنا في سعادة أو حزن. كما نكتشف أصوات الحروف مع صوت حرف T وصوت حرف I، ونتعرف على الرقم واحد والشكل الدائري باللون الأحمر الزاهي كالتفاحة اللذيذة. التواصل والتعبير هما مفتاح تكوين الصداقات وبداية التعلم الممتع.",
+    "scenes": [
+      {
+        "id": "scene-1",
+        "act": "hook",
+        "title": "مرحبًا بك في المدرسة!",
+        "badgeText": "🔥 بداية المغامرة",
+        "visualType": "quote",
+        "visualData": {
+          "highlightQuote": "Saying 'Hello' and 'Good morning' helps us make friends!"
+        },
+        "startSec": 0,
+        "endSec": 10
+      },
+      {
+        "id": "scene-2",
+        "act": "concept",
+        "title": "التحيات، الأصوات والأشكال",
+        "badgeText": "🧠 المفاهيم الأساسية",
+        "visualType": "bullet_points",
+        "visualData": {
+          "bullets": [
+            "التحايا والمشاعر: Hello, Goodbye / Happy, Sad",
+            "الصوتيات: Letter Tt (/t/ as in train), Letter Ii (/i/ as in in)",
+            "الرياضيات: Number 1, Shape: Circle, Color: Red"
+          ],
+          "formulaLatex": "",
+          "codeSnippet": "",
+          "imagePrompt": "Chalkboard illustration showing a cheerful classroom with the letters Tt and Ii, a red circle, the number 1, and happy children waving hello."
+        },
+        "startSec": 10,
+        "endSec": 30
+      },
+      {
+        "id": "scene-3",
+        "act": "takeaway",
+        "title": "ثمرة الدرس",
+        "badgeText": "🏆 خلاصة الانطلاق",
+        "visualType": "bullet_points",
+        "visualData": {
+          "highlightQuote": "شارك مشاعرك، رحّب بأصدقائك، واستمتع بتعلم أول الحروف والأرقام!"
+        },
+        "startSec": 30,
+        "endSec": 45
+      }
+    ],
+    "word_timings": [
+      {
+        "word": "مرحبًا",
+        "startMs": 0,
+        "endMs": 702
+      },
+      {
+        "word": "بكم",
+        "startMs": 702,
+        "endMs": 1404
+      },
+      {
+        "word": "في",
+        "startMs": 1404,
+        "endMs": 2105
+      },
+      {
+        "word": "مغامرتنا",
+        "startMs": 2105,
+        "endMs": 2807
+      },
+      {
+        "word": "المدرسية",
+        "startMs": 2807,
+        "endMs": 3509
+      },
+      {
+        "word": "الأولى!",
+        "startMs": 3509,
+        "endMs": 4211
+      },
+      {
+        "word": "هنا",
+        "startMs": 4211,
+        "endMs": 4912
+      },
+      {
+        "word": "نتعلم",
+        "startMs": 4912,
+        "endMs": 5614
+      },
+      {
+        "word": "كيف",
+        "startMs": 5614,
+        "endMs": 6316
+      },
+      {
+        "word": "نلقي",
+        "startMs": 6316,
+        "endMs": 7018
+      },
+      {
+        "word": "التحية",
+        "startMs": 7018,
+        "endMs": 7719
+      },
+      {
+        "word": "بمودة",
+        "startMs": 7719,
+        "endMs": 8421
+      },
+      {
+        "word": "فنقول",
+        "startMs": 8421,
+        "endMs": 9123
+      },
+      {
+        "word": "Hello",
+        "startMs": 9123,
+        "endMs": 9825
+      },
+      {
+        "word": "وGood",
+        "startMs": 9825,
+        "endMs": 10526
+      },
+      {
+        "word": "morning،",
+        "startMs": 10526,
+        "endMs": 11228
+      },
+      {
+        "word": "ونعبر",
+        "startMs": 11228,
+        "endMs": 11930
+      },
+      {
+        "word": "بصدق",
+        "startMs": 11930,
+        "endMs": 12632
+      },
+      {
+        "word": "عن",
+        "startMs": 12632,
+        "endMs": 13333
+      },
+      {
+        "word": "مشاعرنا",
+        "startMs": 13333,
+        "endMs": 14035
+      },
+      {
+        "word": "سواء",
+        "startMs": 14035,
+        "endMs": 14737
+      },
+      {
+        "word": "كنا",
+        "startMs": 14737,
+        "endMs": 15439
+      },
+      {
+        "word": "في",
+        "startMs": 15439,
+        "endMs": 16140
+      },
+      {
+        "word": "سعادة",
+        "startMs": 16140,
+        "endMs": 16842
+      },
+      {
+        "word": "أو",
+        "startMs": 16842,
+        "endMs": 17544
+      },
+      {
+        "word": "حزن.",
+        "startMs": 17544,
+        "endMs": 18246
+      },
+      {
+        "word": "كما",
+        "startMs": 18246,
+        "endMs": 18947
+      },
+      {
+        "word": "نكتشف",
+        "startMs": 18947,
+        "endMs": 19649
+      },
+      {
+        "word": "أصوات",
+        "startMs": 19649,
+        "endMs": 20351
+      },
+      {
+        "word": "الحروف",
+        "startMs": 20351,
+        "endMs": 21053
+      },
+      {
+        "word": "مع",
+        "startMs": 21053,
+        "endMs": 21754
+      },
+      {
+        "word": "صوت",
+        "startMs": 21754,
+        "endMs": 22456
+      },
+      {
+        "word": "حرف",
+        "startMs": 22456,
+        "endMs": 23158
+      },
+      {
+        "word": "T",
+        "startMs": 23158,
+        "endMs": 23860
+      },
+      {
+        "word": "وصوت",
+        "startMs": 23860,
+        "endMs": 24561
+      },
+      {
+        "word": "حرف",
+        "startMs": 24561,
+        "endMs": 25263
+      },
+      {
+        "word": "I،",
+        "startMs": 25263,
+        "endMs": 25965
+      },
+      {
+        "word": "ونتعرف",
+        "startMs": 25965,
+        "endMs": 26667
+      },
+      {
+        "word": "على",
+        "startMs": 26667,
+        "endMs": 27368
+      },
+      {
+        "word": "الرقم",
+        "startMs": 27368,
+        "endMs": 28070
+      },
+      {
+        "word": "واحد",
+        "startMs": 28070,
+        "endMs": 28772
+      },
+      {
+        "word": "والشكل",
+        "startMs": 28772,
+        "endMs": 29474
+      },
+      {
+        "word": "الدائري",
+        "startMs": 29474,
+        "endMs": 30175
+      },
+      {
+        "word": "باللون",
+        "startMs": 30175,
+        "endMs": 30877
+      },
+      {
+        "word": "الأحمر",
+        "startMs": 30877,
+        "endMs": 31579
+      },
+      {
+        "word": "الزاهي",
+        "startMs": 31579,
+        "endMs": 32281
+      },
+      {
+        "word": "كالتفاحة",
+        "startMs": 32281,
+        "endMs": 32982
+      },
+      {
+        "word": "اللذيذة.",
+        "startMs": 32982,
+        "endMs": 33684
+      },
+      {
+        "word": "التواصل",
+        "startMs": 33684,
+        "endMs": 34386
+      },
+      {
+        "word": "والتعبير",
+        "startMs": 34386,
+        "endMs": 35088
+      },
+      {
+        "word": "هما",
+        "startMs": 35088,
+        "endMs": 35789
+      },
+      {
+        "word": "مفتاح",
+        "startMs": 35789,
+        "endMs": 36491
+      },
+      {
+        "word": "تكوين",
+        "startMs": 36491,
+        "endMs": 37193
+      },
+      {
+        "word": "الصداقات",
+        "startMs": 37193,
+        "endMs": 37895
+      },
+      {
+        "word": "وبداية",
+        "startMs": 37895,
+        "endMs": 38596
+      },
+      {
+        "word": "التعلم",
+        "startMs": 38596,
+        "endMs": 39298
+      },
+      {
+        "word": "الممتع.",
+        "startMs": 39298,
+        "endMs": 40000
+      }
+    ],
+    "visual_cards": [
+      {
+        "title": "بطاقة الصوتيات (Phonics)",
+        "content": "Tt ➔ /t/ (train, turtle) | Ii ➔ /i/ (in, insect)",
+        "type": "formula",
+        "startSec": 5,
+        "endSec": 20
+      },
+      {
+        "title": "بطاقة المفاهيم (Math & Colors)",
+        "content": "Number 1 | Shape: Circle | Color: Red (like an apple)",
+        "type": "diagram",
+        "startSec": 21,
+        "endSec": 35
+      }
+    ],
+    "interactive_quiz": {
+      "question": "ما هو الصوت الذي يُصدره الحرف (Letter Tt) حسب ما ورد في الدرس؟",
+      "options": [
+        "صوت /t/ كما في كلمة train وturtle",
+        "صوت /i/ كما في كلمة insect وink",
+        "صوت /m/ كما في كلمة morning"
+      ],
+      "correctIndex": 0,
+      "triggerSec": 32,
+      "explanation": "يُصدر الحرف Tt الصوت /t/ كما في كلمات train وtoys وturtle، بينما الصوت /i/ هو للحرف Ii."
+    },
+    "likes_count": 32,
+    "views_count": 182,
+    "completions_count": 45,
+    "is_public_teaser": true,
+    "created_at": "2026-09-15T05:23:09.185Z"
+  },
+  {
+    "id": "reel-1789449812585",
+    "book_id": "75a19d19-e466-4c0a-b9f7-fef8f8463211",
+    "book_title": "KG 1 English: Interactive Term 1 Adventure",
+    "author_name": "خبير المادة",
+    "category": "تعليمي",
+    "subcategory": "",
+    "thumbnail_url": "",
+    "chapter_id": "ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-2",
+    "chapter_title": "I Can Find it at School!",
+    "style_type": "chalkboard",
+    "style": "chalkboard",
+    "voice": "ar-SA-HamedNeural",
+    "duration_seconds": 45,
+    "audio_url": "https://ydlzvuutjgelpxueufgn.supabase.co/storage/v1/object/public/book-audios/reel_75a19d19-e466-4c0a-b9f7-fef8f8463211_ch-75a19d19-e466-4c0a-b9f7-fef8f8463211-2_1789449825287.mp3",
+    "narration_script": "مرحبًا بكم يا أصدقائي في عالم مدرستنا الرائع والمثير! هنا في صفنا الجميل، نلتقي بمعلمنا اللطيف، ونستخدم أدواتنا كالقلم والممحاة والألوان لنرسم ونكتب على السبورة. وعندما يحين وقت اللعب، ننطلق إلى الفناء لنركب الأرجوحة والمنزلقة مع الأصدقاء. واليوم سنمرح مع أصوات الحروف الدافئة: السين كالشمس، والألف كالتفاحة، والنون كالعش، ونكتشف معًا الرقم اثنين، وشكل المربع، ولون السماء الأزرق البديع! هيا بنا نستكشف ونلعب معًا!",
+    "scenes": [
+      {
+        "id": "scene-1",
+        "act": "hook",
+        "title": "مغامرتنا الأولى في المدرسة!",
+        "badgeText": "🔥 فكرة محورية",
+        "visualType": "quote",
+        "visualData": {
+          "highlightQuote": "مدرستنا مليئة بالأشياء الرائعة التي تساعدنا على التعلم واللعب كل يوم!"
+        },
+        "startSec": 0,
+        "endSec": 10
+      },
+      {
+        "id": "scene-2",
+        "act": "concept",
+        "title": "أدوات الصف وأصوات الحروف",
+        "badgeText": "🧠 الشرح العميق",
+        "visualType": "bullet_points",
+        "visualData": {
+          "bullets": [
+            "أدواتنا الرائعة: المعلم، المكتب، السبورة، القلم، الممحاة، والألوان المبهجة.",
+            "أصوات الحروف: حرف Ss كالشمس، وحرف Aa كالتفاحة، وحرف Nn كالعش الجميل.",
+            "عالم الحساب: الرقم 2، وشكل المربع كالنافذة، واللون الأزرق كالسماء الصافية."
+          ],
+          "formulaLatex": "",
+          "codeSnippet": "",
+          "imagePrompt": "A colorful cartoon classroom with a friendly teacher, a blackboard showing letters S, A, N, and a window shaped like a square, bright blue sky outside, highly engaging for KG1 children, 3D render style."
+        },
+        "startSec": 10,
+        "endSec": 30
+      },
+      {
+        "id": "scene-3",
+        "act": "takeaway",
+        "title": "المرح والمشاركة في الفناء",
+        "badgeText": "🏆 التطبيق والنتيجة",
+        "visualType": "bullet_points",
+        "visualData": {
+          "highlightQuote": "اللعب مع الأصدقاء في فناء المدرسة على الأرجوحة والمنزلقة يبني ثقتنا ويعلمنا متعة المشاركة!"
+        },
+        "startSec": 30,
+        "endSec": 45
+      }
+    ],
+    "word_timings": [
+      {
+        "word": "مرحبًا",
+        "startMs": 0,
+        "endMs": 625
+      },
+      {
+        "word": "بكم",
+        "startMs": 625,
+        "endMs": 1250
+      },
+      {
+        "word": "يا",
+        "startMs": 1250,
+        "endMs": 1875
+      },
+      {
+        "word": "أصدقائي",
+        "startMs": 1875,
+        "endMs": 2500
+      },
+      {
+        "word": "في",
+        "startMs": 2500,
+        "endMs": 3125
+      },
+      {
+        "word": "عالم",
+        "startMs": 3125,
+        "endMs": 3750
+      },
+      {
+        "word": "مدرستنا",
+        "startMs": 3750,
+        "endMs": 4375
+      },
+      {
+        "word": "الرائع",
+        "startMs": 4375,
+        "endMs": 5000
+      },
+      {
+        "word": "والمثير!",
+        "startMs": 5000,
+        "endMs": 5625
+      },
+      {
+        "word": "هنا",
+        "startMs": 5625,
+        "endMs": 6250
+      },
+      {
+        "word": "في",
+        "startMs": 6250,
+        "endMs": 6875
+      },
+      {
+        "word": "صفنا",
+        "startMs": 6875,
+        "endMs": 7500
+      },
+      {
+        "word": "الجميل،",
+        "startMs": 7500,
+        "endMs": 8125
+      },
+      {
+        "word": "نلتقي",
+        "startMs": 8125,
+        "endMs": 8750
+      },
+      {
+        "word": "بمعلمنا",
+        "startMs": 8750,
+        "endMs": 9375
+      },
+      {
+        "word": "اللطيف،",
+        "startMs": 9375,
+        "endMs": 10000
+      },
+      {
+        "word": "ونستخدم",
+        "startMs": 10000,
+        "endMs": 10625
+      },
+      {
+        "word": "أدواتنا",
+        "startMs": 10625,
+        "endMs": 11250
+      },
+      {
+        "word": "كالقلم",
+        "startMs": 11250,
+        "endMs": 11875
+      },
+      {
+        "word": "والممحاة",
+        "startMs": 11875,
+        "endMs": 12500
+      },
+      {
+        "word": "والألوان",
+        "startMs": 12500,
+        "endMs": 13125
+      },
+      {
+        "word": "لنرسم",
+        "startMs": 13125,
+        "endMs": 13750
+      },
+      {
+        "word": "ونكتب",
+        "startMs": 13750,
+        "endMs": 14375
+      },
+      {
+        "word": "على",
+        "startMs": 14375,
+        "endMs": 15000
+      },
+      {
+        "word": "السبورة.",
+        "startMs": 15000,
+        "endMs": 15625
+      },
+      {
+        "word": "وعندما",
+        "startMs": 15625,
+        "endMs": 16250
+      },
+      {
+        "word": "يحين",
+        "startMs": 16250,
+        "endMs": 16875
+      },
+      {
+        "word": "وقت",
+        "startMs": 16875,
+        "endMs": 17500
+      },
+      {
+        "word": "اللعب،",
+        "startMs": 17500,
+        "endMs": 18125
+      },
+      {
+        "word": "ننطلق",
+        "startMs": 18125,
+        "endMs": 18750
+      },
+      {
+        "word": "إلى",
+        "startMs": 18750,
+        "endMs": 19375
+      },
+      {
+        "word": "الفناء",
+        "startMs": 19375,
+        "endMs": 20000
+      },
+      {
+        "word": "لنركب",
+        "startMs": 20000,
+        "endMs": 20625
+      },
+      {
+        "word": "الأرجوحة",
+        "startMs": 20625,
+        "endMs": 21250
+      },
+      {
+        "word": "والمنزلقة",
+        "startMs": 21250,
+        "endMs": 21875
+      },
+      {
+        "word": "مع",
+        "startMs": 21875,
+        "endMs": 22500
+      },
+      {
+        "word": "الأصدقاء.",
+        "startMs": 22500,
+        "endMs": 23125
+      },
+      {
+        "word": "واليوم",
+        "startMs": 23125,
+        "endMs": 23750
+      },
+      {
+        "word": "سنمرح",
+        "startMs": 23750,
+        "endMs": 24375
+      },
+      {
+        "word": "مع",
+        "startMs": 24375,
+        "endMs": 25000
+      },
+      {
+        "word": "أصوات",
+        "startMs": 25000,
+        "endMs": 25625
+      },
+      {
+        "word": "الحروف",
+        "startMs": 25625,
+        "endMs": 26250
+      },
+      {
+        "word": "الدافئة:",
+        "startMs": 26250,
+        "endMs": 26875
+      },
+      {
+        "word": "السين",
+        "startMs": 26875,
+        "endMs": 27500
+      },
+      {
+        "word": "كالشمس،",
+        "startMs": 27500,
+        "endMs": 28125
+      },
+      {
+        "word": "والألف",
+        "startMs": 28125,
+        "endMs": 28750
+      },
+      {
+        "word": "كالتفاحة،",
+        "startMs": 28750,
+        "endMs": 29375
+      },
+      {
+        "word": "والنون",
+        "startMs": 29375,
+        "endMs": 30000
+      },
+      {
+        "word": "كالعش،",
+        "startMs": 30000,
+        "endMs": 30625
+      },
+      {
+        "word": "ونكتشف",
+        "startMs": 30625,
+        "endMs": 31250
+      },
+      {
+        "word": "معًا",
+        "startMs": 31250,
+        "endMs": 31875
+      },
+      {
+        "word": "الرقم",
+        "startMs": 31875,
+        "endMs": 32500
+      },
+      {
+        "word": "اثنين،",
+        "startMs": 32500,
+        "endMs": 33125
+      },
+      {
+        "word": "وشكل",
+        "startMs": 33125,
+        "endMs": 33750
+      },
+      {
+        "word": "المربع،",
+        "startMs": 33750,
+        "endMs": 34375
+      },
+      {
+        "word": "ولون",
+        "startMs": 34375,
+        "endMs": 35000
+      },
+      {
+        "word": "السماء",
+        "startMs": 35000,
+        "endMs": 35625
+      },
+      {
+        "word": "الأزرق",
+        "startMs": 35625,
+        "endMs": 36250
+      },
+      {
+        "word": "البديع!",
+        "startMs": 36250,
+        "endMs": 36875
+      },
+      {
+        "word": "هيا",
+        "startMs": 36875,
+        "endMs": 37500
+      },
+      {
+        "word": "بنا",
+        "startMs": 37500,
+        "endMs": 38125
+      },
+      {
+        "word": "نستكشف",
+        "startMs": 38125,
+        "endMs": 38750
+      },
+      {
+        "word": "ونلعب",
+        "startMs": 38750,
+        "endMs": 39375
+      },
+      {
+        "word": "معًا!",
+        "startMs": 39375,
+        "endMs": 40000
+      }
+    ],
+    "visual_cards": [
+      {
+        "title": "أصوات الحروف الأساسية",
+        "content": "الحرف Ss يصدر صوت /s/ (Star)، الحرف Aa يصدر صوت /æ/ (Apple)، الحرف Nn يصدر صوت /n/ (Nest)",
+        "type": "formula",
+        "startSec": 5,
+        "endSec": 20
+      },
+      {
+        "title": "الأشكال والأرقام حولنا",
+        "content": "الرقم 2 (مثل العينين والأذنين)، المربع (له 4 أضلاع متساوية كالنافذة)، اللون الأزرق (لون السماء)",
+        "type": "diagram",
+        "startSec": 21,
+        "endSec": 35
+      }
+    ],
+    "interactive_quiz": {
+      "question": "أي من الحروف التالية يصدر الصوت /s/ كما في كلمة Sun (شمس)؟",
+      "options": [
+        "Letter Ss",
+        "Letter Aa",
+        "Letter Nn"
+      ],
+      "correctIndex": 0,
+      "triggerSec": 32,
+      "explanation": "حرف Ss يصدر الصوت /s/ كما في كلمات star (نجمة)، وsun (شمس)، وschool (مدرسة)."
+    },
+    "likes_count": 32,
+    "views_count": 182,
+    "completions_count": 45,
+    "is_public_teaser": true,
+    "created_at": "2026-09-15T05:23:50.916Z"
   }
 ]

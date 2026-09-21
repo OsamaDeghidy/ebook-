@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useParams, Link, useLocation, Navigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import {
-  BookOpen, ArrowLeft, Brain, HelpCircle, Youtube, Edit, Radio, Shield, LogOut, User, X, Sparkles, Compass, ShoppingCart, MessageSquare
+  BookOpen, ArrowLeft, Brain, HelpCircle, Youtube, Edit, Radio, Shield, LogOut, User, X, Sparkles, Compass, ShoppingCart, MessageSquare, Menu, ChevronLeft, Phone, Building2, Sliders
 } from 'lucide-react';
 import { MarketplaceBook, UserRole } from './types';
 import ContentUploader from './components/ContentUploader';
@@ -24,12 +24,17 @@ import { SupportModal } from './components/support/SupportModal';
 import { FloatingAiMascot } from './components/ai/FloatingAiMascot';
 import { supabase } from './lib/supabase';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { getPlatformConfig, PlatformConfig } from './services/platformConfigService';
+import { getPlatformConfig, syncPlatformConfigWithServer, PlatformConfig } from './services/platformConfigService';
 
 function AppContent() {
   const [platformConfig, setPlatformConfig] = useState<PlatformConfig>(getPlatformConfig());
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
+    syncPlatformConfigWithServer().then(synced => {
+      if (synced) setPlatformConfig(synced);
+    });
+
     const handleConfigChange = (e: any) => {
       setPlatformConfig(e.detail || getPlatformConfig());
     };
@@ -611,30 +616,58 @@ function AppContent() {
   const location = useLocation();
   const isLandingPage = location.pathname === '/';
 
+  // Close mobile navigation drawer on route navigation
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
+
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 flex flex-col font-sans selection:bg-teal-500 selection:text-white" dir="rtl">
-      {/* GLOBAL SAAS NAVBAR (Dynamic White-Label Branding) */}
-      <header className="bg-white/95 border-b border-gray-200 sticky top-0 z-40 px-4 sm:px-6 py-3.5 backdrop-blur-md flex items-center justify-between relative print:hidden">
-        <div className="flex items-center gap-3">
-          <Link to="/" className="flex items-center gap-3 cursor-pointer group">
-            <div className="w-10 h-10 bg-gradient-to-tr from-sky-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-md shadow-sky-500/25 text-white font-black text-xl group-hover:scale-105 transition">
-              {platformConfig.brandName.charAt(0) || 'أ'}
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-black text-lg text-slate-900 tracking-tight">{platformConfig.brandName}</span>
-                <span className="text-[10px] font-black bg-sky-50 text-sky-700 border border-sky-200 px-1.5 py-0.5 rounded-md">AI LMS</span>
+      {/* 🌟 GLOBAL SAAS NAVBAR (Dynamic White-Label & Responsive Design) */}
+      <header className="bg-white/95 border-b border-gray-200 sticky top-0 z-40 px-3 sm:px-6 py-3 backdrop-blur-md flex items-center justify-between print:hidden">
+        
+        {/* BRAND LOGO & TITLE */}
+        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+          <Link to="/" className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group">
+            {platformConfig.brandLogoUrl ? (
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-center p-1 overflow-hidden shrink-0 group-hover:scale-105 transition">
+                <img 
+                  src={platformConfig.brandLogoUrl} 
+                  alt={platformConfig.brandName} 
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    // Fallback to text logo if image fails
+                    (e.target as HTMLElement).style.display = 'none';
+                  }}
+                />
               </div>
-              <p className="text-xs text-slate-700 font-bold">{platformConfig.brandSubtitle}</p>
+            ) : (
+              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-tr from-sky-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-md shadow-sky-500/25 text-white font-black text-lg sm:text-xl shrink-0 group-hover:scale-105 transition">
+                {platformConfig.brandName ? platformConfig.brandName.charAt(0) : 'أ'}
+              </div>
+            )}
+
+            <div className="text-right">
+              <div className="flex items-center gap-1.5">
+                <span className="font-black text-base sm:text-lg text-slate-900 tracking-tight leading-none line-clamp-1 max-w-[130px] sm:max-w-[200px] md:max-w-none">
+                  {platformConfig.brandName}
+                </span>
+                <span className="text-[9px] sm:text-[10px] font-black bg-sky-50 text-sky-700 border border-sky-200 px-1.5 py-0.5 rounded-md shrink-0">
+                  AI LMS
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 font-bold hidden xs:block line-clamp-1 max-w-[160px] sm:max-w-[240px] md:max-w-none mt-0.5">
+                {platformConfig.brandSubtitle}
+              </p>
             </div>
           </Link>
         </div>
 
-        {/* 🌟 CENTERED MAIN NAVIGATION LINKS IN THE MIDDLE OF THE HEADER */}
-        <nav className="hidden md:flex items-center gap-2 text-xs font-bold absolute left-1/2 -translate-x-1/2">
+        {/* 🌟 DESKTOP NAVIGATION LINKS (Hidden on mobile / tablet, visible on lg+) */}
+        <nav className="hidden lg:flex items-center gap-1.5 text-xs font-bold">
           <Link
             to="/"
-            className={`px-4 py-2 rounded-xl transition ${
+            className={`px-3.5 py-2 rounded-xl transition ${
               isLandingPage
                 ? 'bg-slate-900 text-white font-black shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -645,79 +678,76 @@ function AppContent() {
 
           <Link
             to="/marketplace"
-            className={`px-4 py-2 rounded-xl transition flex items-center gap-1.5 ${
+            className={`px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 ${
               location.pathname === '/marketplace'
                 ? 'bg-sky-600 text-white font-black shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
             <ShoppingCart className="w-3.5 h-3.5" />
-            <span>متجر ومكتبة المقررات</span>
-            <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${location.pathname === '/marketplace' ? 'bg-sky-700 text-white' : 'bg-slate-200 text-slate-700'}`}>
+            <span>متجر المقررات</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+              location.pathname === '/marketplace' ? 'bg-sky-700 text-white' : 'bg-slate-200 text-slate-700'
+            }`}>
               {ebooks.length}
             </span>
           </Link>
 
           {/* REELS LINK */}
-          <Link
-            to="/reels"
-            className={`px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 ${
-              location.pathname === '/reels'
-                ? 'bg-purple-600 text-white font-black shadow-xs'
-                : 'text-purple-700 hover:text-purple-900 hover:bg-purple-50 border border-purple-100'
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-            <span>🎬 ريلز المعرفة</span>
-          </Link>
+          {platformConfig.showReels && (
+            <Link
+              to="/reels"
+              className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 ${
+                location.pathname === '/reels'
+                  ? 'bg-purple-600 text-white font-black shadow-xs'
+                  : 'text-purple-700 hover:text-purple-900 hover:bg-purple-50 border border-purple-100'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+              <span>🎬 ريلز المعرفة</span>
+            </Link>
+          )}
 
           {/* INSTRUCTOR / ADMIN HUB LINK */}
           {currentUser && (userRole === 'admin' || userRole === 'instructor' || isAdminMode) && (
             <Link
               to={userRole === 'admin' || isAdminMode ? '/admin' : '/instructor'}
-              className={`px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 ${
+              className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 ${
                 location.pathname === '/admin' || location.pathname === '/instructor'
                   ? 'bg-indigo-600 text-white font-black shadow-xs'
                   : 'text-indigo-700 hover:text-indigo-900 hover:bg-indigo-50 border border-indigo-100'
               }`}
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              <span>{userRole === 'admin' || isAdminMode ? 'لوحة التحكم والإدارة 🛡️' : 'لوحة المعلم والسنتر ⚡'}</span>
+              <span>{userRole === 'admin' || isAdminMode ? 'لوحة القيادة 🛡️' : 'لوحة المعلم ⚡'}</span>
             </Link>
           )}
         </nav>
 
-        {/* CONTROLS & AUTH BUTTONS */}
-        <div className="flex items-center gap-2.5">
-          {/* 🌟 GAMIFICATION / DAILY STREAK BADGE */}
-          <StudentStreakBadge currentUser={currentUser} />
+        {/* 🌟 RIGHT ACTION CONTROLS & AUTH */}
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          {/* GAMIFICATION / DAILY STREAK BADGE */}
+          {platformConfig.showGamification && (
+            <StudentStreakBadge currentUser={currentUser} />
+          )}
 
-          {/* SUPPORT / COMPLAINTS BUTTON */}
+          {/* SUPPORT / COMPLAINTS BUTTON (Desktop) */}
           <button
             onClick={() => setIsSupportModalOpen(true)}
-            className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl transition flex items-center gap-1.5 cursor-pointer"
+            className="hidden sm:flex px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl transition items-center gap-1.5 cursor-pointer"
             title="مركز الشكاوى والدعم الفني"
           >
             <MessageSquare className="w-3.5 h-3.5 text-rose-600" />
-            <span className="hidden sm:inline">الشكاوى والدعم 🎫</span>
+            <span>الشكاوى والدعم 🎫</span>
           </button>
 
-          {isLandingPage && (
-            <Link
-              to="/marketplace"
-              className="hidden sm:flex px-4 py-2 bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 text-white font-black text-xs rounded-xl shadow-sm transition items-center gap-1.5"
-            >
-              <ShoppingCart className="w-3.5 h-3.5" />
-              <span>تصفح المقررات</span>
-            </Link>
-          )}
-
+          {/* ADMIN / STUDENT MODE TOGGLE */}
           {userRole === 'admin' && (
             <button
               onClick={() => setIsAdminMode(!isAdminMode)}
-              className={`px-3 py-1.5 rounded-full text-xs font-black border transition flex items-center gap-1.5 ${
+              className={`hidden md:flex px-3 py-1.5 rounded-full text-xs font-black border transition items-center gap-1.5 cursor-pointer ${
                 isAdminMode
-                  ? 'bg-amber-100 border-amber-300 text-amber-800'
+                  ? 'bg-amber-100 border-amber-300 text-amber-900'
                   : 'bg-white border-gray-300 text-gray-600 hover:text-gray-900'
               }`}
             >
@@ -726,16 +756,17 @@ function AppContent() {
             </button>
           )}
 
+          {/* USER PROFILE OR LOGIN BUTTON (Desktop) */}
           {currentUser ? (
-            <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-1.5">
               <div className="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-xl flex items-center gap-2 text-xs font-bold text-slate-700">
-                <User className="w-3.5 h-3.5 text-teal-600" />
-                <span>{currentUser.email?.split('@')[0]}</span>
+                <User className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                <span className="truncate max-w-[110px]">{currentUser.email?.split('@')[0]}</span>
               </div>
               <button
                 onClick={handleLogout}
                 title="تسجيل الخروج"
-                className="p-2 text-slate-400 hover:text-rose-500 hover:bg-slate-100 rounded-xl transition"
+                className="p-2 text-slate-400 hover:text-rose-500 hover:bg-slate-100 rounded-xl transition cursor-pointer"
               >
                 <LogOut className="w-4 h-4" />
               </button>
@@ -743,14 +774,237 @@ function AppContent() {
           ) : (
             <button
               onClick={() => setIsAuthModalOpen(true)}
-              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition active:scale-95 flex items-center gap-1.5"
+              className="hidden sm:flex px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition active:scale-95 items-center gap-1.5 cursor-pointer"
             >
               <User className="w-3.5 h-3.5 text-teal-400" />
               <span>تسجيل الدخول</span>
             </button>
           )}
+
+          {/* 🍔 MOBILE HAMBURGER MENU BUTTON (Visible on < lg) */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label="القائمة الرئيسية"
+            className="lg:hidden p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200/80 transition flex items-center justify-center cursor-pointer active:scale-95"
+          >
+            {isMobileMenuOpen ? (
+              <X className="w-5 h-5 text-rose-600" />
+            ) : (
+              <Menu className="w-5 h-5 text-slate-800" />
+            )}
+          </button>
         </div>
       </header>
+
+      {/* 📱 SLIDE-OVER MOBILE NAVIGATION DRAWER */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden print:hidden" dir="rtl">
+          {/* Backdrop Overlay */}
+          <div 
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity animate-fade-in"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+
+          {/* Drawer Panel */}
+          <div className="fixed inset-y-0 right-0 max-w-xs w-full bg-white shadow-2xl border-l border-slate-200 flex flex-col justify-between overflow-y-auto animate-slide-left z-10">
+            
+            <div className="p-5 space-y-5">
+              {/* Drawer Top Header */}
+              <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div className="flex items-center gap-2.5">
+                  {platformConfig.brandLogoUrl ? (
+                    <div className="w-9 h-9 rounded-xl bg-white border border-slate-200 shadow-xs flex items-center justify-center p-1 overflow-hidden">
+                      <img src={platformConfig.brandLogoUrl} alt={platformConfig.brandName} className="w-full h-full object-contain" />
+                    </div>
+                  ) : (
+                    <div className="w-9 h-9 bg-gradient-to-tr from-sky-600 to-indigo-600 rounded-xl flex items-center justify-center text-white font-black text-base shadow-sm">
+                      {platformConfig.brandName.charAt(0) || 'أ'}
+                    </div>
+                  )}
+                  <div>
+                    <h3 className="font-black text-sm text-slate-900 leading-tight">{platformConfig.brandName}</h3>
+                    <p className="text-[10px] text-slate-500 font-bold">{platformConfig.brandSubtitle}</p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* USER STATUS CARD (Mobile) */}
+              {currentUser ? (
+                <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-teal-100 border border-teal-200 text-teal-800 flex items-center justify-center font-black text-xs">
+                        {currentUser.email?.charAt(0).toUpperCase() || 'U'}
+                      </div>
+                      <div>
+                        <div className="font-black text-xs text-slate-900 truncate max-w-[140px]">
+                          {currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0]}
+                        </div>
+                        <div className="text-[10px] text-slate-500 truncate max-w-[140px]">
+                          {currentUser.email}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200">
+                      {userRole === 'admin' ? '🛡️ مسؤول' : userRole === 'instructor' ? '👨‍🏫 معلم' : '🎓 طالب'}
+                    </span>
+                  </div>
+
+                  {userRole === 'admin' && (
+                    <button
+                      onClick={() => setIsAdminMode(!isAdminMode)}
+                      className={`w-full py-1.5 rounded-xl text-xs font-black border transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                        isAdminMode
+                          ? 'bg-amber-100 border-amber-300 text-amber-900'
+                          : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <Shield className="w-3.5 h-3.5" />
+                      <span>{isAdminMode ? 'وضع المسؤول نشط 🛡️' : 'التحويل لوضع المسؤول'}</span>
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    setIsAuthModalOpen(true);
+                  }}
+                  className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs rounded-2xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <User className="w-4 h-4 text-teal-400" />
+                  <span>تسجيل الدخول / إنشاء حساب</span>
+                </button>
+              )}
+
+              {/* NAVIGATION LINKS LIST */}
+              <div className="space-y-1 text-right">
+                <p className="text-[10px] font-bold text-slate-400 px-3 pb-1">أقسام المنصة الرئيسية</p>
+                
+                <Link
+                  to="/"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`flex items-center justify-between p-3 rounded-2xl text-xs font-bold transition ${
+                    isLandingPage ? 'bg-slate-900 text-white font-black' : 'text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Compass className="w-4 h-4 text-sky-500" />
+                    <span>الصفحة الرئيسية</span>
+                  </div>
+                  <ChevronLeft className="w-4 h-4 opacity-60" />
+                </Link>
+
+                <Link
+                  to="/marketplace"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`flex items-center justify-between p-3 rounded-2xl text-xs font-bold transition ${
+                    location.pathname === '/marketplace' ? 'bg-sky-600 text-white font-black' : 'text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <ShoppingCart className="w-4 h-4 text-emerald-500" />
+                    <span>متجر ومكتبة المقررات</span>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                    location.pathname === '/marketplace' ? 'bg-sky-700 text-white' : 'bg-slate-100 text-slate-700'
+                  }`}>
+                    {ebooks.length}
+                  </span>
+                </Link>
+
+                {platformConfig.showReels && (
+                  <Link
+                    to="/reels"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={`flex items-center justify-between p-3 rounded-2xl text-xs font-bold transition ${
+                      location.pathname === '/reels' ? 'bg-purple-600 text-white font-black' : 'text-slate-700 hover:bg-purple-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Sparkles className="w-4 h-4 text-purple-500" />
+                      <span>🎬 ريلز المعرفة والفيديوهات</span>
+                    </div>
+                    <ChevronLeft className="w-4 h-4 opacity-60" />
+                  </Link>
+                )}
+
+                {currentUser && (userRole === 'admin' || userRole === 'instructor' || isAdminMode) && (
+                  <Link
+                    to={userRole === 'admin' || isAdminMode ? '/admin' : '/instructor'}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={`flex items-center justify-between p-3 rounded-2xl text-xs font-bold transition ${
+                      location.pathname === '/admin' || location.pathname === '/instructor' 
+                        ? 'bg-indigo-600 text-white font-black' 
+                        : 'text-indigo-700 bg-indigo-50/70 hover:bg-indigo-100/70 border border-indigo-100'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Sliders className="w-4 h-4 text-amber-500" />
+                      <span>{userRole === 'admin' || isAdminMode ? 'لوحة التحكم المركزية 🛡️' : 'لوحة المعلم والسنتر ⚡'}</span>
+                    </div>
+                    <ChevronLeft className="w-4 h-4 opacity-60" />
+                  </Link>
+                )}
+
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    setIsSupportModalOpen(true);
+                  }}
+                  className="w-full flex items-center justify-between p-3 rounded-2xl text-xs font-bold text-rose-700 bg-rose-50/70 hover:bg-rose-100/70 border border-rose-100 transition cursor-pointer"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <MessageSquare className="w-4 h-4 text-rose-600" />
+                    <span>الشكاوى والدعم الفني 🎫</span>
+                  </div>
+                  <ChevronLeft className="w-4 h-4 opacity-60" />
+                </button>
+              </div>
+            </div>
+
+            {/* Drawer Bottom Footer */}
+            <div className="p-5 border-t border-slate-100 bg-slate-50 space-y-3">
+              {platformConfig.whatsappNumber && (
+                <a
+                  href={`https://wa.me/${platformConfig.whatsappNumber.replace(/[^0-9]/g, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-xl shadow-xs transition"
+                >
+                  <Phone className="w-3.5 h-3.5" />
+                  <span>تواصل واتساب مع الدعم</span>
+                </a>
+              )}
+
+              {currentUser && (
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    handleLogout();
+                  }}
+                  className="w-full py-2.5 px-4 rounded-xl border border-rose-200 text-rose-700 hover:bg-rose-50 text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>تسجيل الخروج من الحساب</span>
+                </button>
+              )}
+
+              <p className="text-[10px] text-center text-slate-400 font-medium">
+                {platformConfig.copyrightText}
+              </p>
+            </div>
+
+          </div>
+        </div>
+      )}
 
       <main className="flex-1 w-full">
         <Routes>

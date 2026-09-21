@@ -83,13 +83,18 @@ export const PlatformSettingsTab: React.FC = () => {
           const data = await res.json();
           if (res.ok && data.logoUrl) {
             setConfig(prev => ({ ...prev, brandLogoUrl: data.logoUrl }));
+            await savePlatformConfigAsync({ brandLogoUrl: data.logoUrl });
+            setSavedSuccess(true);
+            setTimeout(() => setSavedSuccess(false), 3000);
           } else {
             // Fallback to Base64 preview
             setConfig(prev => ({ ...prev, brandLogoUrl: base64 }));
+            await savePlatformConfigAsync({ brandLogoUrl: base64 });
           }
         } catch (uploadErr) {
           // Fallback to direct Base64 Data URL
           setConfig(prev => ({ ...prev, brandLogoUrl: base64 }));
+          await savePlatformConfigAsync({ brandLogoUrl: base64 });
         } finally {
           setIsUploadingLogo(false);
         }

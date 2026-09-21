@@ -5219,54 +5219,10 @@ app.get("/api/user/ai-quota/:userId", async (req, res) => {
   }
 });
 
-// 1. GET Platform Settings
+// 1. GET Platform Settings (Dynamic White-Label & Commissions)
 app.get("/api/platform/settings", async (req, res) => {
   try {
     const local = loadPlatformSettingsFile();
-
-    // Also attempt fetching from Supabase for sync
-    let dbSettings: any = null;
-    try {
-      const { data } = await supabase
-        .from("platform_settings")
-        .select("*")
-        .eq("id", "default_settings")
-        .maybeSingle();
-      if (data) dbSettings = data;
-    } catch (e) {}
-
-    if (dbSettings) {
-      const features = dbSettings.features || {};
-      const merged = {
-        ...local,
-        brandName: dbSettings.brand_name || local.brandName,
-        brandSubtitle: dbSettings.brand_subtitle || local.brandSubtitle,
-        brandLogoUrl: dbSettings.brand_logo_url || local.brandLogoUrl,
-        companyName: dbSettings.company_name || local.companyName,
-        founderName: dbSettings.founder_name || local.founderName,
-        supportPhone: dbSettings.support_phone || local.supportPhone,
-        supportEmail: dbSettings.support_email || local.supportEmail,
-        whatsappNumber: dbSettings.whatsapp_number || local.whatsappNumber,
-        copyrightText: dbSettings.copyright_text || local.copyrightText,
-        platformCommissionRate: dbSettings.commission_rate ?? features.platformCommissionRate ?? local.platformCommissionRate,
-        minWithdrawalAmount: dbSettings.min_withdrawal ?? features.minWithdrawalAmount ?? local.minWithdrawalAmount,
-        freeAiBooksPerTeacher: features.freeAiBooksPerTeacher ?? local.freeAiBooksPerTeacher,
-        bookGenerationCost: dbSettings.generation_cost ?? features.bookGenerationCost ?? local.bookGenerationCost,
-        allowWalletPayment: features.allowWalletPayment ?? local.allowWalletPayment,
-        minPayPalAmountUsd: features.minPayPalAmountUsd ?? local.minPayPalAmountUsd,
-        paypalClientId: features.paypalClientId || local.paypalClientId,
-        paypalClientSecret: features.paypalClientSecret || local.paypalClientSecret,
-        showReels: features.showReels ?? local.showReels,
-        showGamification: features.showGamification ?? local.showGamification,
-        showInstructorHubShortcut: features.showInstructorHubShortcut ?? local.showInstructorHubShortcut,
-        showAiRobot: features.showAiRobot ?? local.showAiRobot,
-        showWalletAndCredits: features.showWalletAndCredits ?? local.showWalletAndCredits,
-        enableVoucherCodes: features.enableVoucherCodes ?? local.enableVoucherCodes
-      };
-      savePlatformSettingsFile(merged);
-      return res.json({ success: true, settings: merged });
-    }
-
     return res.json({ success: true, settings: local });
   } catch (err: any) {
     console.error("Fetch settings error:", err);
@@ -5290,10 +5246,10 @@ app.post("/api/platform/settings", async (req, res) => {
       updatedAt: new Date().toISOString()
     };
 
-    // 1. Immediately persist to server disk file (guaranteed fallback)
+    // 1. Immediately persist to server disk file (guaranteed primary store)
     savePlatformSettingsFile(updatedSettings);
 
-    // 2. Persist to Supabase platform_settings table
+    // 2. Persist to Supabase platform_settings table non-destructively
     try {
       const updatePayload = {
         id: "default_settings",
@@ -5350,7 +5306,7 @@ app.post("/api/platform/settings", async (req, res) => {
   }
 });
 
-// 3. POST Upload Logo (رفع صورة الشعار مباشرة من الجهاز)
+// 3. POST Upload Logo (رفع وحفظ صورة الشعار على القرص والسيرفر)
 app.post("/api/platform/upload-logo", async (req, res) => {
   try {
     const { imageBase64, fileName = "platform_logo.png" } = req.body;
@@ -5373,10 +5329,26 @@ app.post("/api/platform/upload-logo", async (req, res) => {
       buffer = Buffer.from(imageBase64, "base64");
     }
 
-    // Try uploading to Supabase Storage 'book-covers' / 'public'
-    let publicUrl: string | null = null;
-    const cleanFileName = `platform_logo_${Date.now()}.${extension}`;
+    // Save locally to public/branding folder for 100% reliable local serving
+    const BRANDING_DIR = path.join(process.cwd(), "public", "branding");
+    try {
+      if (!fs.existsSync(BRANDING_DIR)) {
+        fs.mkdirSync(BRANDING_DIR, { recursive: true });
+      }
+    } catch (e) {}
 
+    const cleanFileName = `platform_logo_${Date.now()}.${extension}`;
+    const localFilePath = path.join(BRANDING_DIR, cleanFileName);
+    let publicUrl: string | null = null;
+
+    try {
+      fs.writeFileSync(localFilePath, buffer);
+      publicUrl = `/branding/${cleanFileName}`;
+    } catch (fsErr) {
+      console.warn("Local disk write warning for branding:", fsErr);
+    }
+
+    // Also attempt uploading to Supabase Storage 'book-covers' / 'branding'
     try {
       const { data: uploadData, error: uploadErr } = await supabase.storage
         .from("book-covers")
@@ -5389,23 +5361,30 @@ app.post("/api/platform/upload-logo", async (req, res) => {
         const { data: urlData } = supabase.storage
           .from("book-covers")
           .getPublicUrl(`branding/${cleanFileName}`);
-        publicUrl = urlData?.publicUrl || null;
+        if (urlData?.publicUrl) {
+          publicUrl = urlData.publicUrl;
+        }
       }
     } catch (e) {}
 
-    // Fallback: If Supabase Storage is not configured, use Base64 Data URL directly
+    // Fallback: If not written to file and no Supabase, use direct Data URL
     if (!publicUrl) {
       publicUrl = imageBase64.startsWith("data:") ? imageBase64 : `data:image/${extension};base64,${imageBase64}`;
     }
 
-    // Auto-update logo in platform_settings
+    // Auto-update logo in platform_settings.json
     const current = loadPlatformSettingsFile();
-    current.brandLogoUrl = publicUrl;
-    savePlatformSettingsFile(current);
+    const updated = {
+      ...current,
+      brandLogoUrl: publicUrl,
+      updatedAt: new Date().toISOString()
+    };
+    savePlatformSettingsFile(updated);
 
     res.json({
       success: true,
       logoUrl: publicUrl,
+      settings: updated,
       message: "تم رفع وتطبيق شعار المنصة بنجاح! 🖼️"
     });
   } catch (err: any) {

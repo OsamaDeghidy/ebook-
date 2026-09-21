@@ -922,10 +922,10 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
       </div>
 
       {/* 🌟 TABS SELECTOR */}
-      <div className="flex items-center gap-1.5 p-1.5 bg-slate-100 rounded-2xl text-xs font-bold w-full overflow-x-auto print:hidden">
+      <div className="flex items-center gap-1.5 p-2 bg-slate-100/90 rounded-2xl text-xs font-bold w-full overflow-x-auto no-scrollbar scroll-smooth whitespace-nowrap shadow-2xs print:hidden">
           <button
             onClick={() => setActiveTab('analytics')}
-            className={`px-3.5 py-2.5 rounded-xl transition flex items-center gap-1.5 shrink-0 ${
+            className={`px-3.5 py-2.5 rounded-xl transition flex items-center gap-1.5 shrink-0 cursor-pointer ${
               activeTab === 'analytics'
                 ? 'bg-white text-teal-900 shadow-sm font-black'
                 : 'text-slate-600 hover:text-slate-900'
@@ -937,7 +937,7 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
 
           <button
             onClick={() => setActiveTab('approvals')}
-            className={`px-3.5 py-2.5 rounded-xl transition flex items-center gap-1.5 shrink-0 ${
+            className={`px-3.5 py-2.5 rounded-xl transition flex items-center gap-1.5 shrink-0 cursor-pointer ${
               activeTab === 'approvals'
                 ? 'bg-white text-amber-900 shadow-sm font-black'
                 : 'text-slate-600 hover:text-slate-900'
@@ -954,7 +954,7 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
 
           <button
             onClick={() => setActiveTab('exams')}
-            className={`px-3.5 py-2.5 rounded-xl transition flex items-center gap-1.5 shrink-0 ${
+            className={`px-3.5 py-2.5 rounded-xl transition flex items-center gap-1.5 shrink-0 cursor-pointer ${
               activeTab === 'exams'
                 ? 'bg-white text-indigo-900 shadow-sm font-black'
                 : 'text-slate-600 hover:text-slate-900'
@@ -966,7 +966,7 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
 
           <button
             onClick={() => setActiveTab('vouchers')}
-            className={`px-3.5 py-2.5 rounded-xl transition flex items-center gap-1.5 shrink-0 ${
+            className={`px-3.5 py-2.5 rounded-xl transition flex items-center gap-1.5 shrink-0 cursor-pointer ${
               activeTab === 'vouchers'
                 ? 'bg-white text-rose-900 shadow-sm font-black'
                 : 'text-slate-600 hover:text-slate-900'
@@ -978,7 +978,7 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
 
           <button
             onClick={() => setActiveTab('wallet')}
-            className={`px-3.5 py-2.5 rounded-xl transition flex items-center gap-1.5 shrink-0 ${
+            className={`px-3.5 py-2.5 rounded-xl transition flex items-center gap-1.5 shrink-0 cursor-pointer ${
               activeTab === 'wallet'
                 ? 'bg-white text-emerald-900 shadow-sm font-black'
                 : 'text-slate-600 hover:text-slate-900'
@@ -990,7 +990,7 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
 
           <button
             onClick={() => setActiveTab('reels')}
-            className={`px-3.5 py-2.5 rounded-xl transition flex items-center gap-1.5 shrink-0 ${
+            className={`px-3.5 py-2.5 rounded-xl transition flex items-center gap-1.5 shrink-0 cursor-pointer ${
               activeTab === 'reels'
                 ? 'bg-white text-purple-900 shadow-sm font-black'
                 : 'text-slate-600 hover:text-slate-900'
@@ -1056,50 +1056,50 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
       {/* ========================================================================= */}
       {activeTab === 'analytics' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-5 bg-white border border-gray-100 rounded-3xl shadow-xs space-y-2">
-              <div className="flex items-center justify-between text-slate-500 text-xs font-bold">
-                <span>الطلاب المسجلين بالداتابيز</span>
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="p-3.5 sm:p-5 bg-white border border-gray-100 rounded-3xl shadow-xs space-y-1 sm:space-y-2">
+              <div className="flex items-center justify-between text-slate-500 text-[11px] sm:text-xs font-bold">
+                <span>الطلاب المسجلين</span>
                 <Users className="w-4 h-4 text-teal-600" />
               </div>
-              <div className="text-3xl font-black text-slate-900">{dbProfiles.length}</div>
-              <div className="text-[11px] text-slate-500 font-bold">
-                حسابات حقيقية مسجلة في Supabase
+              <div className="text-2xl sm:text-3xl font-black text-slate-900">{dbProfiles.length}</div>
+              <div className="text-[10px] sm:text-[11px] text-slate-500 font-bold truncate">
+                حسابات حقيقية في الداتابيز
               </div>
             </div>
 
-            <div className="p-5 bg-white border border-gray-100 rounded-3xl shadow-xs space-y-2">
-              <div className="flex items-center justify-between text-slate-500 text-xs font-bold">
-                <span>إجمالي الإيرادات المحققة</span>
+            <div className="p-3.5 sm:p-5 bg-white border border-gray-100 rounded-3xl shadow-xs space-y-1 sm:space-y-2">
+              <div className="flex items-center justify-between text-slate-500 text-[11px] sm:text-xs font-bold">
+                <span>إجمالي الإيرادات</span>
                 <DollarSign className="w-4 h-4 text-emerald-600" />
               </div>
-              <div className="text-3xl font-black text-emerald-600">{totalRevenue} <span className="text-xs font-bold text-slate-400">ج.م</span></div>
-              <div className="text-[11px] text-slate-500 font-bold">
-                من واقع {dbPurchases.length} عمليات شراء مؤكدة
+              <div className="text-2xl sm:text-3xl font-black text-emerald-600">{totalRevenue} <span className="text-[10px] sm:text-xs font-bold text-slate-400">ج.م</span></div>
+              <div className="text-[10px] sm:text-[11px] text-slate-500 font-bold truncate">
+                {dbPurchases.length} عمليات شراء مؤكدة
               </div>
             </div>
 
-            <div className="p-5 bg-white border border-gray-100 rounded-3xl shadow-xs space-y-2">
-              <div className="flex items-center justify-between text-slate-500 text-xs font-bold">
-                <span>محاولات حل الامتحانات</span>
+            <div className="p-3.5 sm:p-5 bg-white border border-gray-100 rounded-3xl shadow-xs space-y-1 sm:space-y-2">
+              <div className="flex items-center justify-between text-slate-500 text-[11px] sm:text-xs font-bold">
+                <span>محاولات الامتحانات</span>
                 <Award className="w-4 h-4 text-amber-600" />
               </div>
-              <div className="text-3xl font-black text-slate-900">{dbQuizAttempts.length}</div>
-              <div className="text-[11px] text-slate-500 font-bold">
-                {dbQuizAttempts.length === 0 ? 'لا توجد محاولات كويز بعد' : 'محاولة تقييم مسجلة'}
+              <div className="text-2xl sm:text-3xl font-black text-slate-900">{dbQuizAttempts.length}</div>
+              <div className="text-[10px] sm:text-[11px] text-slate-500 font-bold truncate">
+                {dbQuizAttempts.length === 0 ? 'لا توجد محاولات بعد' : 'محاولة تقييم مسجلة'}
               </div>
             </div>
 
-            <div className="p-5 bg-white border border-gray-100 rounded-3xl shadow-xs space-y-2">
-              <div className="flex items-center justify-between text-slate-500 text-xs font-bold">
-                <span>كروت الشحن الصادرة</span>
+            <div className="p-3.5 sm:p-5 bg-white border border-gray-100 rounded-3xl shadow-xs space-y-1 sm:space-y-2">
+              <div className="flex items-center justify-between text-slate-500 text-[11px] sm:text-xs font-bold">
+                <span>كروت الشحن</span>
                 <Ticket className="w-4 h-4 text-rose-600" />
               </div>
-              <div className="text-3xl font-black text-rose-600">
-                {usedVouchersCount} <span className="text-sm font-normal text-slate-400">/ {generatedVouchers.length}</span>
+              <div className="text-2xl sm:text-3xl font-black text-rose-600">
+                {usedVouchersCount} <span className="text-xs sm:text-sm font-normal text-slate-400">/ {generatedVouchers.length}</span>
               </div>
-              <div className="text-[11px] text-slate-500 font-bold">
-                {activeVouchersCount} كارت نشط في انتظار الشحن
+              <div className="text-[10px] sm:text-[11px] text-slate-500 font-bold truncate">
+                {activeVouchersCount} كارت في انتظار الشحن
               </div>
             </div>
           </div>
