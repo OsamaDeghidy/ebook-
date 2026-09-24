@@ -48,7 +48,7 @@ export type BookTrack =
   | 'languages' 
   | 'general_literature';
 
-export type QuestionType = 'mcq' | 'true_false' | 'fill_blank' | 'case_study';
+export type QuestionType = 'mcq' | 'true_false' | 'essay' | 'worked_example' | 'fill_blank' | 'case_study';
 
 export interface QuizQuestion {
   id: string;
@@ -59,6 +59,7 @@ export interface QuizQuestion {
   questionType?: QuestionType;
   difficulty?: 'easy' | 'medium' | 'hard';
   topicTag?: string;
+  cognitiveLevel?: string; // Bloom's Taxonomy: تذكر | فهم واستيعاب | تطبيق وحل مسائل | تحليل واستنتاج
 }
 
 export interface Flashcard {

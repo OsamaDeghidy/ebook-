@@ -9,6 +9,7 @@ import {
 import { MarketplaceBook } from '../types';
 import { MAIN_CATEGORIES } from '../constants/taxonomy';
 import { getPlatformConfig, PlatformConfig } from '../services/platformConfigService';
+import { SeoStructuredData } from './seo/SeoStructuredData';
 
 interface LandingPageViewProps {
   books: MarketplaceBook[];
@@ -53,6 +54,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
 
   return (
     <div className="w-full text-right font-sans selection:bg-teal-500 selection:text-white overflow-x-hidden" dir="rtl">
+      <SeoStructuredData type="landing" platformName={platformConfig.brandName || 'Osera AI'} />
 
       {/* 🌟 TOP ANNOUNCEMENT TICKER */}
       <div className="bg-gradient-to-r from-teal-700 via-indigo-900 to-teal-800 text-white text-[11px] sm:text-xs font-bold py-2.5 px-3 sm:px-4 text-center border-b border-teal-500/30 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">

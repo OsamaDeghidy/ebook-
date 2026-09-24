@@ -33,6 +33,23 @@ interface QuizSectionProps {
   isGeneratingAiQuestions?: boolean;
 }
 
+function getSanitizedOptions(q: QuizQuestion | undefined): string[] {
+  if (!q) return [];
+  if (q.questionType === 'true_false') {
+    return ['صواب (صح)', 'خطأ'];
+  }
+  if (!q.options || q.options.length === 0) return [];
+  // Check if options are generic placeholders like "Option A", "Option 1"
+  const isGeneric = q.options.every(opt => /^option\s*[a-d1-4]/i.test(opt.trim()));
+  if (isGeneric) {
+    if (/صح|خطأ|صواب/i.test(q.question)) {
+      return ['صواب (صح)', 'خطأ'];
+    }
+    return ['الخيار الأول (أ)', 'الخيار الثاني (ب)', 'الخيار الثالث (ج)', 'الخيار الرابع (د)'];
+  }
+  return q.options.map(opt => opt.replace(/^([A-D]|[\u0623\u0628\u062C\u062F])[\.\:\-\)]\s*/, '').trim());
+}
+
 export default function QuizSection({
   bookId,
   chapterTitle,
@@ -63,6 +80,8 @@ export default function QuizSection({
   const [editOptions, setEditOptions] = useState<string[]>(['', '', '', '']);
   const [editCorrectIndex, setEditCorrectIndex] = useState(0);
   const [editExplanation, setEditExplanation] = useState('');
+  const [editCognitiveLevel, setEditCognitiveLevel] = useState<string>('فهم واستيعاب');
+  const [editDifficulty, setEditDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
 
   const currentQuestion = questions[currentQuestionIndex];
   const isFinished = examMode === 'practice' ? currentQuestionIndex >= questions.length : isExamSubmitted;
@@ -173,6 +192,8 @@ export default function QuizSection({
     setEditOptions(['', '', '', '']);
     setEditCorrectIndex(0);
     setEditExplanation('');
+    setEditCognitiveLevel('فهم واستيعاب');
+    setEditDifficulty('medium');
     setShowEditor(true);
   };
 
@@ -184,6 +205,8 @@ export default function QuizSection({
     setEditOptions([...(q.options || ['', '', '', ''])]);
     setEditCorrectIndex(q.correctOptionIndex);
     setEditExplanation(q.explanation || '');
+    setEditCognitiveLevel(q.cognitiveLevel || 'فهم واستيعاب');
+    setEditDifficulty(q.difficulty || 'medium');
     setShowEditor(true);
   };
 
@@ -196,7 +219,9 @@ export default function QuizSection({
       questionType: editType,
       options: editType === 'true_false' ? ['صح (صواب)', 'خطأ (غير صحيح)'] : editOptions.filter(o => o.trim().length > 0),
       correctOptionIndex: editCorrectIndex,
-      explanation: editExplanation
+      explanation: editExplanation,
+      cognitiveLevel: editCognitiveLevel,
+      difficulty: editDifficulty
     };
 
     let updated: QuizQuestion[] = [];
@@ -358,6 +383,36 @@ export default function QuizSection({
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">المستوى المعرفي (هرم بلوم)</label>
+                  <select
+                    value={editCognitiveLevel}
+                    onChange={(e) => setEditCognitiveLevel(e.target.value)}
+                    className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold"
+                  >
+                    <option value="تذكر وحفظ المفاهيم">🧠 تذكر وحفظ المفاهيم</option>
+                    <option value="فهم واستيعاب">💡 فهم واستيعاب</option>
+                    <option value="تطبيق ومسائل حسابية">📐 تطبيق ومسائل حسابية</option>
+                    <option value="تحليل واستنتاج">🔍 تحليل واستنتاج</option>
+                    <option value="تقييم وتركيب">🎯 تقييم وتركيب</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">مستوى الصعوبة</label>
+                  <select
+                    value={editDifficulty}
+                    onChange={(e) => setEditDifficulty(e.target.value as any)}
+                    className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold"
+                  >
+                    <option value="easy">🟢 سهل ومباشر</option>
+                    <option value="medium">🟡 متوسط وتطبيقي</option>
+                    <option value="hard">🔴 متقدم / للطلبة المتميزين</option>
+                  </select>
+                </div>
+              </div>
+
               {editType !== 'true_false' && (
                 <div className="space-y-2">
                   <label className="block text-xs font-bold text-gray-700">خيارات الإجابة</label>
@@ -456,52 +511,120 @@ export default function QuizSection({
           </div>
 
           <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm">
+            
+            {/* Question Type Badge */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-indigo-100 text-indigo-800">
+                {currentQuestion.questionType === 'essay' ? '📝 سؤال مقالي / تفكير نقدي' :
+                 currentQuestion.questionType === 'worked_example' ? '📐 مسألة وتطبيق محلول' :
+                 currentQuestion.questionType === 'true_false' ? '⚖️ صواب أم خطأ' : '🔘 اختيار من متعدد'}
+              </span>
+
+              {currentQuestion.cognitiveLevel && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black bg-indigo-50 text-indigo-700 border border-indigo-100">
+                  <Brain className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>{currentQuestion.cognitiveLevel}</span>
+                </span>
+              )}
+              {currentQuestion.difficulty && (
+                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black border ${
+                  currentQuestion.difficulty === 'hard'
+                    ? 'bg-rose-50 text-rose-700 border-rose-200'
+                    : currentQuestion.difficulty === 'medium'
+                    ? 'bg-amber-50 text-amber-700 border-amber-200'
+                    : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                }`}>
+                  <Flame className="w-3 h-3" />
+                  <span>{currentQuestion.difficulty === 'hard' ? 'متقدم' : currentQuestion.difficulty === 'medium' ? 'متوسط' : 'أساسي'}</span>
+                </span>
+              )}
+              {currentQuestion.topicTag && (
+                <span className="text-[10px] text-gray-500 font-bold bg-gray-100 px-2 py-0.5 rounded-md">
+                  {currentQuestion.topicTag}
+                </span>
+              )}
+            </div>
+
             <h4 className="text-lg font-black text-gray-900 leading-snug font-sans">
               {currentQuestion.question}
             </h4>
 
-            {/* Options */}
-            <div className="space-y-3">
-              {(currentQuestion.options || []).map((option, idx) => {
-                const isSelected = selectedOption === idx;
-                const isCorrect = idx === currentQuestion.correctOptionIndex;
-                let optStyle = "bg-gray-50 border-gray-200 text-gray-800 hover:bg-gray-100";
+            {/* RENDER BASED ON QUESTION TYPE: MCQ & TRUE/FALSE VS ESSAY/WORKED_EXAMPLE */}
+            {(currentQuestion.questionType === 'essay' || currentQuestion.questionType === 'worked_example' || !currentQuestion.options || currentQuestion.options.length <= 1) ? (
+              <div className="space-y-4">
+                <textarea
+                  rows={3}
+                  placeholder="اكتب إجابتك أو طريقة حلك هنا للممارسة..."
+                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-xs outline-none focus:border-indigo-500 leading-relaxed font-sans shadow-inner"
+                />
 
-                if (isAnswered) {
-                  if (isCorrect) {
-                    optStyle = "bg-emerald-50 border-emerald-500 text-emerald-950 font-black";
-                  } else if (isSelected) {
-                    optStyle = "bg-rose-50 border-rose-500 text-rose-950 font-black";
-                  } else {
-                    optStyle = "bg-gray-50 border-gray-200 text-gray-400 opacity-60";
-                  }
-                }
-
-                return (
+                {!isAnswered ? (
                   <button
-                    key={idx}
-                    disabled={isAnswered}
-                    onClick={() => handleOptionSelect(idx)}
-                    className={`w-full p-4 rounded-2xl border-2 text-right text-xs sm:text-sm transition flex items-center justify-between font-sans ${optStyle}`}
+                    onClick={() => {
+                      setIsAnswered(true);
+                      setScore(s => s + 1);
+                    }}
+                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-xs font-black transition shadow-md flex items-center justify-center gap-2"
                   >
-                    <span>{option}</span>
-                    {isAnswered && isCorrect && <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />}
-                    {isAnswered && isSelected && !isCorrect && <XCircle className="w-5 h-5 text-rose-600 shrink-0" />}
+                    <Sparkles className="w-4 h-4 text-amber-300" />
+                    <span>استعراض الإجابة النموذجية والحل الكامل</span>
                   </button>
-                );
-              })}
-            </div>
+                ) : (
+                  <div className="p-5 bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-2xl text-xs leading-relaxed space-y-2 animate-fade-in">
+                    <div className="flex items-center gap-2 text-indigo-900 font-black text-sm">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                      <span>الإجابة النموذجية وسلم التقييم:</span>
+                    </div>
+                    <p className="text-indigo-950 font-medium whitespace-pre-line text-xs sm:text-sm leading-relaxed">
+                      {currentQuestion.explanation}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* MCQ & True/False Options */
+              <div className="space-y-3">
+                {getSanitizedOptions(currentQuestion).map((option, idx) => {
+                  const isSelected = selectedOption === idx;
+                  const isCorrect = idx === currentQuestion.correctOptionIndex;
+                  let optStyle = "bg-gray-50 border-gray-200 text-gray-800 hover:bg-gray-100";
 
-            {/* Educational Explanation */}
-            {isAnswered && (
-              <div className="p-4 bg-indigo-50/80 border border-indigo-200 rounded-2xl text-xs leading-relaxed space-y-1.5 animate-fade-in">
-                <div className="flex items-center gap-1.5 text-indigo-900 font-black">
-                  <Sparkles className="w-4 h-4 text-indigo-600" />
-                  <span>الإيضاح التعليمي والتغذية الراجعة:</span>
-                </div>
-                <p className="text-indigo-950 font-medium">
-                  {currentQuestion.explanation || 'الإجابة المحددة هي الخيار الأكثر دقة وفقاً لما ورد في محتوى هذا الفصل.'}
-                </p>
+                  if (isAnswered) {
+                    if (isCorrect) {
+                      optStyle = "bg-emerald-50 border-emerald-500 text-emerald-950 font-black";
+                    } else if (isSelected) {
+                      optStyle = "bg-rose-50 border-rose-500 text-rose-950 font-black";
+                    } else {
+                      optStyle = "bg-gray-50 border-gray-200 text-gray-400 opacity-60";
+                    }
+                  }
+
+                  return (
+                    <button
+                      key={idx}
+                      disabled={isAnswered}
+                      onClick={() => handleOptionSelect(idx)}
+                      className={`w-full p-4 rounded-2xl border-2 text-right text-xs sm:text-sm transition flex items-center justify-between font-sans ${optStyle}`}
+                    >
+                      <span>{option}</span>
+                      {isAnswered && isCorrect && <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />}
+                      {isAnswered && isSelected && !isCorrect && <XCircle className="w-5 h-5 text-rose-600 shrink-0" />}
+                    </button>
+                  );
+                })}
+
+                {/* Educational Explanation for MCQ */}
+                {isAnswered && (
+                  <div className="p-4 bg-indigo-50/80 border border-indigo-200 rounded-2xl text-xs leading-relaxed space-y-1.5 animate-fade-in">
+                    <div className="flex items-center gap-1.5 text-indigo-900 font-black">
+                      <Sparkles className="w-4 h-4 text-indigo-600" />
+                      <span>الإيضاح التعليمي والتغذية الراجعة:</span>
+                    </div>
+                    <p className="text-indigo-950 font-medium leading-relaxed">
+                      {currentQuestion.explanation || 'الإجابة المحددة هي الخيار الأكثر دقة وفقاً لما ورد في محتوى هذا الفصل.'}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -581,7 +704,7 @@ export default function QuizSection({
             </h4>
 
             <div className="space-y-3">
-              {(currentQuestion.options || []).map((option, idx) => {
+              {getSanitizedOptions(currentQuestion).map((option, idx) => {
                 const isSelected = answersMap[currentQuestionIndex] === idx;
                 return (
                   <button

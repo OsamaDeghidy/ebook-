@@ -14417,5 +14417,4356 @@
     "completions_count": 45,
     "is_public_teaser": true,
     "created_at": "2026-09-15T05:23:50.916Z"
+  },
+  {
+    "id": "reel-1790187007109",
+    "book_id": "b7fb5508-b372-43d1-8bde-a896171ab075",
+    "book_title": "الدراسات الاجتماعية: مصر في قلب العالم - المنهج التفاعلي المطور",
+    "author_name": "خبير المادة",
+    "category": "تعليمي",
+    "subcategory": "",
+    "thumbnail_url": "",
+    "chapter_id": "ch-b7fb5508-b372-43d1-8bde-a896171ab075-1",
+    "chapter_title": "الدرس الأول: الأماكن والاتجاهات من حولنا",
+    "style_type": "chalkboard",
+    "style": "chalkboard",
+    "voice": "ar-SA-HamedNeural",
+    "duration_seconds": 45,
+    "audio_url": "https://ydlzvuutjgelpxueufgn.supabase.co/storage/v1/object/public/book-audios/reel_b7fb5508-b372-43d1-8bde-a896171ab075_ch-b7fb5508-b372-43d1-8bde-a896171ab075-1_1790187001451.mp3",
+    "narration_script": "تحديد المواقع مهارة أساسية في حياتنا اليومية. نستخدم المخطط كرسم مصغر للمكان لرؤيته بوضوح من الأعلى، ولتحديد الاتجاهات نعتمد على وردة البوصلة. تنقسم الاتجاهات إلى أصلية تشمل الشمال والجنوب والشرق والغرب، وفرعية تقع بين الاتجاهات الأصلية المتجاورة. تذكر دائماً أن شروق الشمس يحدد اتجاه الشرق مباشرة، وعليك الحذر من الخلط بين مواقع الاتجاهات الفرعية في الامتحانات.",
+    "scenes": [
+      {
+        "id": "scene-1",
+        "act": "hook",
+        "title": "أهمية تحديد المواقع",
+        "badgeText": "🔥 فكرة محورية",
+        "visualType": "quote",
+        "visualData": {
+          "highlightQuote": "تحديد المواقع مهارة أساسية في حياتنا اليومية باستخدام المخطط ووردة البوصلة."
+        },
+        "startSec": 0,
+        "endSec": 10
+      },
+      {
+        "id": "scene-2",
+        "act": "concept",
+        "title": "الاتجاهات الأصلية والفرعية",
+        "badgeText": "🧠 الشرح العميق",
+        "visualType": "bullet_points",
+        "visualData": {
+          "bullets": [
+            "المخطط هو رسم مصغر للمكان لرؤيته بوضوح من الأعلى.",
+            "الاتجاهات الأصلية: الشمال، الجنوب، الشرق، الغرب.",
+            "الاتجاهات الفرعية: شمال شرق، شمال غرب، جنوب شرق، جنوب غرب."
+          ],
+          "formulaLatex": "",
+          "codeSnippet": "",
+          "imagePrompt": "Educational chalkboard illustration of a compass rose showing cardinal and intermediate directions clearly."
+        },
+        "startSec": 10,
+        "endSec": 30
+      },
+      {
+        "id": "scene-3",
+        "act": "takeaway",
+        "title": "الخلاصة الذهبية",
+        "badgeText": "🏆 التطبيق والنتيجة",
+        "visualType": "bullet_points",
+        "visualData": {
+          "highlightQuote": "الجنوب الغربي يقع بدقة بين الجنوب والغرب، والشروق يحدد اتجاه الشرق دائماً."
+        },
+        "startSec": 30,
+        "endSec": 45
+      }
+    ],
+    "word_timings": [
+      {
+        "word": "تحديد",
+        "startMs": 0,
+        "endMs": 714
+      },
+      {
+        "word": "المواقع",
+        "startMs": 714,
+        "endMs": 1429
+      },
+      {
+        "word": "مهارة",
+        "startMs": 1429,
+        "endMs": 2143
+      },
+      {
+        "word": "أساسية",
+        "startMs": 2143,
+        "endMs": 2857
+      },
+      {
+        "word": "في",
+        "startMs": 2857,
+        "endMs": 3571
+      },
+      {
+        "word": "حياتنا",
+        "startMs": 3571,
+        "endMs": 4286
+      },
+      {
+        "word": "اليومية.",
+        "startMs": 4286,
+        "endMs": 5000
+      },
+      {
+        "word": "نستخدم",
+        "startMs": 5000,
+        "endMs": 5714
+      },
+      {
+        "word": "المخطط",
+        "startMs": 5714,
+        "endMs": 6429
+      },
+      {
+        "word": "كرسم",
+        "startMs": 6429,
+        "endMs": 7143
+      },
+      {
+        "word": "مصغر",
+        "startMs": 7143,
+        "endMs": 7857
+      },
+      {
+        "word": "للمكان",
+        "startMs": 7857,
+        "endMs": 8571
+      },
+      {
+        "word": "لرؤيته",
+        "startMs": 8571,
+        "endMs": 9286
+      },
+      {
+        "word": "بوضوح",
+        "startMs": 9286,
+        "endMs": 10000
+      },
+      {
+        "word": "من",
+        "startMs": 10000,
+        "endMs": 10714
+      },
+      {
+        "word": "الأعلى،",
+        "startMs": 10714,
+        "endMs": 11429
+      },
+      {
+        "word": "ولتحديد",
+        "startMs": 11429,
+        "endMs": 12143
+      },
+      {
+        "word": "الاتجاهات",
+        "startMs": 12143,
+        "endMs": 12857
+      },
+      {
+        "word": "نعتمد",
+        "startMs": 12857,
+        "endMs": 13571
+      },
+      {
+        "word": "على",
+        "startMs": 13571,
+        "endMs": 14286
+      },
+      {
+        "word": "وردة",
+        "startMs": 14286,
+        "endMs": 15000
+      },
+      {
+        "word": "البوصلة.",
+        "startMs": 15000,
+        "endMs": 15714
+      },
+      {
+        "word": "تنقسم",
+        "startMs": 15714,
+        "endMs": 16429
+      },
+      {
+        "word": "الاتجاهات",
+        "startMs": 16429,
+        "endMs": 17143
+      },
+      {
+        "word": "إلى",
+        "startMs": 17143,
+        "endMs": 17857
+      },
+      {
+        "word": "أصلية",
+        "startMs": 17857,
+        "endMs": 18571
+      },
+      {
+        "word": "تشمل",
+        "startMs": 18571,
+        "endMs": 19286
+      },
+      {
+        "word": "الشمال",
+        "startMs": 19286,
+        "endMs": 20000
+      },
+      {
+        "word": "والجنوب",
+        "startMs": 20000,
+        "endMs": 20714
+      },
+      {
+        "word": "والشرق",
+        "startMs": 20714,
+        "endMs": 21429
+      },
+      {
+        "word": "والغرب،",
+        "startMs": 21429,
+        "endMs": 22143
+      },
+      {
+        "word": "وفرعية",
+        "startMs": 22143,
+        "endMs": 22857
+      },
+      {
+        "word": "تقع",
+        "startMs": 22857,
+        "endMs": 23571
+      },
+      {
+        "word": "بين",
+        "startMs": 23571,
+        "endMs": 24286
+      },
+      {
+        "word": "الاتجاهات",
+        "startMs": 24286,
+        "endMs": 25000
+      },
+      {
+        "word": "الأصلية",
+        "startMs": 25000,
+        "endMs": 25714
+      },
+      {
+        "word": "المتجاورة.",
+        "startMs": 25714,
+        "endMs": 26429
+      },
+      {
+        "word": "تذكر",
+        "startMs": 26429,
+        "endMs": 27143
+      },
+      {
+        "word": "دائماً",
+        "startMs": 27143,
+        "endMs": 27857
+      },
+      {
+        "word": "أن",
+        "startMs": 27857,
+        "endMs": 28571
+      },
+      {
+        "word": "شروق",
+        "startMs": 28571,
+        "endMs": 29286
+      },
+      {
+        "word": "الشمس",
+        "startMs": 29286,
+        "endMs": 30000
+      },
+      {
+        "word": "يحدد",
+        "startMs": 30000,
+        "endMs": 30714
+      },
+      {
+        "word": "اتجاه",
+        "startMs": 30714,
+        "endMs": 31429
+      },
+      {
+        "word": "الشرق",
+        "startMs": 31429,
+        "endMs": 32143
+      },
+      {
+        "word": "مباشرة،",
+        "startMs": 32143,
+        "endMs": 32857
+      },
+      {
+        "word": "وعليك",
+        "startMs": 32857,
+        "endMs": 33571
+      },
+      {
+        "word": "الحذر",
+        "startMs": 33571,
+        "endMs": 34286
+      },
+      {
+        "word": "من",
+        "startMs": 34286,
+        "endMs": 35000
+      },
+      {
+        "word": "الخلط",
+        "startMs": 35000,
+        "endMs": 35714
+      },
+      {
+        "word": "بين",
+        "startMs": 35714,
+        "endMs": 36429
+      },
+      {
+        "word": "مواقع",
+        "startMs": 36429,
+        "endMs": 37143
+      },
+      {
+        "word": "الاتجاهات",
+        "startMs": 37143,
+        "endMs": 37857
+      },
+      {
+        "word": "الفرعية",
+        "startMs": 37857,
+        "endMs": 38571
+      },
+      {
+        "word": "في",
+        "startMs": 38571,
+        "endMs": 39286
+      },
+      {
+        "word": "الامتحانات.",
+        "startMs": 39286,
+        "endMs": 40000
+      }
+    ],
+    "visual_cards": [
+      {
+        "title": "قاعدة الاتجاهات",
+        "content": "الاتجاهات الأصلية هي الشمال والجنوب والشرق والغرب، بينما الفرعية تقع بينها.",
+        "type": "formula",
+        "startSec": 5,
+        "endSec": 20
+      },
+      {
+        "title": "الخلاصة والتطبيق",
+        "content": "استخدام وردة البوصلة والمخطط لتحديد مواقع الأماكن بدقة تامة.",
+        "type": "diagram",
+        "startSec": 21,
+        "endSec": 35
+      }
+    ],
+    "interactive_quiz": {
+      "question": "إذا كنت تقف مواجهاً للشمس عند الشروق، فأي اتجاه يكون خلفك تماماً؟",
+      "options": [
+        "الشمال",
+        "الشرق",
+        "الغرب"
+      ],
+      "correctIndex": 2,
+      "triggerSec": 32,
+      "explanation": "الشروق يحدد اتجاه الشرق دائماً، وعليه فإن الاتجاه المقابل خلفك تماماً هو الغرب."
+    },
+    "likes_count": 32,
+    "views_count": 194,
+    "completions_count": 45,
+    "is_public_teaser": true,
+    "created_at": "2026-09-23T18:10:07.109Z"
+  },
+  {
+    "id": "reel-1790202572580",
+    "book_id": "9e330812-f444-4851-8cc6-d7428eabf4dd",
+    "book_title": "مغامرات الأرقام مع البطل الصغير - الرياضيات للصف الرابع الابتدائي",
+    "author_name": "خبير المادة",
+    "category": "تعليمي",
+    "subcategory": "",
+    "thumbnail_url": "",
+    "chapter_id": "ch-9e330812-f444-4851-8cc6-d7428eabf4dd-1",
+    "chapter_title": "الفصل الأول: مغامرة الأعداد الكبيرة وقيمتها المكانية",
+    "style_type": "chalkboard",
+    "style": "chalkboard",
+    "voice": "ar-SA-HamedNeural",
+    "duration_seconds": 45,
+    "audio_url": "https://ydlzvuutjgelpxueufgn.supabase.co/storage/v1/object/public/book-audios/reel_9e330812-f444-4851-8cc6-d7428eabf4dd_ch-9e330812-f444-4851-8cc6-d7428eabf4dd-1_1790202563120.mp3",
+    "narration_script": "مرحباً بكم يا أبطال الرياضيات! هل تساءلتم يوماً كيف نفتح أسرار الأعداد الكبيرة؟ القيمة المكانية هي المنازل التي تسكنها الأرقام، كـالآحاد والعشرات ومئات الألوف. أما قيمة الرقم فهي قيمته الفعلية بحسب منزله؛ فالرقم خمسة في خانة مئات الألوف يمثل خُمسمائة ألف! لقراءة أي عدد كبير، نقسّمه إلى مجموعات من ثلاثة أرقام ونبدأ من اليسار. انطلقوا واكتشفوا سر الأرقام بثقة!",
+    "scenes": [
+      {
+        "id": "scene-1",
+        "act": "hook",
+        "title": "سر الصندوق المغلق",
+        "badgeText": "🔥 فكرة محورية",
+        "visualType": "quote",
+        "visualData": {
+          "highlightQuote": "لكي نفتح صندوق الأسرار، يجب أن نعرف قيمة كل رقم حسب مكانه في العدد!"
+        },
+        "startSec": 0,
+        "endSec": 10
+      },
+      {
+        "id": "scene-2",
+        "act": "concept",
+        "title": "جوهر الدرس",
+        "badgeText": "🧠 الشرح العميق",
+        "visualType": "bullet_points",
+        "visualData": {
+          "bullets": [
+            "القيمة المكانية هي اسم منزلة الرقم (آحاد، عشرات، مئات، مئات الألوف).",
+            "قيمة الرقم هي قيمته المادية بناءً على منزله (5 في مئات الألوف = 500,000).",
+            "لقراءة الأعداد الكبيرة نقسمها لمجموعات من 3 أرقام ونبدأ القراءة من اليسار."
+          ],
+          "formulaLatex": "5 \\times 100,000 = 500,000",
+          "codeSnippet": "",
+          "imagePrompt": "A colorful educational chalkboard showing a place value chart divided into periods of three digits, with bright glowing numbers and clear Arabic labels for units, tens, hundreds, thousands, and hundred thousands."
+        },
+        "startSec": 10,
+        "endSec": 30
+      },
+      {
+        "id": "scene-3",
+        "act": "takeaway",
+        "title": "الخلاصة الذهبية",
+        "badgeText": "🏆 التطبيق والنتيجة",
+        "visualType": "bullet_points",
+        "visualData": {
+          "highlightQuote": "تذكر دائماً: الرقم في خانة العشرات يتبعه صفر واحد، وفي المئات صفران، وفي مئات الألوف خمسة أصفار!"
+        },
+        "startSec": 30,
+        "endSec": 45
+      }
+    ],
+    "word_timings": [
+      {
+        "word": "مرحباً",
+        "startMs": 0,
+        "endMs": 678
+      },
+      {
+        "word": "بكم",
+        "startMs": 678,
+        "endMs": 1356
+      },
+      {
+        "word": "يا",
+        "startMs": 1356,
+        "endMs": 2034
+      },
+      {
+        "word": "أبطال",
+        "startMs": 2034,
+        "endMs": 2712
+      },
+      {
+        "word": "الرياضيات!",
+        "startMs": 2712,
+        "endMs": 3390
+      },
+      {
+        "word": "هل",
+        "startMs": 3390,
+        "endMs": 4068
+      },
+      {
+        "word": "تساءلتم",
+        "startMs": 4068,
+        "endMs": 4746
+      },
+      {
+        "word": "يوماً",
+        "startMs": 4746,
+        "endMs": 5424
+      },
+      {
+        "word": "كيف",
+        "startMs": 5424,
+        "endMs": 6102
+      },
+      {
+        "word": "نفتح",
+        "startMs": 6102,
+        "endMs": 6780
+      },
+      {
+        "word": "أسرار",
+        "startMs": 6780,
+        "endMs": 7458
+      },
+      {
+        "word": "الأعداد",
+        "startMs": 7458,
+        "endMs": 8136
+      },
+      {
+        "word": "الكبيرة؟",
+        "startMs": 8136,
+        "endMs": 8814
+      },
+      {
+        "word": "القيمة",
+        "startMs": 8814,
+        "endMs": 9492
+      },
+      {
+        "word": "المكانية",
+        "startMs": 9492,
+        "endMs": 10169
+      },
+      {
+        "word": "هي",
+        "startMs": 10169,
+        "endMs": 10847
+      },
+      {
+        "word": "المنازل",
+        "startMs": 10847,
+        "endMs": 11525
+      },
+      {
+        "word": "التي",
+        "startMs": 11525,
+        "endMs": 12203
+      },
+      {
+        "word": "تسكنها",
+        "startMs": 12203,
+        "endMs": 12881
+      },
+      {
+        "word": "الأرقام،",
+        "startMs": 12881,
+        "endMs": 13559
+      },
+      {
+        "word": "كـالآحاد",
+        "startMs": 13559,
+        "endMs": 14237
+      },
+      {
+        "word": "والعشرات",
+        "startMs": 14237,
+        "endMs": 14915
+      },
+      {
+        "word": "ومئات",
+        "startMs": 14915,
+        "endMs": 15593
+      },
+      {
+        "word": "الألوف.",
+        "startMs": 15593,
+        "endMs": 16271
+      },
+      {
+        "word": "أما",
+        "startMs": 16271,
+        "endMs": 16949
+      },
+      {
+        "word": "قيمة",
+        "startMs": 16949,
+        "endMs": 17627
+      },
+      {
+        "word": "الرقم",
+        "startMs": 17627,
+        "endMs": 18305
+      },
+      {
+        "word": "فهي",
+        "startMs": 18305,
+        "endMs": 18983
+      },
+      {
+        "word": "قيمته",
+        "startMs": 18983,
+        "endMs": 19661
+      },
+      {
+        "word": "الفعلية",
+        "startMs": 19661,
+        "endMs": 20339
+      },
+      {
+        "word": "بحسب",
+        "startMs": 20339,
+        "endMs": 21017
+      },
+      {
+        "word": "منزله؛",
+        "startMs": 21017,
+        "endMs": 21695
+      },
+      {
+        "word": "فالرقم",
+        "startMs": 21695,
+        "endMs": 22373
+      },
+      {
+        "word": "خمسة",
+        "startMs": 22373,
+        "endMs": 23051
+      },
+      {
+        "word": "في",
+        "startMs": 23051,
+        "endMs": 23729
+      },
+      {
+        "word": "خانة",
+        "startMs": 23729,
+        "endMs": 24407
+      },
+      {
+        "word": "مئات",
+        "startMs": 24407,
+        "endMs": 25085
+      },
+      {
+        "word": "الألوف",
+        "startMs": 25085,
+        "endMs": 25763
+      },
+      {
+        "word": "يمثل",
+        "startMs": 25763,
+        "endMs": 26441
+      },
+      {
+        "word": "خُمسمائة",
+        "startMs": 26441,
+        "endMs": 27119
+      },
+      {
+        "word": "ألف!",
+        "startMs": 27119,
+        "endMs": 27797
+      },
+      {
+        "word": "لقراءة",
+        "startMs": 27797,
+        "endMs": 28475
+      },
+      {
+        "word": "أي",
+        "startMs": 28475,
+        "endMs": 29153
+      },
+      {
+        "word": "عدد",
+        "startMs": 29153,
+        "endMs": 29831
+      },
+      {
+        "word": "كبير،",
+        "startMs": 29831,
+        "endMs": 30508
+      },
+      {
+        "word": "نقسّمه",
+        "startMs": 30508,
+        "endMs": 31186
+      },
+      {
+        "word": "إلى",
+        "startMs": 31186,
+        "endMs": 31864
+      },
+      {
+        "word": "مجموعات",
+        "startMs": 31864,
+        "endMs": 32542
+      },
+      {
+        "word": "من",
+        "startMs": 32542,
+        "endMs": 33220
+      },
+      {
+        "word": "ثلاثة",
+        "startMs": 33220,
+        "endMs": 33898
+      },
+      {
+        "word": "أرقام",
+        "startMs": 33898,
+        "endMs": 34576
+      },
+      {
+        "word": "ونبدأ",
+        "startMs": 34576,
+        "endMs": 35254
+      },
+      {
+        "word": "من",
+        "startMs": 35254,
+        "endMs": 35932
+      },
+      {
+        "word": "اليسار.",
+        "startMs": 35932,
+        "endMs": 36610
+      },
+      {
+        "word": "انطلقوا",
+        "startMs": 36610,
+        "endMs": 37288
+      },
+      {
+        "word": "واكتشفوا",
+        "startMs": 37288,
+        "endMs": 37966
+      },
+      {
+        "word": "سر",
+        "startMs": 37966,
+        "endMs": 38644
+      },
+      {
+        "word": "الأرقام",
+        "startMs": 38644,
+        "endMs": 39322
+      },
+      {
+        "word": "بثقة!",
+        "startMs": 39322,
+        "endMs": 40000
+      }
+    ],
+    "visual_cards": [
+      {
+        "title": "الفكرة الرئيسية",
+        "content": "القيمة المكانية = اسم المنزلة | قيمة الرقم = الرقم × قيمة المنزلة (مثال: 5 في مئات الألوف = 500,000)",
+        "type": "formula",
+        "startSec": 5,
+        "endSec": 20
+      },
+      {
+        "title": "الخلاصة والتطبيق",
+        "content": "لقراءة أي عدد كبير: قسّمه إلى مجموعات من 3 أرقام من اليمين، ثم اقرأ من اليسار إلى اليمين.",
+        "type": "diagram",
+        "startSec": 21,
+        "endSec": 35
+      }
+    ],
+    "interactive_quiz": {
+      "question": "ما هي قيمة الرقم 5 إذا كان يقع في خانة مئات الألوف؟",
+      "options": [
+        "50,000",
+        "500,000",
+        "5,000,000"
+      ],
+      "correctIndex": 1,
+      "triggerSec": 32,
+      "explanation": "الرقم في خانة مئات الألوف يُضرب في 100,000، فتكون قيمة الرقم 5 هي 500,000 (خمسة أصفار على يمينه)."
+    },
+    "likes_count": 32,
+    "views_count": 184,
+    "completions_count": 45,
+    "is_public_teaser": true,
+    "created_at": "2026-09-23T22:29:32.580Z"
+  },
+  {
+    "id": "reel-1790203004440",
+    "book_id": "9e330812-f444-4851-8cc6-d7428eabf4dd",
+    "book_title": "مغامرات الأرقام مع البطل الصغير - الرياضيات للصف الرابع الابتدائي",
+    "author_name": "خبير المادة",
+    "category": "تعليمي",
+    "subcategory": "",
+    "thumbnail_url": "",
+    "chapter_id": "ch-9e330812-f444-4851-8cc6-d7428eabf4dd-2",
+    "chapter_title": "الفصل الثاني: جمع وطرح الأعداد الكبيرة",
+    "style_type": "chalkboard",
+    "style": "chalkboard",
+    "voice": "ar-SA-HamedNeural",
+    "duration_seconds": 45,
+    "audio_url": "https://ydlzvuutjgelpxueufgn.supabase.co/storage/v1/object/public/book-audios/reel_9e330812-f444-4851-8cc6-d7428eabf4dd_ch-9e330812-f444-4851-8cc6-d7428eabf4dd-2_1790202995147.mp3",
+    "narration_script": "مرحباً بكم يا أبطال الأرقام! هل تساءلتم يوماً كيف نحسب مجموع مشترياتنا أو الباقي من نقودنا بدقة؟ في رحلتنا اليوم، سنتعلم سحر الجمع والطرح العمودي للأعداد الكبيرة. سنبدأ دائماً من جهة اليمين، من خانة الآحاد. سنتقن مهارة إعادة التسمية عندما تزيد الأرقام، والاستلاف الذكي عندما نحتاج إليه. هيا بنا لنحل المسائل الحياتية بكل ثقة وسهولة ونصبح أبطالاً حقيقيين في الرياضيات!",
+    "scenes": [
+      {
+        "id": "scene-1",
+        "act": "hook",
+        "title": "مغامرة الشراء الذكي",
+        "badgeText": "🔥 فكرة محورية",
+        "visualType": "quote",
+        "visualData": {
+          "highlightQuote": "استخدما مهارات الجمع والطرح العمودي لتصلا إلى الإجابة الصحيحة بسرعة ودقة!"
+        },
+        "startSec": 0,
+        "endSec": 10
+      },
+      {
+        "id": "scene-2",
+        "act": "concept",
+        "title": "أسرار الجمع والطرح العمودي",
+        "badgeText": "🧠 الشرح العميق",
+        "visualType": "bullet_points",
+        "visualData": {
+          "bullets": [
+            "ترتيب المنازل عمودياً: الآحاد تحت الآحاد والعشرات تحت العشرات.",
+            "إعادة التسمية (الحمل) عندما يكون مجموع الآحاد 10 أو أكثر.",
+            "الطرح مع الاستلاف من المنزلة المجاورة إذا كان الرقم العلوي أصغر."
+          ],
+          "formulaLatex": "",
+          "codeSnippet": "",
+          "imagePrompt": "A colorful educational chalkboard illustration showing vertical addition and subtraction of large numbers with arrows indicating carrying and borrowing, designed for 4th-grade kids, bright and engaging style."
+        },
+        "startSec": 10,
+        "endSec": 30
+      },
+      {
+        "id": "scene-3",
+        "act": "takeaway",
+        "title": "الخلاصة الذهبية",
+        "badgeText": "🏆 التطبيق والنتيجة",
+        "visualType": "bullet_points",
+        "visualData": {
+          "highlightQuote": "ابدأ دائماً عملية الجمع أو الطرح من جهة اليمين (الآحاد) ولا تبدأ أبداً من اليسار!"
+        },
+        "startSec": 30,
+        "endSec": 45
+      }
+    ],
+    "word_timings": [
+      {
+        "word": "مرحباً",
+        "startMs": 0,
+        "endMs": 667
+      },
+      {
+        "word": "بكم",
+        "startMs": 667,
+        "endMs": 1333
+      },
+      {
+        "word": "يا",
+        "startMs": 1333,
+        "endMs": 2000
+      },
+      {
+        "word": "أبطال",
+        "startMs": 2000,
+        "endMs": 2667
+      },
+      {
+        "word": "الأرقام!",
+        "startMs": 2667,
+        "endMs": 3333
+      },
+      {
+        "word": "هل",
+        "startMs": 3333,
+        "endMs": 4000
+      },
+      {
+        "word": "تساءلتم",
+        "startMs": 4000,
+        "endMs": 4667
+      },
+      {
+        "word": "يوماً",
+        "startMs": 4667,
+        "endMs": 5333
+      },
+      {
+        "word": "كيف",
+        "startMs": 5333,
+        "endMs": 6000
+      },
+      {
+        "word": "نحسب",
+        "startMs": 6000,
+        "endMs": 6667
+      },
+      {
+        "word": "مجموع",
+        "startMs": 6667,
+        "endMs": 7333
+      },
+      {
+        "word": "مشترياتنا",
+        "startMs": 7333,
+        "endMs": 8000
+      },
+      {
+        "word": "أو",
+        "startMs": 8000,
+        "endMs": 8667
+      },
+      {
+        "word": "الباقي",
+        "startMs": 8667,
+        "endMs": 9333
+      },
+      {
+        "word": "من",
+        "startMs": 9333,
+        "endMs": 10000
+      },
+      {
+        "word": "نقودنا",
+        "startMs": 10000,
+        "endMs": 10667
+      },
+      {
+        "word": "بدقة؟",
+        "startMs": 10667,
+        "endMs": 11333
+      },
+      {
+        "word": "في",
+        "startMs": 11333,
+        "endMs": 12000
+      },
+      {
+        "word": "رحلتنا",
+        "startMs": 12000,
+        "endMs": 12667
+      },
+      {
+        "word": "اليوم،",
+        "startMs": 12667,
+        "endMs": 13333
+      },
+      {
+        "word": "سنتعلم",
+        "startMs": 13333,
+        "endMs": 14000
+      },
+      {
+        "word": "سحر",
+        "startMs": 14000,
+        "endMs": 14667
+      },
+      {
+        "word": "الجمع",
+        "startMs": 14667,
+        "endMs": 15333
+      },
+      {
+        "word": "والطرح",
+        "startMs": 15333,
+        "endMs": 16000
+      },
+      {
+        "word": "العمودي",
+        "startMs": 16000,
+        "endMs": 16667
+      },
+      {
+        "word": "للأعداد",
+        "startMs": 16667,
+        "endMs": 17333
+      },
+      {
+        "word": "الكبيرة.",
+        "startMs": 17333,
+        "endMs": 18000
+      },
+      {
+        "word": "سنبدأ",
+        "startMs": 18000,
+        "endMs": 18667
+      },
+      {
+        "word": "دائماً",
+        "startMs": 18667,
+        "endMs": 19333
+      },
+      {
+        "word": "من",
+        "startMs": 19333,
+        "endMs": 20000
+      },
+      {
+        "word": "جهة",
+        "startMs": 20000,
+        "endMs": 20667
+      },
+      {
+        "word": "اليمين،",
+        "startMs": 20667,
+        "endMs": 21333
+      },
+      {
+        "word": "من",
+        "startMs": 21333,
+        "endMs": 22000
+      },
+      {
+        "word": "خانة",
+        "startMs": 22000,
+        "endMs": 22667
+      },
+      {
+        "word": "الآحاد.",
+        "startMs": 22667,
+        "endMs": 23333
+      },
+      {
+        "word": "سنتقن",
+        "startMs": 23333,
+        "endMs": 24000
+      },
+      {
+        "word": "مهارة",
+        "startMs": 24000,
+        "endMs": 24667
+      },
+      {
+        "word": "إعادة",
+        "startMs": 24667,
+        "endMs": 25333
+      },
+      {
+        "word": "التسمية",
+        "startMs": 25333,
+        "endMs": 26000
+      },
+      {
+        "word": "عندما",
+        "startMs": 26000,
+        "endMs": 26667
+      },
+      {
+        "word": "تزيد",
+        "startMs": 26667,
+        "endMs": 27333
+      },
+      {
+        "word": "الأرقام،",
+        "startMs": 27333,
+        "endMs": 28000
+      },
+      {
+        "word": "والاستلاف",
+        "startMs": 28000,
+        "endMs": 28667
+      },
+      {
+        "word": "الذكي",
+        "startMs": 28667,
+        "endMs": 29333
+      },
+      {
+        "word": "عندما",
+        "startMs": 29333,
+        "endMs": 30000
+      },
+      {
+        "word": "نحتاج",
+        "startMs": 30000,
+        "endMs": 30667
+      },
+      {
+        "word": "إليه.",
+        "startMs": 30667,
+        "endMs": 31333
+      },
+      {
+        "word": "هيا",
+        "startMs": 31333,
+        "endMs": 32000
+      },
+      {
+        "word": "بنا",
+        "startMs": 32000,
+        "endMs": 32667
+      },
+      {
+        "word": "لنحل",
+        "startMs": 32667,
+        "endMs": 33333
+      },
+      {
+        "word": "المسائل",
+        "startMs": 33333,
+        "endMs": 34000
+      },
+      {
+        "word": "الحياتية",
+        "startMs": 34000,
+        "endMs": 34667
+      },
+      {
+        "word": "بكل",
+        "startMs": 34667,
+        "endMs": 35333
+      },
+      {
+        "word": "ثقة",
+        "startMs": 35333,
+        "endMs": 36000
+      },
+      {
+        "word": "وسهولة",
+        "startMs": 36000,
+        "endMs": 36667
+      },
+      {
+        "word": "ونصبح",
+        "startMs": 36667,
+        "endMs": 37333
+      },
+      {
+        "word": "أبطالاً",
+        "startMs": 37333,
+        "endMs": 38000
+      },
+      {
+        "word": "حقيقيين",
+        "startMs": 38000,
+        "endMs": 38667
+      },
+      {
+        "word": "في",
+        "startMs": 38667,
+        "endMs": 39333
+      },
+      {
+        "word": "الرياضيات!",
+        "startMs": 39333,
+        "endMs": 40000
+      }
+    ],
+    "visual_cards": [
+      {
+        "title": "قاعدة الجمع العمودي",
+        "content": "نضع الآحاد تحت الآحاد، والعشرات تحت العشرات، ونجمع من اليمين إلى اليسار مع إعادة التسمية عند الحاجة.",
+        "type": "formula",
+        "startSec": 5,
+        "endSec": 20
+      },
+      {
+        "title": "تحدي البطل الصغير",
+        "content": "لديك 5000 جنيه، واشتريت لعبة بـ 1250 جنيهاً. الباقي = 5000 - 1250 = 3750 جنيهاً باستخدام الاستلاف.",
+        "type": "diagram",
+        "startSec": 21,
+        "endSec": 35
+      }
+    ],
+    "interactive_quiz": {
+      "question": "إذا أردنا حساب ناتج طرح (5000 - 1250)، من أي منزلة نبدأ الحل دائماً؟",
+      "options": [
+        "منزلة الآحاد (اليمين)",
+        "منزلة الألوف (اليسار)",
+        "أي منزلة نختارها عشوائياً"
+      ],
+      "correctIndex": 0,
+      "triggerSec": 32,
+      "explanation": "المعلومة الذهبية للامتحان تؤكد على البدء دائماً من جهة اليمين (الآحاد) لضمان صحة الاستلاف والترتيب الصحيح للعملية الحسابية."
+    },
+    "likes_count": 32,
+    "views_count": 182,
+    "completions_count": 45,
+    "is_public_teaser": true,
+    "created_at": "2026-09-23T22:36:44.440Z"
+  },
+  {
+    "id": "reel-1790240301379",
+    "book_id": "31e2c9e8-38dd-461d-90b2-920321cec1c3",
+    "book_title": "مغامرات الأرقام والقياس: كتاب الرياضيات التفاعلي للصف الرابع الابتدائي",
+    "author_name": "خبير المادة",
+    "category": "تعليمي",
+    "subcategory": "",
+    "thumbnail_url": "",
+    "chapter_id": "ch-31e2c9e8-38dd-461d-90b2-920321cec1c3-1",
+    "chapter_title": "مملكة الأرقام الكبيرة والقيمة المكانية",
+    "style_type": "chalkboard",
+    "style": "chalkboard",
+    "voice": "ar-SA-HamedNeural",
+    "duration_seconds": 45,
+    "audio_url": "https://ydlzvuutjgelpxueufgn.supabase.co/storage/v1/object/public/book-audios/reel_31e2c9e8-38dd-461d-90b2-920321cec1c3_ch-31e2c9e8-38dd-461d-90b2-920321cec1c3-1_1790240292487.mp3",
+    "narration_script": "هل تساءلتم يوماً كيف تسكن الأرقام؟ في مملكة الأرقام الكبيرة، لكل رقم بيتٌ وقيمة! نميز أولاً بين الرقم كرمز مفرد، والعدد، والصيغة العددية. ثم ننتقل لجدول القيمة المكانية حيث تتوزع الأرقام في عائلات من الوحدات إلى المليارات. وتذكروا دائماً: هناك فرقٌ حاسم بين القيمة المكانية التي تعني اسم البيت الذي يسكنه الرقم، وقيمة الرقم التي تعبر عن مقداره بالأصفار. لننطلق معاً في هذه المغامرة الشيقة!",
+    "scenes": [
+      {
+        "id": "scene-1",
+        "act": "hook",
+        "title": "أين تسكن الأرقام الكبيرة؟",
+        "badgeText": "🔥 فكرة محورية",
+        "visualType": "quote",
+        "visualData": {
+          "highlightQuote": "الأرقام لها منازل وبيوت تسكن فيها مثلنا تماماً، من الوحدات إلى المليارات!"
+        },
+        "startSec": 0,
+        "endSec": 10
+      },
+      {
+        "id": "scene-2",
+        "act": "concept",
+        "title": "أسرار مملكة الأرقام",
+        "badgeText": "🧠 الشرح العميق",
+        "visualType": "bullet_points",
+        "visualData": {
+          "bullets": [
+            "الرقم رمز مفرد من 0 إلى 9، والعدد يتكون من رقم أو أكثر، والصيغة العددية هي طريقة التعبير عنهما بالرموز أو الكلمات.",
+            "جدول القيمة المكانية يقسم الأعداد الكبيرة لعائلات: الوحدات، الألوف، الملايين، والمليارات، وكل عائلة تضم ثلاثة بيوت.",
+            "نكتب الأعداد بثلاث صيغ رئيسية: القياسية (بالأرقام)، الممتدة (مجموع قيم الأرقام)، واللفظية (بالكلمات)."
+          ],
+          "formulaLatex": "",
+          "codeSnippet": "",
+          "imagePrompt": "A colorful educational chalkboard showing a place value chart with houses labeled in Arabic for Units, Thousands, Millions, and Billions, with a friendly robot character pointing at it, high resolution, vector style."
+        },
+        "startSec": 10,
+        "endSec": 30
+      },
+      {
+        "id": "scene-3",
+        "act": "takeaway",
+        "title": "السر الذهبي للامتحان",
+        "badgeText": "🏆 التطبيق والنتيجة",
+        "visualType": "bullet_points",
+        "visualData": {
+          "highlightQuote": "القيمة المكانية هي اسم البيت الذي يسكن فيه الرقم (مثل: عشرات الألوف)، أما قيمة الرقم فهي قيمته بالأصفار (مثل: 50,000)."
+        },
+        "startSec": 30,
+        "endSec": 45
+      }
+    ],
+    "word_timings": [
+      {
+        "word": "هل",
+        "startMs": 0,
+        "endMs": 615
+      },
+      {
+        "word": "تساءلتم",
+        "startMs": 615,
+        "endMs": 1231
+      },
+      {
+        "word": "يوماً",
+        "startMs": 1231,
+        "endMs": 1846
+      },
+      {
+        "word": "كيف",
+        "startMs": 1846,
+        "endMs": 2462
+      },
+      {
+        "word": "تسكن",
+        "startMs": 2462,
+        "endMs": 3077
+      },
+      {
+        "word": "الأرقام؟",
+        "startMs": 3077,
+        "endMs": 3692
+      },
+      {
+        "word": "في",
+        "startMs": 3692,
+        "endMs": 4308
+      },
+      {
+        "word": "مملكة",
+        "startMs": 4308,
+        "endMs": 4923
+      },
+      {
+        "word": "الأرقام",
+        "startMs": 4923,
+        "endMs": 5538
+      },
+      {
+        "word": "الكبيرة،",
+        "startMs": 5538,
+        "endMs": 6154
+      },
+      {
+        "word": "لكل",
+        "startMs": 6154,
+        "endMs": 6769
+      },
+      {
+        "word": "رقم",
+        "startMs": 6769,
+        "endMs": 7385
+      },
+      {
+        "word": "بيتٌ",
+        "startMs": 7385,
+        "endMs": 8000
+      },
+      {
+        "word": "وقيمة!",
+        "startMs": 8000,
+        "endMs": 8615
+      },
+      {
+        "word": "نميز",
+        "startMs": 8615,
+        "endMs": 9231
+      },
+      {
+        "word": "أولاً",
+        "startMs": 9231,
+        "endMs": 9846
+      },
+      {
+        "word": "بين",
+        "startMs": 9846,
+        "endMs": 10462
+      },
+      {
+        "word": "الرقم",
+        "startMs": 10462,
+        "endMs": 11077
+      },
+      {
+        "word": "كرمز",
+        "startMs": 11077,
+        "endMs": 11692
+      },
+      {
+        "word": "مفرد،",
+        "startMs": 11692,
+        "endMs": 12308
+      },
+      {
+        "word": "والعدد،",
+        "startMs": 12308,
+        "endMs": 12923
+      },
+      {
+        "word": "والصيغة",
+        "startMs": 12923,
+        "endMs": 13538
+      },
+      {
+        "word": "العددية.",
+        "startMs": 13538,
+        "endMs": 14154
+      },
+      {
+        "word": "ثم",
+        "startMs": 14154,
+        "endMs": 14769
+      },
+      {
+        "word": "ننتقل",
+        "startMs": 14769,
+        "endMs": 15385
+      },
+      {
+        "word": "لجدول",
+        "startMs": 15385,
+        "endMs": 16000
+      },
+      {
+        "word": "القيمة",
+        "startMs": 16000,
+        "endMs": 16615
+      },
+      {
+        "word": "المكانية",
+        "startMs": 16615,
+        "endMs": 17231
+      },
+      {
+        "word": "حيث",
+        "startMs": 17231,
+        "endMs": 17846
+      },
+      {
+        "word": "تتوزع",
+        "startMs": 17846,
+        "endMs": 18462
+      },
+      {
+        "word": "الأرقام",
+        "startMs": 18462,
+        "endMs": 19077
+      },
+      {
+        "word": "في",
+        "startMs": 19077,
+        "endMs": 19692
+      },
+      {
+        "word": "عائلات",
+        "startMs": 19692,
+        "endMs": 20308
+      },
+      {
+        "word": "من",
+        "startMs": 20308,
+        "endMs": 20923
+      },
+      {
+        "word": "الوحدات",
+        "startMs": 20923,
+        "endMs": 21538
+      },
+      {
+        "word": "إلى",
+        "startMs": 21538,
+        "endMs": 22154
+      },
+      {
+        "word": "المليارات.",
+        "startMs": 22154,
+        "endMs": 22769
+      },
+      {
+        "word": "وتذكروا",
+        "startMs": 22769,
+        "endMs": 23385
+      },
+      {
+        "word": "دائماً:",
+        "startMs": 23385,
+        "endMs": 24000
+      },
+      {
+        "word": "هناك",
+        "startMs": 24000,
+        "endMs": 24615
+      },
+      {
+        "word": "فرقٌ",
+        "startMs": 24615,
+        "endMs": 25231
+      },
+      {
+        "word": "حاسم",
+        "startMs": 25231,
+        "endMs": 25846
+      },
+      {
+        "word": "بين",
+        "startMs": 25846,
+        "endMs": 26462
+      },
+      {
+        "word": "القيمة",
+        "startMs": 26462,
+        "endMs": 27077
+      },
+      {
+        "word": "المكانية",
+        "startMs": 27077,
+        "endMs": 27692
+      },
+      {
+        "word": "التي",
+        "startMs": 27692,
+        "endMs": 28308
+      },
+      {
+        "word": "تعني",
+        "startMs": 28308,
+        "endMs": 28923
+      },
+      {
+        "word": "اسم",
+        "startMs": 28923,
+        "endMs": 29538
+      },
+      {
+        "word": "البيت",
+        "startMs": 29538,
+        "endMs": 30154
+      },
+      {
+        "word": "الذي",
+        "startMs": 30154,
+        "endMs": 30769
+      },
+      {
+        "word": "يسكنه",
+        "startMs": 30769,
+        "endMs": 31385
+      },
+      {
+        "word": "الرقم،",
+        "startMs": 31385,
+        "endMs": 32000
+      },
+      {
+        "word": "وقيمة",
+        "startMs": 32000,
+        "endMs": 32615
+      },
+      {
+        "word": "الرقم",
+        "startMs": 32615,
+        "endMs": 33231
+      },
+      {
+        "word": "التي",
+        "startMs": 33231,
+        "endMs": 33846
+      },
+      {
+        "word": "تعبر",
+        "startMs": 33846,
+        "endMs": 34462
+      },
+      {
+        "word": "عن",
+        "startMs": 34462,
+        "endMs": 35077
+      },
+      {
+        "word": "مقداره",
+        "startMs": 35077,
+        "endMs": 35692
+      },
+      {
+        "word": "بالأصفار.",
+        "startMs": 35692,
+        "endMs": 36308
+      },
+      {
+        "word": "لننطلق",
+        "startMs": 36308,
+        "endMs": 36923
+      },
+      {
+        "word": "معاً",
+        "startMs": 36923,
+        "endMs": 37538
+      },
+      {
+        "word": "في",
+        "startMs": 37538,
+        "endMs": 38154
+      },
+      {
+        "word": "هذه",
+        "startMs": 38154,
+        "endMs": 38769
+      },
+      {
+        "word": "المغامرة",
+        "startMs": 38769,
+        "endMs": 39385
+      },
+      {
+        "word": "الشيقة!",
+        "startMs": 39385,
+        "endMs": 40000
+      }
+    ],
+    "visual_cards": [
+      {
+        "title": "صيغ كتابة الأعداد",
+        "content": "القياسية: 5,234 | الممتدة: 4 + 30 + 200 + 5000 | اللفظية: خمسة آلاف ومائتان وأربعة وثلاثون",
+        "type": "formula",
+        "startSec": 5,
+        "endSec": 20
+      },
+      {
+        "title": "القيمة المكانية وقيمة الرقم",
+        "content": "القيمة المكانية = اسم البيت (عشرات الألوف) | قيمة الرقم = مقدار الرقم بالأصفار (50,000)",
+        "type": "diagram",
+        "startSec": 21,
+        "endSec": 35
+      }
+    ],
+    "interactive_quiz": {
+      "question": "ما هي القيمة المكانية للرقم 5 في العدد 54,321؟",
+      "options": [
+        "عشرات الألوف",
+        "50,000",
+        "مئات الألوف"
+      ],
+      "correctIndex": 0,
+      "triggerSec": 32,
+      "explanation": "القيمة المكانية تسأل عن اسم البيت الذي يسكن فيه الرقم، وهنا يسكن الرقم 5 في بيت عشرات الألوف. أما الخيار الثاني (50,000) فهو يعبر عن قيمة الرقم وليس قيمته المكانية."
+    },
+    "likes_count": 32,
+    "views_count": 182,
+    "completions_count": 45,
+    "is_public_teaser": true,
+    "created_at": "2026-09-24T08:58:21.379Z"
+  },
+  {
+    "id": "reel-1790255415082",
+    "book_id": "f8409fa5-a42a-4918-b071-c4a479dfde71",
+    "book_title": "رحلة المستكشف الصغير في عالم العلوم",
+    "author_name": "خبير المادة",
+    "category": "تعليمي",
+    "subcategory": "",
+    "thumbnail_url": "",
+    "chapter_id": "ch-f8409fa5-a42a-4918-b071-c4a479dfde71-1",
+    "chapter_title": "الفصل الأول: الطبيعة من حولنا",
+    "style_type": "chalkboard",
+    "style": "chalkboard",
+    "voice": "ar-SA-HamedNeural",
+    "duration_seconds": 45,
+    "audio_url": "https://ydlzvuutjgelpxueufgn.supabase.co/storage/v1/object/public/book-audios/reel_f8409fa5-a42a-4918-b071-c4a479dfde71_ch-f8409fa5-a42a-4918-b071-c4a479dfde71-1_1790255407503.mp3",
+    "narration_script": "هل تساءلتم يوماً كيف تنبض الطبيعة بالحياة من حولنا؟ الكائنات الحية كالإنسان والحيوان والنبات تمتاز بالتنفس والتغذية والنمو، بخلاف الأشياء الجامدة. وفي قلب الصحراء القاسية، تتجلى معجزة التكيف للبقاء؛ حيث يبرد ثعلب الفنك جسده بأذنيه الكبيرتين، ويقفز اليربوع بأرجله الطويلة هرباً من الرمال الساخنة، بينما تمد شجرة السنط جذورها العميقة بحثاً عن قطرة ماء. التكيف هو سر الحياة والسر المذهل للبقاء!",
+    "scenes": [
+      {
+        "id": "scene-1",
+        "act": "hook",
+        "title": "سر الحياة والتكيف",
+        "badgeText": "🔥 فكرة محورية",
+        "visualType": "quote",
+        "visualData": {
+          "highlightQuote": "هل كل ما حولنا كائنات حية؟ وكيف تتكيف هذه الكائنات مع بيئاتها المختلفة للبقاء؟"
+        },
+        "startSec": 0,
+        "endSec": 10
+      },
+      {
+        "id": "scene-2",
+        "act": "concept",
+        "title": "معجزات التكيف في الصحراء",
+        "badgeText": "🧠 الشرح العميق",
+        "visualType": "bullet_points",
+        "visualData": {
+          "bullets": [
+            "الكائنات الحية تتميز بالتنفس والتغذية والنمو بعكس الأشياء غير الحية كالصخور والماء.",
+            "ثعلب الفنك يستعين بأذنيه الكبيرتين وفرو قدميه لمواجهة حرارة الصحراء الشديدة.",
+            "نبات السنط يمتلك أوراقاً صغيرة لتقليل فقد الماء وجذوراً عميقة للبحث عنه تحت الأرض."
+          ],
+          "formulaLatex": "",
+          "codeSnippet": "",
+          "imagePrompt": "An educational chalkboard illustration showing a Fennec fox with large ears and an Acacia tree with deep roots in a desert environment, labeled in Arabic, clean vector style."
+        },
+        "startSec": 10,
+        "endSec": 30
+      },
+      {
+        "id": "scene-3",
+        "act": "takeaway",
+        "title": "الخلاصة الذهبية للبقاء",
+        "badgeText": "🏆 التطبيق والنتيجة",
+        "visualType": "bullet_points",
+        "visualData": {
+          "highlightQuote": "التكيف هو تغير في أجزاء جسم الكائن الحي أو سلوكه يساعده على البقاء في موطنه."
+        },
+        "startSec": 30,
+        "endSec": 45
+      }
+    ],
+    "word_timings": [
+      {
+        "word": "هل",
+        "startMs": 0,
+        "endMs": 656
+      },
+      {
+        "word": "تساءلتم",
+        "startMs": 656,
+        "endMs": 1311
+      },
+      {
+        "word": "يوماً",
+        "startMs": 1311,
+        "endMs": 1967
+      },
+      {
+        "word": "كيف",
+        "startMs": 1967,
+        "endMs": 2623
+      },
+      {
+        "word": "تنبض",
+        "startMs": 2623,
+        "endMs": 3279
+      },
+      {
+        "word": "الطبيعة",
+        "startMs": 3279,
+        "endMs": 3934
+      },
+      {
+        "word": "بالحياة",
+        "startMs": 3934,
+        "endMs": 4590
+      },
+      {
+        "word": "من",
+        "startMs": 4590,
+        "endMs": 5246
+      },
+      {
+        "word": "حولنا؟",
+        "startMs": 5246,
+        "endMs": 5902
+      },
+      {
+        "word": "الكائنات",
+        "startMs": 5902,
+        "endMs": 6557
+      },
+      {
+        "word": "الحية",
+        "startMs": 6557,
+        "endMs": 7213
+      },
+      {
+        "word": "كالإنسان",
+        "startMs": 7213,
+        "endMs": 7869
+      },
+      {
+        "word": "والحيوان",
+        "startMs": 7869,
+        "endMs": 8525
+      },
+      {
+        "word": "والنبات",
+        "startMs": 8525,
+        "endMs": 9180
+      },
+      {
+        "word": "تمتاز",
+        "startMs": 9180,
+        "endMs": 9836
+      },
+      {
+        "word": "بالتنفس",
+        "startMs": 9836,
+        "endMs": 10492
+      },
+      {
+        "word": "والتغذية",
+        "startMs": 10492,
+        "endMs": 11148
+      },
+      {
+        "word": "والنمو،",
+        "startMs": 11148,
+        "endMs": 11803
+      },
+      {
+        "word": "بخلاف",
+        "startMs": 11803,
+        "endMs": 12459
+      },
+      {
+        "word": "الأشياء",
+        "startMs": 12459,
+        "endMs": 13115
+      },
+      {
+        "word": "الجامدة.",
+        "startMs": 13115,
+        "endMs": 13770
+      },
+      {
+        "word": "وفي",
+        "startMs": 13770,
+        "endMs": 14426
+      },
+      {
+        "word": "قلب",
+        "startMs": 14426,
+        "endMs": 15082
+      },
+      {
+        "word": "الصحراء",
+        "startMs": 15082,
+        "endMs": 15738
+      },
+      {
+        "word": "القاسية،",
+        "startMs": 15738,
+        "endMs": 16393
+      },
+      {
+        "word": "تتجلى",
+        "startMs": 16393,
+        "endMs": 17049
+      },
+      {
+        "word": "معجزة",
+        "startMs": 17049,
+        "endMs": 17705
+      },
+      {
+        "word": "التكيف",
+        "startMs": 17705,
+        "endMs": 18361
+      },
+      {
+        "word": "للبقاء؛",
+        "startMs": 18361,
+        "endMs": 19016
+      },
+      {
+        "word": "حيث",
+        "startMs": 19016,
+        "endMs": 19672
+      },
+      {
+        "word": "يبرد",
+        "startMs": 19672,
+        "endMs": 20328
+      },
+      {
+        "word": "ثعلب",
+        "startMs": 20328,
+        "endMs": 20984
+      },
+      {
+        "word": "الفنك",
+        "startMs": 20984,
+        "endMs": 21639
+      },
+      {
+        "word": "جسده",
+        "startMs": 21639,
+        "endMs": 22295
+      },
+      {
+        "word": "بأذنيه",
+        "startMs": 22295,
+        "endMs": 22951
+      },
+      {
+        "word": "الكبيرتين،",
+        "startMs": 22951,
+        "endMs": 23607
+      },
+      {
+        "word": "ويقفز",
+        "startMs": 23607,
+        "endMs": 24262
+      },
+      {
+        "word": "اليربوع",
+        "startMs": 24262,
+        "endMs": 24918
+      },
+      {
+        "word": "بأرجله",
+        "startMs": 24918,
+        "endMs": 25574
+      },
+      {
+        "word": "الطويلة",
+        "startMs": 25574,
+        "endMs": 26230
+      },
+      {
+        "word": "هرباً",
+        "startMs": 26230,
+        "endMs": 26885
+      },
+      {
+        "word": "من",
+        "startMs": 26885,
+        "endMs": 27541
+      },
+      {
+        "word": "الرمال",
+        "startMs": 27541,
+        "endMs": 28197
+      },
+      {
+        "word": "الساخنة،",
+        "startMs": 28197,
+        "endMs": 28852
+      },
+      {
+        "word": "بينما",
+        "startMs": 28852,
+        "endMs": 29508
+      },
+      {
+        "word": "تمد",
+        "startMs": 29508,
+        "endMs": 30164
+      },
+      {
+        "word": "شجرة",
+        "startMs": 30164,
+        "endMs": 30820
+      },
+      {
+        "word": "السنط",
+        "startMs": 30820,
+        "endMs": 31475
+      },
+      {
+        "word": "جذورها",
+        "startMs": 31475,
+        "endMs": 32131
+      },
+      {
+        "word": "العميقة",
+        "startMs": 32131,
+        "endMs": 32787
+      },
+      {
+        "word": "بحثاً",
+        "startMs": 32787,
+        "endMs": 33443
+      },
+      {
+        "word": "عن",
+        "startMs": 33443,
+        "endMs": 34098
+      },
+      {
+        "word": "قطرة",
+        "startMs": 34098,
+        "endMs": 34754
+      },
+      {
+        "word": "ماء.",
+        "startMs": 34754,
+        "endMs": 35410
+      },
+      {
+        "word": "التكيف",
+        "startMs": 35410,
+        "endMs": 36066
+      },
+      {
+        "word": "هو",
+        "startMs": 36066,
+        "endMs": 36721
+      },
+      {
+        "word": "سر",
+        "startMs": 36721,
+        "endMs": 37377
+      },
+      {
+        "word": "الحياة",
+        "startMs": 37377,
+        "endMs": 38033
+      },
+      {
+        "word": "والسر",
+        "startMs": 38033,
+        "endMs": 38689
+      },
+      {
+        "word": "المذهل",
+        "startMs": 38689,
+        "endMs": 39344
+      },
+      {
+        "word": "للبقاء!",
+        "startMs": 39344,
+        "endMs": 40000
+      }
+    ],
+    "visual_cards": [
+      {
+        "title": "معادلة التمييز الحيوية",
+        "content": "كائن حي = تغذية + تنفس + نمو | شيء غير حي = جماد لا ينمو ولا يتنفس",
+        "type": "formula",
+        "startSec": 5,
+        "endSec": 20
+      },
+      {
+        "title": "قانون التكيف الذهبي",
+        "content": "التكيف: تغير جسدي أو سلوكي يساعد الكائن الحي على البقاء في بيئته.",
+        "type": "diagram",
+        "startSec": 21,
+        "endSec": 35
+      }
+    ],
+    "interactive_quiz": {
+      "question": "ما الذي يساعد نبات السنط على البقاء في البيئة الصحراوية الجافة؟",
+      "options": [
+        "أوراق كبيرة وجذور سطحية",
+        "أوراق صغيرة وجذور عميقة جداً",
+        "أذنان كبيرتان وفرو كثيف"
+      ],
+      "correctIndex": 1,
+      "triggerSec": 32,
+      "explanation": "يتميز نبات السنط بأوراق صغيرة لتقليل فقدان الماء، وجذور عميقة تمتد تحت الأرض للبحث عن مصادر المياه الشحيحة."
+    },
+    "likes_count": 32,
+    "views_count": 188,
+    "completions_count": 45,
+    "is_public_teaser": true,
+    "created_at": "2026-09-24T13:10:15.082Z"
+  },
+  {
+    "id": "reel-1790238253955",
+    "book_id": "aaf6b6ab-6928-431a-afec-89c2adbfce6d",
+    "book_title": "مغامرة الدراسات الاجتماعية: مصر في قلب العالم",
+    "author_name": "خبير المادة",
+    "category": "تعليمي",
+    "subcategory": "",
+    "thumbnail_url": "",
+    "chapter_id": "ch-aaf6b6ab-6928-431a-afec-89c2adbfce6d-1",
+    "chapter_title": "مغامرة الاتجاهات والخرائط: كيف نرسم عالمنا؟",
+    "style_type": "chalkboard",
+    "style": "chalkboard",
+    "voice": "ar-SA-HamedNeural",
+    "duration_seconds": 45,
+    "audio_url": "https://ydlzvuutjgelpxueufgn.supabase.co/storage/v1/object/public/book-audios/reel_aaf6b6ab-6928-431a-afec-89c2adbfce6d_ch-aaf6b6ab-6928-431a-afec-89c2adbfce6d-1_1790256414501.mp3",
+    "narration_script": "هل تساءلت يوماً كيف يعرف القبطان طريقه في البحر دون شوارع؟ الطبيعة هي بوصلتنا الأولى! بقاعدة الشمس الذهبية: إذا واجهت شروق الشمس صباحاً، فأنت تتجه شرقاً، والغرب خلفك، والشمال على يسارك، والجنوب على يمينك. ولكي نرسم عالمنا، نستخدم الخريطة بعناصرها الأربعة: العنوان، ووردة البوصلة، ومفتاح الرموز، ومقياس الرسم الذي يحسب المسافات الحقيقية على الأرض بدقة متناهية. ابدأ اليوم برسم مخطط غرفتك وكن مستكشفاً بارعاً!",
+    "scenes": [
+      {
+        "id": "scene-1",
+        "act": "hook",
+        "title": "كيف نرسم عالمنا؟",
+        "badgeText": "🔥 سر الاتجاهات",
+        "visualType": "quote",
+        "visualData": {
+          "highlightQuote": "كيف يعرف القبطان طريقه في البحر دون وجود شوارع؟"
+        },
+        "startSec": 0,
+        "endSec": 10
+      },
+      {
+        "id": "scene-2",
+        "act": "concept",
+        "title": "قاعدة الشمس وعناصر الخريطة",
+        "badgeText": "🧠 الشرح العميق",
+        "visualType": "bullet_points",
+        "visualData": {
+          "bullets": [
+            "قاعدة الشمس الذهبية: وجهك للشرق، الغرب خلفك، الشمال يسارك، والجنوب يمينك.",
+            "الاتجاهات الفرعية تقع بدقة بين الاتجاهات الأصلية الأربعة.",
+            "عناصر الخريطة: العنوان، وردة البوصلة، مفتاح الرموز، ومقياس الرسم."
+          ],
+          "formulaLatex": "",
+          "codeSnippet": "",
+          "imagePrompt": "An educational chalkboard illustration showing a child standing with arms outstretched facing a rising sun in the East, with labels in Arabic and English for North, South, East, West, and a classic compass rose in the corner, highly detailed, academic style."
+        },
+        "startSec": 10,
+        "endSec": 30
+      },
+      {
+        "id": "scene-3",
+        "act": "takeaway",
+        "title": "فخ الامتحان والخلاصة",
+        "badgeText": "🏆 انتبه وتذكر",
+        "visualType": "bullet_points",
+        "visualData": {
+          "highlightQuote": "مقياس الرسم يحسب المسافات الحقيقية فقط ولا يقيس الأوزان! ارسم مخطط غرفتك الآن كالمستكشفين."
+        },
+        "startSec": 30,
+        "endSec": 45
+      }
+    ],
+    "word_timings": [
+      {
+        "word": "هل",
+        "startMs": 0,
+        "endMs": 625
+      },
+      {
+        "word": "تساءلت",
+        "startMs": 625,
+        "endMs": 1250
+      },
+      {
+        "word": "يوماً",
+        "startMs": 1250,
+        "endMs": 1875
+      },
+      {
+        "word": "كيف",
+        "startMs": 1875,
+        "endMs": 2500
+      },
+      {
+        "word": "يعرف",
+        "startMs": 2500,
+        "endMs": 3125
+      },
+      {
+        "word": "القبطان",
+        "startMs": 3125,
+        "endMs": 3750
+      },
+      {
+        "word": "طريقه",
+        "startMs": 3750,
+        "endMs": 4375
+      },
+      {
+        "word": "في",
+        "startMs": 4375,
+        "endMs": 5000
+      },
+      {
+        "word": "البحر",
+        "startMs": 5000,
+        "endMs": 5625
+      },
+      {
+        "word": "دون",
+        "startMs": 5625,
+        "endMs": 6250
+      },
+      {
+        "word": "شوارع؟",
+        "startMs": 6250,
+        "endMs": 6875
+      },
+      {
+        "word": "الطبيعة",
+        "startMs": 6875,
+        "endMs": 7500
+      },
+      {
+        "word": "هي",
+        "startMs": 7500,
+        "endMs": 8125
+      },
+      {
+        "word": "بوصلتنا",
+        "startMs": 8125,
+        "endMs": 8750
+      },
+      {
+        "word": "الأولى!",
+        "startMs": 8750,
+        "endMs": 9375
+      },
+      {
+        "word": "بقاعدة",
+        "startMs": 9375,
+        "endMs": 10000
+      },
+      {
+        "word": "الشمس",
+        "startMs": 10000,
+        "endMs": 10625
+      },
+      {
+        "word": "الذهبية:",
+        "startMs": 10625,
+        "endMs": 11250
+      },
+      {
+        "word": "إذا",
+        "startMs": 11250,
+        "endMs": 11875
+      },
+      {
+        "word": "واجهت",
+        "startMs": 11875,
+        "endMs": 12500
+      },
+      {
+        "word": "شروق",
+        "startMs": 12500,
+        "endMs": 13125
+      },
+      {
+        "word": "الشمس",
+        "startMs": 13125,
+        "endMs": 13750
+      },
+      {
+        "word": "صباحاً،",
+        "startMs": 13750,
+        "endMs": 14375
+      },
+      {
+        "word": "فأنت",
+        "startMs": 14375,
+        "endMs": 15000
+      },
+      {
+        "word": "تتجه",
+        "startMs": 15000,
+        "endMs": 15625
+      },
+      {
+        "word": "شرقاً،",
+        "startMs": 15625,
+        "endMs": 16250
+      },
+      {
+        "word": "والغرب",
+        "startMs": 16250,
+        "endMs": 16875
+      },
+      {
+        "word": "خلفك،",
+        "startMs": 16875,
+        "endMs": 17500
+      },
+      {
+        "word": "والشمال",
+        "startMs": 17500,
+        "endMs": 18125
+      },
+      {
+        "word": "على",
+        "startMs": 18125,
+        "endMs": 18750
+      },
+      {
+        "word": "يسارك،",
+        "startMs": 18750,
+        "endMs": 19375
+      },
+      {
+        "word": "والجنوب",
+        "startMs": 19375,
+        "endMs": 20000
+      },
+      {
+        "word": "على",
+        "startMs": 20000,
+        "endMs": 20625
+      },
+      {
+        "word": "يمينك.",
+        "startMs": 20625,
+        "endMs": 21250
+      },
+      {
+        "word": "ولكي",
+        "startMs": 21250,
+        "endMs": 21875
+      },
+      {
+        "word": "نرسم",
+        "startMs": 21875,
+        "endMs": 22500
+      },
+      {
+        "word": "عالمنا،",
+        "startMs": 22500,
+        "endMs": 23125
+      },
+      {
+        "word": "نستخدم",
+        "startMs": 23125,
+        "endMs": 23750
+      },
+      {
+        "word": "الخريطة",
+        "startMs": 23750,
+        "endMs": 24375
+      },
+      {
+        "word": "بعناصرها",
+        "startMs": 24375,
+        "endMs": 25000
+      },
+      {
+        "word": "الأربعة:",
+        "startMs": 25000,
+        "endMs": 25625
+      },
+      {
+        "word": "العنوان،",
+        "startMs": 25625,
+        "endMs": 26250
+      },
+      {
+        "word": "ووردة",
+        "startMs": 26250,
+        "endMs": 26875
+      },
+      {
+        "word": "البوصلة،",
+        "startMs": 26875,
+        "endMs": 27500
+      },
+      {
+        "word": "ومفتاح",
+        "startMs": 27500,
+        "endMs": 28125
+      },
+      {
+        "word": "الرموز،",
+        "startMs": 28125,
+        "endMs": 28750
+      },
+      {
+        "word": "ومقياس",
+        "startMs": 28750,
+        "endMs": 29375
+      },
+      {
+        "word": "الرسم",
+        "startMs": 29375,
+        "endMs": 30000
+      },
+      {
+        "word": "الذي",
+        "startMs": 30000,
+        "endMs": 30625
+      },
+      {
+        "word": "يحسب",
+        "startMs": 30625,
+        "endMs": 31250
+      },
+      {
+        "word": "المسافات",
+        "startMs": 31250,
+        "endMs": 31875
+      },
+      {
+        "word": "الحقيقية",
+        "startMs": 31875,
+        "endMs": 32500
+      },
+      {
+        "word": "على",
+        "startMs": 32500,
+        "endMs": 33125
+      },
+      {
+        "word": "الأرض",
+        "startMs": 33125,
+        "endMs": 33750
+      },
+      {
+        "word": "بدقة",
+        "startMs": 33750,
+        "endMs": 34375
+      },
+      {
+        "word": "متناهية.",
+        "startMs": 34375,
+        "endMs": 35000
+      },
+      {
+        "word": "ابدأ",
+        "startMs": 35000,
+        "endMs": 35625
+      },
+      {
+        "word": "اليوم",
+        "startMs": 35625,
+        "endMs": 36250
+      },
+      {
+        "word": "برسم",
+        "startMs": 36250,
+        "endMs": 36875
+      },
+      {
+        "word": "مخطط",
+        "startMs": 36875,
+        "endMs": 37500
+      },
+      {
+        "word": "غرفتك",
+        "startMs": 37500,
+        "endMs": 38125
+      },
+      {
+        "word": "وكن",
+        "startMs": 38125,
+        "endMs": 38750
+      },
+      {
+        "word": "مستكشفاً",
+        "startMs": 38750,
+        "endMs": 39375
+      },
+      {
+        "word": "بارعاً!",
+        "startMs": 39375,
+        "endMs": 40000
+      }
+    ],
+    "visual_cards": [
+      {
+        "title": "قاعدة الشمس الذهبية",
+        "content": "إذا وقفت مقابل الشمس صباحاً: الشرق أمامك، الغرب خلفك، الشمال يسارك، والجنوب يمينك.",
+        "type": "formula",
+        "startSec": 5,
+        "endSec": 20
+      },
+      {
+        "title": "مقياس الرسم",
+        "content": "يستخدم لحساب المسافات الحقيقية على الأرض مقارنة بالخريطة (مثال: 1 سم = 100 كم)، وليس لقياس الأوزان!",
+        "type": "diagram",
+        "startSec": 21,
+        "endSec": 35
+      }
+    ],
+    "interactive_quiz": {
+      "question": "ما هي وظيفة 'مقياس الرسم' الأساسية على الخريطة؟",
+      "options": [
+        "حساب المسافات الحقيقية مقارنة بالخريطة",
+        "تحديد اتجاه الشمال والجنوب",
+        "معرفة معاني الألوان والرموز"
+      ],
+      "correctIndex": 0,
+      "triggerSec": 32,
+      "explanation": "مقياس الرسم يوضح النسبة بين المسافة على الخريطة وما يقابلها في الحقيقة، بينما تحدد البوصلة الاتجاهات، ويوضح المفتاح معاني الرموز والألوان."
+    },
+    "likes_count": 32,
+    "views_count": 188,
+    "completions_count": 45,
+    "is_public_teaser": true,
+    "created_at": "2026-09-24T08:24:13.955Z"
+  },
+  {
+    "id": "reel-1790256475991-7702",
+    "book_id": "aaf6b6ab-6928-431a-afec-89c2adbfce6d",
+    "book_title": "مغامرة الدراسات الاجتماعية: مصر في قلب العالم",
+    "author_name": "خبير المادة",
+    "category": "تعليمي",
+    "subcategory": "",
+    "thumbnail_url": "",
+    "chapter_id": "ch-aaf6b6ab-6928-431a-afec-89c2adbfce6d-2",
+    "chapter_title": "رحلة عبر الزمن: كيف تطورت الخريطة وجمعنا المعلومات؟",
+    "style_type": "chalkboard",
+    "style": "chalkboard",
+    "voice": "ar-SA-HamedNeural",
+    "duration_seconds": 45,
+    "audio_url": "https://ydlzvuutjgelpxueufgn.supabase.co/storage/v1/object/public/book-audios/reel_aaf6b6ab-6928-431a-afec-89c2adbfce6d_ch-aaf6b6ab-6928-431a-afec-89c2adbfce6d-2_1790256463386.mp3",
+    "narration_script": "هل تساءلت يوماً كيف يعرف هاتفك موقعك بدقة؟ السر يبدأ من عبقرية أجدادنا! من الإسطرلاب، الجد الأكبر لنظام الـ GPS الذي طورته العالمة مريم الإسطرلابية لتحديد النجوم والقبلة، إلى خرائط اليوم الملتقطة بالطائرات كصور جوية تفصيلية، أو بالأقمار الصناعية كصور فضائية واسعة. ولتوثيق هذه المعارف، نميز بين المصادر الأولية كالنقوش المعاصرة للحدث، والمصادر الثانوية كالكتب، مع الحذر من الشائعات والاعتماد فقط على الحقائق المثبتة!",
+    "scenes": [
+      {
+        "id": "scene-1",
+        "act": "hook",
+        "title": "من الإسطرلاب إلى الـ GPS",
+        "badgeText": "🔥 سر الخريطة",
+        "visualType": "quote",
+        "visualData": {
+          "highlightQuote": "كيف تطورت الخرائط من ورق البردي والإسطرلاب إلى هواتفنا الذكية اليوم؟"
+        },
+        "startSec": 0,
+        "endSec": 10
+      },
+      {
+        "id": "scene-2",
+        "act": "concept",
+        "title": "أدوات رصد الأرض ومصادر المعرفة",
+        "badgeText": "🧠 الشرح العميق",
+        "visualType": "bullet_points",
+        "visualData": {
+          "bullets": [
+            "الإسطرلاب: ابتكار مريم الإسطرلابية والجد الأكبر لنظام الـ GPS.",
+            "الصور الجوية (بالطائرات، تفصيلية) مقابل الصور الفضائية (بالأقمار الصناعية، واسعة).",
+            "المصادر الأولية (نقوش وبرديات معاصرة) والمصادر الثانوية (كتب وموسوعات لاحقة)."
+          ],
+          "formulaLatex": "",
+          "codeSnippet": "",
+          "imagePrompt": "A high-quality educational illustration showing a split screen: on the left, an ancient golden Arabic astrolabe with stars; on the right, a modern satellite orbiting Earth sending signals to a smartphone displaying a map. Chalkboard style aesthetic, clear, academic."
+        },
+        "startSec": 10,
+        "endSec": 30
+      },
+      {
+        "id": "scene-3",
+        "act": "takeaway",
+        "title": "حقيقة أم رأي؟",
+        "badgeText": "🏆 الخلاصة الذهبية",
+        "visualType": "bullet_points",
+        "visualData": {
+          "highlightQuote": "فرق دائماً بين الحقيقة المثبتة علمياً والرأي الشخصي، واحذر الشائعات لحماية مجتمعك!"
+        },
+        "startSec": 30,
+        "endSec": 45
+      }
+    ],
+    "word_timings": [
+      {
+        "word": "هل",
+        "startMs": 0,
+        "endMs": 625
+      },
+      {
+        "word": "تساءلت",
+        "startMs": 625,
+        "endMs": 1250
+      },
+      {
+        "word": "يوماً",
+        "startMs": 1250,
+        "endMs": 1875
+      },
+      {
+        "word": "كيف",
+        "startMs": 1875,
+        "endMs": 2500
+      },
+      {
+        "word": "يعرف",
+        "startMs": 2500,
+        "endMs": 3125
+      },
+      {
+        "word": "هاتفك",
+        "startMs": 3125,
+        "endMs": 3750
+      },
+      {
+        "word": "موقعك",
+        "startMs": 3750,
+        "endMs": 4375
+      },
+      {
+        "word": "بدقة؟",
+        "startMs": 4375,
+        "endMs": 5000
+      },
+      {
+        "word": "السر",
+        "startMs": 5000,
+        "endMs": 5625
+      },
+      {
+        "word": "يبدأ",
+        "startMs": 5625,
+        "endMs": 6250
+      },
+      {
+        "word": "من",
+        "startMs": 6250,
+        "endMs": 6875
+      },
+      {
+        "word": "عبقرية",
+        "startMs": 6875,
+        "endMs": 7500
+      },
+      {
+        "word": "أجدادنا!",
+        "startMs": 7500,
+        "endMs": 8125
+      },
+      {
+        "word": "من",
+        "startMs": 8125,
+        "endMs": 8750
+      },
+      {
+        "word": "الإسطرلاب،",
+        "startMs": 8750,
+        "endMs": 9375
+      },
+      {
+        "word": "الجد",
+        "startMs": 9375,
+        "endMs": 10000
+      },
+      {
+        "word": "الأكبر",
+        "startMs": 10000,
+        "endMs": 10625
+      },
+      {
+        "word": "لنظام",
+        "startMs": 10625,
+        "endMs": 11250
+      },
+      {
+        "word": "الـ",
+        "startMs": 11250,
+        "endMs": 11875
+      },
+      {
+        "word": "GPS",
+        "startMs": 11875,
+        "endMs": 12500
+      },
+      {
+        "word": "الذي",
+        "startMs": 12500,
+        "endMs": 13125
+      },
+      {
+        "word": "طورته",
+        "startMs": 13125,
+        "endMs": 13750
+      },
+      {
+        "word": "العالمة",
+        "startMs": 13750,
+        "endMs": 14375
+      },
+      {
+        "word": "مريم",
+        "startMs": 14375,
+        "endMs": 15000
+      },
+      {
+        "word": "الإسطرلابية",
+        "startMs": 15000,
+        "endMs": 15625
+      },
+      {
+        "word": "لتحديد",
+        "startMs": 15625,
+        "endMs": 16250
+      },
+      {
+        "word": "النجوم",
+        "startMs": 16250,
+        "endMs": 16875
+      },
+      {
+        "word": "والقبلة،",
+        "startMs": 16875,
+        "endMs": 17500
+      },
+      {
+        "word": "إلى",
+        "startMs": 17500,
+        "endMs": 18125
+      },
+      {
+        "word": "خرائط",
+        "startMs": 18125,
+        "endMs": 18750
+      },
+      {
+        "word": "اليوم",
+        "startMs": 18750,
+        "endMs": 19375
+      },
+      {
+        "word": "الملتقطة",
+        "startMs": 19375,
+        "endMs": 20000
+      },
+      {
+        "word": "بالطائرات",
+        "startMs": 20000,
+        "endMs": 20625
+      },
+      {
+        "word": "كصور",
+        "startMs": 20625,
+        "endMs": 21250
+      },
+      {
+        "word": "جوية",
+        "startMs": 21250,
+        "endMs": 21875
+      },
+      {
+        "word": "تفصيلية،",
+        "startMs": 21875,
+        "endMs": 22500
+      },
+      {
+        "word": "أو",
+        "startMs": 22500,
+        "endMs": 23125
+      },
+      {
+        "word": "بالأقمار",
+        "startMs": 23125,
+        "endMs": 23750
+      },
+      {
+        "word": "الصناعية",
+        "startMs": 23750,
+        "endMs": 24375
+      },
+      {
+        "word": "كصور",
+        "startMs": 24375,
+        "endMs": 25000
+      },
+      {
+        "word": "فضائية",
+        "startMs": 25000,
+        "endMs": 25625
+      },
+      {
+        "word": "واسعة.",
+        "startMs": 25625,
+        "endMs": 26250
+      },
+      {
+        "word": "ولتوثيق",
+        "startMs": 26250,
+        "endMs": 26875
+      },
+      {
+        "word": "هذه",
+        "startMs": 26875,
+        "endMs": 27500
+      },
+      {
+        "word": "المعارف،",
+        "startMs": 27500,
+        "endMs": 28125
+      },
+      {
+        "word": "نميز",
+        "startMs": 28125,
+        "endMs": 28750
+      },
+      {
+        "word": "بين",
+        "startMs": 28750,
+        "endMs": 29375
+      },
+      {
+        "word": "المصادر",
+        "startMs": 29375,
+        "endMs": 30000
+      },
+      {
+        "word": "الأولية",
+        "startMs": 30000,
+        "endMs": 30625
+      },
+      {
+        "word": "كالنقوش",
+        "startMs": 30625,
+        "endMs": 31250
+      },
+      {
+        "word": "المعاصرة",
+        "startMs": 31250,
+        "endMs": 31875
+      },
+      {
+        "word": "للحدث،",
+        "startMs": 31875,
+        "endMs": 32500
+      },
+      {
+        "word": "والمصادر",
+        "startMs": 32500,
+        "endMs": 33125
+      },
+      {
+        "word": "الثانوية",
+        "startMs": 33125,
+        "endMs": 33750
+      },
+      {
+        "word": "كالكتب،",
+        "startMs": 33750,
+        "endMs": 34375
+      },
+      {
+        "word": "مع",
+        "startMs": 34375,
+        "endMs": 35000
+      },
+      {
+        "word": "الحذر",
+        "startMs": 35000,
+        "endMs": 35625
+      },
+      {
+        "word": "من",
+        "startMs": 35625,
+        "endMs": 36250
+      },
+      {
+        "word": "الشائعات",
+        "startMs": 36250,
+        "endMs": 36875
+      },
+      {
+        "word": "والاعتماد",
+        "startMs": 36875,
+        "endMs": 37500
+      },
+      {
+        "word": "فقط",
+        "startMs": 37500,
+        "endMs": 38125
+      },
+      {
+        "word": "على",
+        "startMs": 38125,
+        "endMs": 38750
+      },
+      {
+        "word": "الحقائق",
+        "startMs": 38750,
+        "endMs": 39375
+      },
+      {
+        "word": "المثبتة!",
+        "startMs": 39375,
+        "endMs": 40000
+      }
+    ],
+    "visual_cards": [
+      {
+        "title": "الإسطرلاب والـ GPS",
+        "content": "الإسطرلاب أداة فلكية طورتها مريم الإسطرلابية لتحديد الاتجاهات ومواقع النجوم، وهو الأساس التاريخي لنظام الـ GPS الحديث.",
+        "type": "diagram",
+        "startSec": 5,
+        "endSec": 20
+      },
+      {
+        "title": "مصادر المعلومات",
+        "content": "المصادر الأولية تُسجل وقت الحدث (كالنقوش والبرديات)، بينما المصادر الثانوية تُكتب لاحقاً (كالكتب والموسوعات).",
+        "type": "diagram",
+        "startSec": 21,
+        "endSec": 35
+      }
+    ],
+    "interactive_quiz": {
+      "question": "أي مما يلي يُعد مصدراً أولياً لجمع المعلومات؟",
+      "options": [
+        "النقوش على جدران المعابد والبرديات",
+        "الموسوعات والكتب الحديثة",
+        "المقالات الصحفية المكتوبة حديثاً"
+      ],
+      "correctIndex": 0,
+      "triggerSec": 32,
+      "explanation": "النقوش والبرديات تُعد مصادر أولية لأنها كُتبت وسُجلت وقت وقوع الحدث بالفعل، على عكس الكتب والموسوعات التي تُصنف كمصادر ثانوية."
+    },
+    "likes_count": 65,
+    "views_count": 249,
+    "completions_count": 45,
+    "is_public_teaser": true,
+    "created_at": "2026-09-24T13:27:55.991Z"
+  },
+  {
+    "id": "reel-1790256548480-5406",
+    "book_id": "aaf6b6ab-6928-431a-afec-89c2adbfce6d",
+    "book_title": "مغامرة الدراسات الاجتماعية: مصر في قلب العالم",
+    "author_name": "خبير المادة",
+    "category": "تعليمي",
+    "subcategory": "",
+    "thumbnail_url": "",
+    "chapter_id": "ch-aaf6b6ab-6928-431a-afec-89c2adbfce6d-3",
+    "chapter_title": "مدينتنا وقريتنا: أين نعيش وكيف تطورت بيوتنا؟",
+    "style_type": "chalkboard",
+    "style": "chalkboard",
+    "voice": "ar-SA-HamedNeural",
+    "duration_seconds": 45,
+    "audio_url": "https://ydlzvuutjgelpxueufgn.supabase.co/storage/v1/object/public/book-audios/reel_aaf6b6ab-6928-431a-afec-89c2adbfce6d_ch-aaf6b6ab-6928-431a-afec-89c2adbfce6d-3_1790256538969.mp3",
+    "narration_script": "هل تساءلت يوماً كيف تتكامل القرية والمدينة لتصنعا حياتنا؟ القرية بهدوئها ونشاطها الزراعي توفر الأغذية الطازجة، بينما تقدم المدينة المزدهرة بالخدمات والصناعات الآلات والملابس والرعاية الطبية. ولكي تنمو بيئتنا بشكل متوازن، تُقسّم الأراضي إلى مناطق سكنية وزراعية وترفيهية، وتوضع المصانع دائماً على أطراف المدن لحماية السكان من التلوث؛ تماماً كما تجسد في إعادة بناء مدينة السويس البطلة.",
+    "scenes": [
+      {
+        "id": "scene-1",
+        "act": "hook",
+        "title": "تكامل القرية والمدينة",
+        "badgeText": "🔥 فكرة محورية",
+        "visualType": "quote",
+        "visualData": {
+          "highlightQuote": "القرية تطعم المدينة، والمدينة تصنع للقرية الأدوات والآلات!"
+        },
+        "startSec": 0,
+        "endSec": 10
+      },
+      {
+        "id": "scene-2",
+        "act": "concept",
+        "title": "استخدامات الأراضي وتبادل المنافع",
+        "badgeText": "🧠 الشرح العميق",
+        "visualType": "bullet_points",
+        "visualData": {
+          "bullets": [
+            "القرية توفر المحاصيل واللحوم والمدينة تقدم الصناعة والخدمات الطبية.",
+            "تتقسم الأراضي إلى مناطق سكنية وزراعية وصناعية وترفيهية.",
+            "المناطق الصناعية تُبنى دائماً على أطراف المدن لتقليل التلوث."
+          ],
+          "formulaLatex": "",
+          "codeSnippet": "",
+          "imagePrompt": "Educational chalkboard illustration comparing a quiet green village with farms and a modern city with zoned residential and industrial areas on the outskirts."
+        },
+        "startSec": 10,
+        "endSec": 30
+      },
+      {
+        "id": "scene-3",
+        "act": "takeaway",
+        "title": "الخلاصة وقصة صمود السويس",
+        "badgeText": "🏆 التطبيق والنتيجة",
+        "visualType": "bullet_points",
+        "visualData": {
+          "highlightQuote": "تُبنى المناطق الصناعية على أطراف المدن لحماية صحة السكان من التلوث، وتكاتف الجميع يعيد بناء المدن كمدينة السويس البطلة."
+        },
+        "startSec": 30,
+        "endSec": 45
+      }
+    ],
+    "word_timings": [
+      {
+        "word": "هل",
+        "startMs": 0,
+        "endMs": 702
+      },
+      {
+        "word": "تساءلت",
+        "startMs": 702,
+        "endMs": 1404
+      },
+      {
+        "word": "يوماً",
+        "startMs": 1404,
+        "endMs": 2105
+      },
+      {
+        "word": "كيف",
+        "startMs": 2105,
+        "endMs": 2807
+      },
+      {
+        "word": "تتكامل",
+        "startMs": 2807,
+        "endMs": 3509
+      },
+      {
+        "word": "القرية",
+        "startMs": 3509,
+        "endMs": 4211
+      },
+      {
+        "word": "والمدينة",
+        "startMs": 4211,
+        "endMs": 4912
+      },
+      {
+        "word": "لتصنعا",
+        "startMs": 4912,
+        "endMs": 5614
+      },
+      {
+        "word": "حياتنا؟",
+        "startMs": 5614,
+        "endMs": 6316
+      },
+      {
+        "word": "القرية",
+        "startMs": 6316,
+        "endMs": 7018
+      },
+      {
+        "word": "بهدوئها",
+        "startMs": 7018,
+        "endMs": 7719
+      },
+      {
+        "word": "ونشاطها",
+        "startMs": 7719,
+        "endMs": 8421
+      },
+      {
+        "word": "الزراعي",
+        "startMs": 8421,
+        "endMs": 9123
+      },
+      {
+        "word": "توفر",
+        "startMs": 9123,
+        "endMs": 9825
+      },
+      {
+        "word": "الأغذية",
+        "startMs": 9825,
+        "endMs": 10526
+      },
+      {
+        "word": "الطازجة،",
+        "startMs": 10526,
+        "endMs": 11228
+      },
+      {
+        "word": "بينما",
+        "startMs": 11228,
+        "endMs": 11930
+      },
+      {
+        "word": "تقدم",
+        "startMs": 11930,
+        "endMs": 12632
+      },
+      {
+        "word": "المدينة",
+        "startMs": 12632,
+        "endMs": 13333
+      },
+      {
+        "word": "المزدهرة",
+        "startMs": 13333,
+        "endMs": 14035
+      },
+      {
+        "word": "بالخدمات",
+        "startMs": 14035,
+        "endMs": 14737
+      },
+      {
+        "word": "والصناعات",
+        "startMs": 14737,
+        "endMs": 15439
+      },
+      {
+        "word": "الآلات",
+        "startMs": 15439,
+        "endMs": 16140
+      },
+      {
+        "word": "والملابس",
+        "startMs": 16140,
+        "endMs": 16842
+      },
+      {
+        "word": "والرعاية",
+        "startMs": 16842,
+        "endMs": 17544
+      },
+      {
+        "word": "الطبية.",
+        "startMs": 17544,
+        "endMs": 18246
+      },
+      {
+        "word": "ولكي",
+        "startMs": 18246,
+        "endMs": 18947
+      },
+      {
+        "word": "تنمو",
+        "startMs": 18947,
+        "endMs": 19649
+      },
+      {
+        "word": "بيئتنا",
+        "startMs": 19649,
+        "endMs": 20351
+      },
+      {
+        "word": "بشكل",
+        "startMs": 20351,
+        "endMs": 21053
+      },
+      {
+        "word": "متوازن،",
+        "startMs": 21053,
+        "endMs": 21754
+      },
+      {
+        "word": "تُقسّم",
+        "startMs": 21754,
+        "endMs": 22456
+      },
+      {
+        "word": "الأراضي",
+        "startMs": 22456,
+        "endMs": 23158
+      },
+      {
+        "word": "إلى",
+        "startMs": 23158,
+        "endMs": 23860
+      },
+      {
+        "word": "مناطق",
+        "startMs": 23860,
+        "endMs": 24561
+      },
+      {
+        "word": "سكنية",
+        "startMs": 24561,
+        "endMs": 25263
+      },
+      {
+        "word": "وزراعية",
+        "startMs": 25263,
+        "endMs": 25965
+      },
+      {
+        "word": "وترفيهية،",
+        "startMs": 25965,
+        "endMs": 26667
+      },
+      {
+        "word": "وتوضع",
+        "startMs": 26667,
+        "endMs": 27368
+      },
+      {
+        "word": "المصانع",
+        "startMs": 27368,
+        "endMs": 28070
+      },
+      {
+        "word": "دائماً",
+        "startMs": 28070,
+        "endMs": 28772
+      },
+      {
+        "word": "على",
+        "startMs": 28772,
+        "endMs": 29474
+      },
+      {
+        "word": "أطراف",
+        "startMs": 29474,
+        "endMs": 30175
+      },
+      {
+        "word": "المدن",
+        "startMs": 30175,
+        "endMs": 30877
+      },
+      {
+        "word": "لحماية",
+        "startMs": 30877,
+        "endMs": 31579
+      },
+      {
+        "word": "السكان",
+        "startMs": 31579,
+        "endMs": 32281
+      },
+      {
+        "word": "من",
+        "startMs": 32281,
+        "endMs": 32982
+      },
+      {
+        "word": "التلوث؛",
+        "startMs": 32982,
+        "endMs": 33684
+      },
+      {
+        "word": "تماماً",
+        "startMs": 33684,
+        "endMs": 34386
+      },
+      {
+        "word": "كما",
+        "startMs": 34386,
+        "endMs": 35088
+      },
+      {
+        "word": "تجسد",
+        "startMs": 35088,
+        "endMs": 35789
+      },
+      {
+        "word": "في",
+        "startMs": 35789,
+        "endMs": 36491
+      },
+      {
+        "word": "إعادة",
+        "startMs": 36491,
+        "endMs": 37193
+      },
+      {
+        "word": "بناء",
+        "startMs": 37193,
+        "endMs": 37895
+      },
+      {
+        "word": "مدينة",
+        "startMs": 37895,
+        "endMs": 38596
+      },
+      {
+        "word": "السويس",
+        "startMs": 38596,
+        "endMs": 39298
+      },
+      {
+        "word": "البطلة.",
+        "startMs": 39298,
+        "endMs": 40000
+      }
+    ],
+    "visual_cards": [
+      {
+        "title": "تبادل المنافع",
+        "content": "القرية تمد المدينة بالغذاء (خضروات، فواكه، ألبان)، والمدينة تمد القرية بالملابس والآلات والخدمات.",
+        "type": "formula",
+        "startSec": 5,
+        "endSec": 20
+      },
+      {
+        "title": "التخطيط العمراني الذكي",
+        "content": "وضع المصانع على أطراف المدن يبعد الدخان والتلوث عن المناطق السكنية.",
+        "type": "diagram",
+        "startSec": 21,
+        "endSec": 35
+      }
+    ],
+    "interactive_quiz": {
+      "question": "لماذا تُبنى المناطق الصناعية دائماً على أطراف المدن وليس في وسطها؟",
+      "options": [
+        "لحماية صحة السكان من الدخان والتلوث",
+        "لأنها أسرع في البناء هناك",
+        "لتكون قريبة من الحقول الزراعية فقط"
+      ],
+      "correctIndex": 0,
+      "triggerSec": 32,
+      "explanation": "تبنى المناطق الصناعية بعيداً عن وسط المدن لحماية السكان والأطفال من التلوث والأدخنة الناتجة عن المصانع."
+    },
+    "likes_count": 65,
+    "views_count": 322,
+    "completions_count": 45,
+    "is_public_teaser": true,
+    "created_at": "2026-09-24T13:29:08.480Z"
+  },
+  {
+    "id": "reel-1790256581935-6102",
+    "book_id": "aaf6b6ab-6928-431a-afec-89c2adbfce6d",
+    "book_title": "مغامرة الدراسات الاجتماعية: مصر في قلب العالم",
+    "author_name": "خبير المادة",
+    "category": "تعليمي",
+    "subcategory": "",
+    "thumbnail_url": "",
+    "chapter_id": "ch-aaf6b6ab-6928-431a-afec-89c2adbfce6d-4",
+    "chapter_title": "الخدمات، مدن المستقبل، ومحافظتي على الخريطة",
+    "style_type": "chalkboard",
+    "style": "chalkboard",
+    "voice": "ar-SA-HamedNeural",
+    "duration_seconds": 45,
+    "audio_url": "https://ydlzvuutjgelpxueufgn.supabase.co/storage/v1/object/public/book-audios/reel_aaf6b6ab-6928-431a-afec-89c2adbfce6d_ch-aaf6b6ab-6928-431a-afec-89c2adbfce6d-4_1790256574106.mp3",
+    "narration_script": "هل تساءلتم يوماً كيف تُدار بلادنا مصر؟ الخدمات كالصحة والأمن والتعليم هي أساس حياتنا اليومية. واليوم، ننطلق نحو المستقبل بمدن ذكية مستدامة تعمل بالطاقة الشمسية والذكاء الاصطناعي، مستلهمين عبقرية أجدادنا الفراعنة. مصر الشاسعة تُقسم إلى سبع وعشرين محافظة، لكل منها شعار يروي تاريخها العريق كشعار القاهرة والجامع الأزهر. ابحثوا عن شعار محافظتكم واكتشفوا هويتكم الفريدة!",
+    "scenes": [
+      {
+        "id": "scene-1",
+        "act": "hook",
+        "title": "كيف تخدمنا مصر وتبني مستقبلنا؟",
+        "badgeText": "🔥 فكرة محورية",
+        "visualType": "quote",
+        "visualData": {
+          "highlightQuote": "الخدمات هي أعمال تقدمها الدولة لتلبية احتياجاتنا وتسهيل حياتنا اليومية كالصحة والأمن والتعليم."
+        },
+        "startSec": 0,
+        "endSec": 10
+      },
+      {
+        "id": "scene-2",
+        "act": "concept",
+        "title": "الخدمات ومدن المستقبل الذكية",
+        "badgeText": "🧠 الشرح العميق",
+        "visualType": "bullet_points",
+        "visualData": {
+          "bullets": [
+            "الخدمات الأساسية: تعليمية، صحية (مثل 100 مليون صحة)، أمنية، وتجارية.",
+            "مدن المستقبل: مستدامة تعتمد على الطاقة الشمسية والسيارات ذاتية القيادة والذكاء الاصطناعي.",
+            "التقسيم الإداري: 27 محافظة مقسمة لوجه بحري، وجه قبلي، ومحافظات الحدود الصحراوية."
+          ],
+          "formulaLatex": "",
+          "codeSnippet": "",
+          "imagePrompt": "A futuristic smart city in Egypt with solar panels, self-driving electric cars, and modern architecture blending with ancient Egyptian motifs, high-tech holographic displays, cinematic lighting, educational style."
+        },
+        "startSec": 10,
+        "endSec": 30
+      },
+      {
+        "id": "scene-3",
+        "act": "takeaway",
+        "title": "شعار محافظتك وهويتك",
+        "badgeText": "🏆 التطبيق والنتيجة",
+        "visualType": "bullet_points",
+        "visualData": {
+          "highlightQuote": "لكل محافظة من محافظات مصر الـ 27 شعار خاص يعبر عن تاريخها ونشاط سكانها، مثل الجامع الأزهر في شعار القاهرة."
+        },
+        "startSec": 30,
+        "endSec": 45
+      }
+    ],
+    "word_timings": [
+      {
+        "word": "هل",
+        "startMs": 0,
+        "endMs": 727
+      },
+      {
+        "word": "تساءلتم",
+        "startMs": 727,
+        "endMs": 1455
+      },
+      {
+        "word": "يوماً",
+        "startMs": 1455,
+        "endMs": 2182
+      },
+      {
+        "word": "كيف",
+        "startMs": 2182,
+        "endMs": 2909
+      },
+      {
+        "word": "تُدار",
+        "startMs": 2909,
+        "endMs": 3636
+      },
+      {
+        "word": "بلادنا",
+        "startMs": 3636,
+        "endMs": 4364
+      },
+      {
+        "word": "مصر؟",
+        "startMs": 4364,
+        "endMs": 5091
+      },
+      {
+        "word": "الخدمات",
+        "startMs": 5091,
+        "endMs": 5818
+      },
+      {
+        "word": "كالصحة",
+        "startMs": 5818,
+        "endMs": 6545
+      },
+      {
+        "word": "والأمن",
+        "startMs": 6545,
+        "endMs": 7273
+      },
+      {
+        "word": "والتعليم",
+        "startMs": 7273,
+        "endMs": 8000
+      },
+      {
+        "word": "هي",
+        "startMs": 8000,
+        "endMs": 8727
+      },
+      {
+        "word": "أساس",
+        "startMs": 8727,
+        "endMs": 9455
+      },
+      {
+        "word": "حياتنا",
+        "startMs": 9455,
+        "endMs": 10182
+      },
+      {
+        "word": "اليومية.",
+        "startMs": 10182,
+        "endMs": 10909
+      },
+      {
+        "word": "واليوم،",
+        "startMs": 10909,
+        "endMs": 11636
+      },
+      {
+        "word": "ننطلق",
+        "startMs": 11636,
+        "endMs": 12364
+      },
+      {
+        "word": "نحو",
+        "startMs": 12364,
+        "endMs": 13091
+      },
+      {
+        "word": "المستقبل",
+        "startMs": 13091,
+        "endMs": 13818
+      },
+      {
+        "word": "بمدن",
+        "startMs": 13818,
+        "endMs": 14545
+      },
+      {
+        "word": "ذكية",
+        "startMs": 14545,
+        "endMs": 15273
+      },
+      {
+        "word": "مستدامة",
+        "startMs": 15273,
+        "endMs": 16000
+      },
+      {
+        "word": "تعمل",
+        "startMs": 16000,
+        "endMs": 16727
+      },
+      {
+        "word": "بالطاقة",
+        "startMs": 16727,
+        "endMs": 17455
+      },
+      {
+        "word": "الشمسية",
+        "startMs": 17455,
+        "endMs": 18182
+      },
+      {
+        "word": "والذكاء",
+        "startMs": 18182,
+        "endMs": 18909
+      },
+      {
+        "word": "الاصطناعي،",
+        "startMs": 18909,
+        "endMs": 19636
+      },
+      {
+        "word": "مستلهمين",
+        "startMs": 19636,
+        "endMs": 20364
+      },
+      {
+        "word": "عبقرية",
+        "startMs": 20364,
+        "endMs": 21091
+      },
+      {
+        "word": "أجدادنا",
+        "startMs": 21091,
+        "endMs": 21818
+      },
+      {
+        "word": "الفراعنة.",
+        "startMs": 21818,
+        "endMs": 22545
+      },
+      {
+        "word": "مصر",
+        "startMs": 22545,
+        "endMs": 23273
+      },
+      {
+        "word": "الشاسعة",
+        "startMs": 23273,
+        "endMs": 24000
+      },
+      {
+        "word": "تُقسم",
+        "startMs": 24000,
+        "endMs": 24727
+      },
+      {
+        "word": "إلى",
+        "startMs": 24727,
+        "endMs": 25455
+      },
+      {
+        "word": "سبع",
+        "startMs": 25455,
+        "endMs": 26182
+      },
+      {
+        "word": "وعشرين",
+        "startMs": 26182,
+        "endMs": 26909
+      },
+      {
+        "word": "محافظة،",
+        "startMs": 26909,
+        "endMs": 27636
+      },
+      {
+        "word": "لكل",
+        "startMs": 27636,
+        "endMs": 28364
+      },
+      {
+        "word": "منها",
+        "startMs": 28364,
+        "endMs": 29091
+      },
+      {
+        "word": "شعار",
+        "startMs": 29091,
+        "endMs": 29818
+      },
+      {
+        "word": "يروي",
+        "startMs": 29818,
+        "endMs": 30545
+      },
+      {
+        "word": "تاريخها",
+        "startMs": 30545,
+        "endMs": 31273
+      },
+      {
+        "word": "العريق",
+        "startMs": 31273,
+        "endMs": 32000
+      },
+      {
+        "word": "كشعار",
+        "startMs": 32000,
+        "endMs": 32727
+      },
+      {
+        "word": "القاهرة",
+        "startMs": 32727,
+        "endMs": 33455
+      },
+      {
+        "word": "والجامع",
+        "startMs": 33455,
+        "endMs": 34182
+      },
+      {
+        "word": "الأزهر.",
+        "startMs": 34182,
+        "endMs": 34909
+      },
+      {
+        "word": "ابحثوا",
+        "startMs": 34909,
+        "endMs": 35636
+      },
+      {
+        "word": "عن",
+        "startMs": 35636,
+        "endMs": 36364
+      },
+      {
+        "word": "شعار",
+        "startMs": 36364,
+        "endMs": 37091
+      },
+      {
+        "word": "محافظتكم",
+        "startMs": 37091,
+        "endMs": 37818
+      },
+      {
+        "word": "واكتشفوا",
+        "startMs": 37818,
+        "endMs": 38545
+      },
+      {
+        "word": "هويتكم",
+        "startMs": 38545,
+        "endMs": 39273
+      },
+      {
+        "word": "الفريدة!",
+        "startMs": 39273,
+        "endMs": 40000
+      }
+    ],
+    "visual_cards": [
+      {
+        "title": "أنواع الخدمات الأساسية",
+        "content": "التعليمية (المدارس)، الصحية (المستشفيات)، الأمنية (الشرطة والإطفاء)، والتجارية (الأسواق).",
+        "type": "formula",
+        "startSec": 5,
+        "endSec": 20
+      },
+      {
+        "title": "مدن المستقبل المستدامة",
+        "content": "تعتمد على الطاقة الشمسية النظيفة، السيارات ذاتية القيادة، والذكاء الاصطناعي لتشخيص الأمراض.",
+        "type": "diagram",
+        "startSec": 21,
+        "endSec": 35
+      }
+    ],
+    "interactive_quiz": {
+      "question": "ما هي أكبر محافظات مصر من حيث المساحة وتصنف ضمن محافظات الحدود الصحراوية؟",
+      "options": [
+        "محافظة الوادي الجديد",
+        "محافظة القاهرة",
+        "محافظة الإسكندرية"
+      ],
+      "correctIndex": 0,
+      "triggerSec": 32,
+      "explanation": "محافظة الوادي الجديد هي أكبر محافظات مصر مساحةً وتعتبر من محافظات الحدود الصحراوية التي تقع على حدود مصر."
+    },
+    "likes_count": 67,
+    "views_count": 250,
+    "completions_count": 45,
+    "is_public_teaser": true,
+    "created_at": "2026-09-24T13:29:41.935Z"
+  },
+  {
+    "id": "reel-1790256606951-5963",
+    "book_id": "aaf6b6ab-6928-431a-afec-89c2adbfce6d",
+    "book_title": "مغامرة الدراسات الاجتماعية: مصر في قلب العالم",
+    "author_name": "خبير المادة",
+    "category": "تعليمي",
+    "subcategory": "",
+    "thumbnail_url": "",
+    "chapter_id": "ch-aaf6b6ab-6928-431a-afec-89c2adbfce6d-5",
+    "chapter_title": "علم بلادي وموقع مصر الفريد في قلب العالم",
+    "style_type": "chalkboard",
+    "style": "chalkboard",
+    "voice": "ar-SA-HamedNeural",
+    "duration_seconds": 45,
+    "audio_url": "https://ydlzvuutjgelpxueufgn.supabase.co/storage/v1/object/public/book-audios/reel_aaf6b6ab-6928-431a-afec-89c2adbfce6d_ch-aaf6b6ab-6928-431a-afec-89c2adbfce6d-5_1790256598897.mp3",
+    "narration_script": "هل تساءلت يوماً لماذا نقف باحترام أمام علم مصر؟ إنه ليس مجرد قماش، بل قصة وطن عظيم! فالأحمر يجسد دماء الشهداء والنضال، والأبيض يرمز للسلام، والأسود يروي صمودنا، بينما يمثل النسر الذهبي القوة والعزة. وتقع مصر في قلب العالم القديم، في الركن الشمالي الشرقي لإفريقيا، يحدها البحران المتوسط والأحمر. احترم علمك وحافظ عليه، فهو رمز عزتنا!",
+    "scenes": [
+      {
+        "id": "scene-1",
+        "act": "hook",
+        "title": "سر علم مصر وموقعها الفريد",
+        "badgeText": "🔥 فكرة محورية",
+        "visualType": "quote",
+        "visualData": {
+          "highlightQuote": "العلم ليس مجرد ألوان، بل قصة نضال وموقع يقع في قلب العالم!"
+        },
+        "startSec": 0,
+        "endSec": 10
+      },
+      {
+        "id": "scene-2",
+        "act": "concept",
+        "title": "دلالة الألوان والموقع الجغرافي",
+        "badgeText": "🧠 الشرح العميق",
+        "visualType": "bullet_points",
+        "visualData": {
+          "bullets": [
+            "ألوان العلم: الأحمر للنضال، الأبيض للسلام، الأسود للصمود ضد الظلم، والنسر الذهبي للقوة.",
+            "الموقع الاستراتيجي: تقع مصر في الركن الشمالي الشرقي لقارة إفريقيا بقلب العالم القديم.",
+            "الأهمية المائية: يحدها البحر المتوسط شمالاً والبحر الأحمر شرقاً وتربط بين الشرق والغرب."
+          ],
+          "formulaLatex": "",
+          "codeSnippet": "",
+          "imagePrompt": "A dynamic educational illustration showing the Egyptian flag fluttering alongside a glowing 3D world map emphasizing Egypt's golden location in North-East Africa."
+        },
+        "startSec": 10,
+        "endSec": 30
+      },
+      {
+        "id": "scene-3",
+        "act": "takeaway",
+        "title": "احترام العلم واجب وطني",
+        "badgeText": "🏆 التطبيق والنتيجة",
+        "visualType": "bullet_points",
+        "visualData": {
+          "highlightQuote": "قف باحترام أثناء تحية العلم، وحافظ عليه من التلف أو لمس الأرض، فإهانته جريمة يعاقب عليها القانون."
+        },
+        "startSec": 30,
+        "endSec": 45
+      }
+    ],
+    "word_timings": [
+      {
+        "word": "هل",
+        "startMs": 0,
+        "endMs": 714
+      },
+      {
+        "word": "تساءلت",
+        "startMs": 714,
+        "endMs": 1429
+      },
+      {
+        "word": "يوماً",
+        "startMs": 1429,
+        "endMs": 2143
+      },
+      {
+        "word": "لماذا",
+        "startMs": 2143,
+        "endMs": 2857
+      },
+      {
+        "word": "نقف",
+        "startMs": 2857,
+        "endMs": 3571
+      },
+      {
+        "word": "باحترام",
+        "startMs": 3571,
+        "endMs": 4286
+      },
+      {
+        "word": "أمام",
+        "startMs": 4286,
+        "endMs": 5000
+      },
+      {
+        "word": "علم",
+        "startMs": 5000,
+        "endMs": 5714
+      },
+      {
+        "word": "مصر؟",
+        "startMs": 5714,
+        "endMs": 6429
+      },
+      {
+        "word": "إنه",
+        "startMs": 6429,
+        "endMs": 7143
+      },
+      {
+        "word": "ليس",
+        "startMs": 7143,
+        "endMs": 7857
+      },
+      {
+        "word": "مجرد",
+        "startMs": 7857,
+        "endMs": 8571
+      },
+      {
+        "word": "قماش،",
+        "startMs": 8571,
+        "endMs": 9286
+      },
+      {
+        "word": "بل",
+        "startMs": 9286,
+        "endMs": 10000
+      },
+      {
+        "word": "قصة",
+        "startMs": 10000,
+        "endMs": 10714
+      },
+      {
+        "word": "وطن",
+        "startMs": 10714,
+        "endMs": 11429
+      },
+      {
+        "word": "عظيم!",
+        "startMs": 11429,
+        "endMs": 12143
+      },
+      {
+        "word": "فالأحمر",
+        "startMs": 12143,
+        "endMs": 12857
+      },
+      {
+        "word": "يجسد",
+        "startMs": 12857,
+        "endMs": 13571
+      },
+      {
+        "word": "دماء",
+        "startMs": 13571,
+        "endMs": 14286
+      },
+      {
+        "word": "الشهداء",
+        "startMs": 14286,
+        "endMs": 15000
+      },
+      {
+        "word": "والنضال،",
+        "startMs": 15000,
+        "endMs": 15714
+      },
+      {
+        "word": "والأبيض",
+        "startMs": 15714,
+        "endMs": 16429
+      },
+      {
+        "word": "يرمز",
+        "startMs": 16429,
+        "endMs": 17143
+      },
+      {
+        "word": "للسلام،",
+        "startMs": 17143,
+        "endMs": 17857
+      },
+      {
+        "word": "والأسود",
+        "startMs": 17857,
+        "endMs": 18571
+      },
+      {
+        "word": "يروي",
+        "startMs": 18571,
+        "endMs": 19286
+      },
+      {
+        "word": "صمودنا،",
+        "startMs": 19286,
+        "endMs": 20000
+      },
+      {
+        "word": "بينما",
+        "startMs": 20000,
+        "endMs": 20714
+      },
+      {
+        "word": "يمثل",
+        "startMs": 20714,
+        "endMs": 21429
+      },
+      {
+        "word": "النسر",
+        "startMs": 21429,
+        "endMs": 22143
+      },
+      {
+        "word": "الذهبي",
+        "startMs": 22143,
+        "endMs": 22857
+      },
+      {
+        "word": "القوة",
+        "startMs": 22857,
+        "endMs": 23571
+      },
+      {
+        "word": "والعزة.",
+        "startMs": 23571,
+        "endMs": 24286
+      },
+      {
+        "word": "وتقع",
+        "startMs": 24286,
+        "endMs": 25000
+      },
+      {
+        "word": "مصر",
+        "startMs": 25000,
+        "endMs": 25714
+      },
+      {
+        "word": "في",
+        "startMs": 25714,
+        "endMs": 26429
+      },
+      {
+        "word": "قلب",
+        "startMs": 26429,
+        "endMs": 27143
+      },
+      {
+        "word": "العالم",
+        "startMs": 27143,
+        "endMs": 27857
+      },
+      {
+        "word": "القديم،",
+        "startMs": 27857,
+        "endMs": 28571
+      },
+      {
+        "word": "في",
+        "startMs": 28571,
+        "endMs": 29286
+      },
+      {
+        "word": "الركن",
+        "startMs": 29286,
+        "endMs": 30000
+      },
+      {
+        "word": "الشمالي",
+        "startMs": 30000,
+        "endMs": 30714
+      },
+      {
+        "word": "الشرقي",
+        "startMs": 30714,
+        "endMs": 31429
+      },
+      {
+        "word": "لإفريقيا،",
+        "startMs": 31429,
+        "endMs": 32143
+      },
+      {
+        "word": "يحدها",
+        "startMs": 32143,
+        "endMs": 32857
+      },
+      {
+        "word": "البحران",
+        "startMs": 32857,
+        "endMs": 33571
+      },
+      {
+        "word": "المتوسط",
+        "startMs": 33571,
+        "endMs": 34286
+      },
+      {
+        "word": "والأحمر.",
+        "startMs": 34286,
+        "endMs": 35000
+      },
+      {
+        "word": "احترم",
+        "startMs": 35000,
+        "endMs": 35714
+      },
+      {
+        "word": "علمك",
+        "startMs": 35714,
+        "endMs": 36429
+      },
+      {
+        "word": "وحافظ",
+        "startMs": 36429,
+        "endMs": 37143
+      },
+      {
+        "word": "عليه،",
+        "startMs": 37143,
+        "endMs": 37857
+      },
+      {
+        "word": "فهو",
+        "startMs": 37857,
+        "endMs": 38571
+      },
+      {
+        "word": "رمز",
+        "startMs": 38571,
+        "endMs": 39286
+      },
+      {
+        "word": "عزتنا!",
+        "startMs": 39286,
+        "endMs": 40000
+      }
+    ],
+    "visual_cards": [
+      {
+        "title": "رمزية العلم المصري",
+        "content": "الأحمر للنضال، الأبيض للسلام، الأسود لمواجهة الاستعمار، والنسر الذهبي يعبر عن قوة مصر وعزتها.",
+        "type": "formula",
+        "startSec": 5,
+        "endSec": 20
+      },
+      {
+        "title": "موقع مصر الجغرافي",
+        "content": "تقع مصر في قلب قارات العالم القديم (الركن الشمالي الشرقي لإفريقيا) بين البحر المتوسط والبحر الأحمر.",
+        "type": "diagram",
+        "startSec": 21,
+        "endSec": 35
+      }
+    ],
+    "interactive_quiz": {
+      "question": "إلامَ يرمز اللون الأحمر في علم مصر؟",
+      "options": [
+        "النضال ودماء الشهداء من أجل الحرية",
+        "السلام والنقاء والرخاء",
+        "فترات الاستعمار والظلم"
+      ],
+      "correctIndex": 0,
+      "triggerSec": 32,
+      "explanation": "يعبر اللون الأحمر في علم مصر عن مرحلة النضال ودماء الشهداء الذين ضحوا بأرواحهم لاستقلال الوطن وحريته."
+    },
+    "likes_count": 36,
+    "views_count": 235,
+    "completions_count": 45,
+    "is_public_teaser": true,
+    "created_at": "2026-09-24T13:30:06.951Z"
+  },
+  {
+    "id": "reel-1790256633145-7644",
+    "book_id": "aaf6b6ab-6928-431a-afec-89c2adbfce6d",
+    "book_title": "مغامرة الدراسات الاجتماعية: مصر في قلب العالم",
+    "author_name": "خبير المادة",
+    "category": "تعليمي",
+    "subcategory": "",
+    "thumbnail_url": "",
+    "chapter_id": "ch-aaf6b6ab-6928-431a-afec-89c2adbfce6d-6",
+    "chapter_title": "كنوز مصر: تضاريسها الجميلة، ثرواتها، ومعالمها التاريخية",
+    "style_type": "chalkboard",
+    "style": "chalkboard",
+    "voice": "ar-SA-HamedNeural",
+    "duration_seconds": 45,
+    "audio_url": "https://ydlzvuutjgelpxueufgn.supabase.co/storage/v1/object/public/book-audios/reel_aaf6b6ab-6928-431a-afec-89c2adbfce6d_ch-aaf6b6ab-6928-431a-afec-89c2adbfce6d-6_1790256622111.mp3",
+    "narration_script": "هل تساءلت يوماً ما الذي يجعل أرض مصر خزانة من الكنوز الطبيعية والتاريخية؟ تتنوع تضاريس مصر بين جبال شاهقة كجبل سانت كاترين، وهضاب كالجلف الكبير، وسهول فيضية خصبة يرويها النيل. تجود أرضها بموارد متجددة كالماء والشمس لا تنفد، وموارد غير متجددة كالمعادن والبترول تتطلب الترشيد. وتكتمل هذه العظمة بمعالم أثرية خالدة كمعابد الكرنك وهرم زوسر. فلتكن حامياً لهذه الثروات بتطبيق الحياة المستدامة!",
+    "scenes": [
+      {
+        "id": "scene-1",
+        "act": "hook",
+        "title": "رحلة في أسرار أرض الكنوز",
+        "badgeText": "🔥 فكرة محورية",
+        "visualType": "quote",
+        "visualData": {
+          "highlightQuote": "تنوع طبيعي ساحر وتاريخ عريق يمتد لأفنية الزمن فوق أرض مصر."
+        },
+        "startSec": 0,
+        "endSec": 10
+      },
+      {
+        "id": "scene-2",
+        "act": "concept",
+        "title": "التضاريس وثروات مصر الطبيعية",
+        "badgeText": "🧠 الشرح العميق",
+        "visualType": "bullet_points",
+        "visualData": {
+          "bullets": [
+            "التضاريس: تنوع بين الجبال (سانت كاترين)، الهضاب (الجلف الكبير)، والسهول الفيضية الخصبة.",
+            "الموارد الطبيعية: موارد متجددة لا تنفد كالماء والشمس، وغير متجددة كالبترول والمعادن.",
+            "المعالم التاريخية: آثار خالدة مثل معابد الكرنك وهرم زوسر المدرج والجامع الأزهر."
+          ],
+          "formulaLatex": "",
+          "codeSnippet": "",
+          "imagePrompt": "Cinematic 3D educational visual showing Egypt rich geography: green Nile River valley, golden desert plateaus, Sinai high mountain peaks, and iconic historical monuments under sunny sky."
+        },
+        "startSec": 10,
+        "endSec": 30
+      },
+      {
+        "id": "scene-3",
+        "act": "takeaway",
+        "title": "الحفاظ على الكنوز والحياة المستدامة",
+        "badgeText": "🏆 التطبيق والنتيجة",
+        "visualType": "bullet_points",
+        "visualData": {
+          "highlightQuote": "ترشيد استهلاك المياه والكهرباء والمشاركة في مبادرة 'اتحضر للأخضر' يحمي بيئتنا ومواردنا القومية."
+        },
+        "startSec": 30,
+        "endSec": 45
+      }
+    ],
+    "word_timings": [
+      {
+        "word": "هل",
+        "startMs": 0,
+        "endMs": 645
+      },
+      {
+        "word": "تساءلت",
+        "startMs": 645,
+        "endMs": 1290
+      },
+      {
+        "word": "يوماً",
+        "startMs": 1290,
+        "endMs": 1935
+      },
+      {
+        "word": "ما",
+        "startMs": 1935,
+        "endMs": 2581
+      },
+      {
+        "word": "الذي",
+        "startMs": 2581,
+        "endMs": 3226
+      },
+      {
+        "word": "يجعل",
+        "startMs": 3226,
+        "endMs": 3871
+      },
+      {
+        "word": "أرض",
+        "startMs": 3871,
+        "endMs": 4516
+      },
+      {
+        "word": "مصر",
+        "startMs": 4516,
+        "endMs": 5161
+      },
+      {
+        "word": "خزانة",
+        "startMs": 5161,
+        "endMs": 5806
+      },
+      {
+        "word": "من",
+        "startMs": 5806,
+        "endMs": 6452
+      },
+      {
+        "word": "الكنوز",
+        "startMs": 6452,
+        "endMs": 7097
+      },
+      {
+        "word": "الطبيعية",
+        "startMs": 7097,
+        "endMs": 7742
+      },
+      {
+        "word": "والتاريخية؟",
+        "startMs": 7742,
+        "endMs": 8387
+      },
+      {
+        "word": "تتنوع",
+        "startMs": 8387,
+        "endMs": 9032
+      },
+      {
+        "word": "تضاريس",
+        "startMs": 9032,
+        "endMs": 9677
+      },
+      {
+        "word": "مصر",
+        "startMs": 9677,
+        "endMs": 10323
+      },
+      {
+        "word": "بين",
+        "startMs": 10323,
+        "endMs": 10968
+      },
+      {
+        "word": "جبال",
+        "startMs": 10968,
+        "endMs": 11613
+      },
+      {
+        "word": "شاهقة",
+        "startMs": 11613,
+        "endMs": 12258
+      },
+      {
+        "word": "كجبل",
+        "startMs": 12258,
+        "endMs": 12903
+      },
+      {
+        "word": "سانت",
+        "startMs": 12903,
+        "endMs": 13548
+      },
+      {
+        "word": "كاترين،",
+        "startMs": 13548,
+        "endMs": 14194
+      },
+      {
+        "word": "وهضاب",
+        "startMs": 14194,
+        "endMs": 14839
+      },
+      {
+        "word": "كالجلف",
+        "startMs": 14839,
+        "endMs": 15484
+      },
+      {
+        "word": "الكبير،",
+        "startMs": 15484,
+        "endMs": 16129
+      },
+      {
+        "word": "وسهول",
+        "startMs": 16129,
+        "endMs": 16774
+      },
+      {
+        "word": "فيضية",
+        "startMs": 16774,
+        "endMs": 17419
+      },
+      {
+        "word": "خصبة",
+        "startMs": 17419,
+        "endMs": 18065
+      },
+      {
+        "word": "يرويها",
+        "startMs": 18065,
+        "endMs": 18710
+      },
+      {
+        "word": "النيل.",
+        "startMs": 18710,
+        "endMs": 19355
+      },
+      {
+        "word": "تجود",
+        "startMs": 19355,
+        "endMs": 20000
+      },
+      {
+        "word": "أرضها",
+        "startMs": 20000,
+        "endMs": 20645
+      },
+      {
+        "word": "بموارد",
+        "startMs": 20645,
+        "endMs": 21290
+      },
+      {
+        "word": "متجددة",
+        "startMs": 21290,
+        "endMs": 21935
+      },
+      {
+        "word": "كالماء",
+        "startMs": 21935,
+        "endMs": 22581
+      },
+      {
+        "word": "والشمس",
+        "startMs": 22581,
+        "endMs": 23226
+      },
+      {
+        "word": "لا",
+        "startMs": 23226,
+        "endMs": 23871
+      },
+      {
+        "word": "تنفد،",
+        "startMs": 23871,
+        "endMs": 24516
+      },
+      {
+        "word": "وموارد",
+        "startMs": 24516,
+        "endMs": 25161
+      },
+      {
+        "word": "غير",
+        "startMs": 25161,
+        "endMs": 25806
+      },
+      {
+        "word": "متجددة",
+        "startMs": 25806,
+        "endMs": 26452
+      },
+      {
+        "word": "كالمعادن",
+        "startMs": 26452,
+        "endMs": 27097
+      },
+      {
+        "word": "والبترول",
+        "startMs": 27097,
+        "endMs": 27742
+      },
+      {
+        "word": "تتطلب",
+        "startMs": 27742,
+        "endMs": 28387
+      },
+      {
+        "word": "الترشيد.",
+        "startMs": 28387,
+        "endMs": 29032
+      },
+      {
+        "word": "وتكتمل",
+        "startMs": 29032,
+        "endMs": 29677
+      },
+      {
+        "word": "هذه",
+        "startMs": 29677,
+        "endMs": 30323
+      },
+      {
+        "word": "العظمة",
+        "startMs": 30323,
+        "endMs": 30968
+      },
+      {
+        "word": "بمعالم",
+        "startMs": 30968,
+        "endMs": 31613
+      },
+      {
+        "word": "أثرية",
+        "startMs": 31613,
+        "endMs": 32258
+      },
+      {
+        "word": "خالدة",
+        "startMs": 32258,
+        "endMs": 32903
+      },
+      {
+        "word": "كمعابد",
+        "startMs": 32903,
+        "endMs": 33548
+      },
+      {
+        "word": "الكرنك",
+        "startMs": 33548,
+        "endMs": 34194
+      },
+      {
+        "word": "وهرم",
+        "startMs": 34194,
+        "endMs": 34839
+      },
+      {
+        "word": "زوسر.",
+        "startMs": 34839,
+        "endMs": 35484
+      },
+      {
+        "word": "فلتكن",
+        "startMs": 35484,
+        "endMs": 36129
+      },
+      {
+        "word": "حامياً",
+        "startMs": 36129,
+        "endMs": 36774
+      },
+      {
+        "word": "لهذه",
+        "startMs": 36774,
+        "endMs": 37419
+      },
+      {
+        "word": "الثروات",
+        "startMs": 37419,
+        "endMs": 38065
+      },
+      {
+        "word": "بتطبيق",
+        "startMs": 38065,
+        "endMs": 38710
+      },
+      {
+        "word": "الحياة",
+        "startMs": 38710,
+        "endMs": 39355
+      },
+      {
+        "word": "المستدامة!",
+        "startMs": 39355,
+        "endMs": 40000
+      }
+    ],
+    "visual_cards": [
+      {
+        "title": "تصنيف الموارد الطبيعية",
+        "content": "الموارد المتجددة (شمس، هواء، ماء) لا تنفد بالاستخدام، بينما الموارد غير المتجددة (بترول، معادن، غاز) محدودة وتنفد بكثرة الاستخدام.",
+        "type": "formula",
+        "startSec": 5,
+        "endSec": 20
+      },
+      {
+        "title": "مبادرة اتحضر للأخضر",
+        "content": "سلوكك اليومي في ترشيد الكهرباء والماء وزراعة الأشجار يساهم مباشرة في حماية موارد الوطن وتحقيق الحياة المستدامة.",
+        "type": "diagram",
+        "startSec": 21,
+        "endSec": 35
+      }
+    ],
+    "interactive_quiz": {
+      "question": "أي من المعالم التضاريسية التالية يُعد أعلى قمة جبلية في مصر؟",
+      "options": [
+        "جبل سانت كاترين",
+        "هضبة الجلف الكبير",
+        "جزيرة شدوان"
+      ],
+      "correctIndex": 0,
+      "triggerSec": 32,
+      "explanation": "جبل سانت كاترين هو أعلى قمة جبلية في مصر ويقع في جنوب سيناء، بينما الجلف الكبير هضبة وشدوان جزيرة."
+    },
+    "likes_count": 89,
+    "views_count": 272,
+    "completions_count": 45,
+    "is_public_teaser": true,
+    "created_at": "2026-09-24T13:30:33.145Z"
   }
 ]

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { BookOpen, ArrowLeft, Brain, HelpCircle, Youtube, Edit, Radio, Sparkles, RefreshCw, Layers, Terminal, Volume2, Eye, EyeOff, Check, Flame, Lock, ShoppingCart, CheckCircle2, ExternalLink, X, Maximize2, Minimize2, ShieldCheck, Shield, Play, Film } from 'lucide-react';
+import { BookOpen, ArrowLeft, Brain, HelpCircle, Youtube, Edit, Radio, Sparkles, RefreshCw, Layers, Terminal, Volume2, Eye, EyeOff, Check, Flame, Lock, ShoppingCart, CheckCircle2, ExternalLink, X, Maximize2, Minimize2, ShieldCheck, Shield, Play, Film, Smartphone } from 'lucide-react';
 import { MarketplaceBook, MindMapNode, Flashcard, Chapter, UserRole, EduReel, EduReelStyle } from '../types';
 import MindMap from '../components/MindMap';
 import QuizSection from '../components/QuizSection';
@@ -18,6 +18,7 @@ import { EduReelPlayer } from '../components/reels/EduReelPlayer';
 import { supabase } from '../lib/supabase';
 import { ForensicWatermark } from '../components/security/ForensicWatermark';
 import { ScreenShieldGuard } from '../components/security/ScreenShieldGuard';
+import { SeoStructuredData } from '../components/seo/SeoStructuredData';
 
 interface BookDetailsRouteProps {
   books: MarketplaceBook[];
@@ -420,6 +421,7 @@ export default function BookDetailsRoute({
 
     return (
       <div className="space-y-8 animate-fade-in pb-24 text-right max-w-6xl mx-auto" dir="rtl">
+        <SeoStructuredData type="book" book={book} />
         {/* TOP NAV BAR */}
         <div className="flex items-center justify-between pb-4 border-b border-gray-200">
           <button
@@ -683,6 +685,7 @@ export default function BookDetailsRoute({
 
   return (
     <div className="space-y-6 animate-fade-in pb-24 text-right" dir="rtl">
+      <SeoStructuredData type="chapter" book={book} chapter={activeChapter} />
       
       {/* TOP STATUS & CONTROLS HEADER BAR */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-gray-200 shadow-sm rounded-3xl p-4 px-5">

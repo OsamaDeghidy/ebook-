@@ -339,7 +339,7 @@ export default function ContentUploader({
       <form onSubmit={handleSubmit} className="space-y-5">
         
         {/* PROMINENT TOGGLE: ACADEMIC VS GENERAL LIBRARY */}
-        <div className="bg-white border-2 border-indigo-100 rounded-3xl p-3 shadow-sm">
+        <div className="bg-white border-2 border-indigo-100 rounded-3xl p-3 shadow-sm space-y-3">
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
@@ -367,6 +367,35 @@ export default function ContentUploader({
               <span>كتاب عام ومكتبة رقمية (تطوير ذات / أعمال)</span>
             </button>
           </div>
+
+          {/* Engine Highlights */}
+          {isAcademicMode ? (
+            <div className="p-3 bg-indigo-50/60 rounded-2xl border border-indigo-100 text-[11px] text-indigo-900 grid grid-cols-1 sm:grid-cols-3 gap-2 font-bold">
+              <div className="flex items-center gap-1.5">
+                <span className="text-indigo-600">✓</span>
+                <span>تفكيك الدروس وحفظ الهيكلية الوزارية</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-indigo-600">✓</span>
+                <span>استخراج القوانين وتريكات الامتحانات</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-indigo-600">✓</span>
+                <span>أسئلة متدرجة وفق هرم بلوم وبطاقات مراجعة</span>
+              </div>
+            </div>
+          ) : (
+            <div className="p-3 bg-amber-50/60 rounded-2xl border border-amber-100 text-[11px] text-amber-900 grid grid-cols-1 sm:grid-cols-2 gap-2 font-bold">
+              <div className="flex items-center gap-1.5">
+                <span className="text-amber-600">✓</span>
+                <span>تلخيص الفصول، استخلاص الرؤى، والخرائط الذهنية</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-amber-600">✓</span>
+                <span>حوارات بودكاست صوتية وتوليد ريلز سريعة</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* DRAG AND DROP ZONE */}

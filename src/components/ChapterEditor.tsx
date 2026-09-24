@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Save, Plus, Trash2, FileText, Check, Search, Replace, Sparkles, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Save, Plus, Trash2, FileText, Check, Search, Replace, Sparkles, AlertCircle, ShieldAlert, Binary, Sigma, Table, Lightbulb, HelpCircle } from 'lucide-react';
 import { Chapter } from '../types';
 
 interface ChapterEditorProps {
@@ -28,6 +28,25 @@ export default function ChapterEditor({
   const [findWord, setFindWord] = useState('');
   const [replaceWord, setReplaceWord] = useState('');
   const [replaceMessage, setReplaceMessage] = useState<string | null>(null);
+
+  const contentTextAreaRef = useRef<HTMLTextAreaElement>(null);
+
+  const insertSnippet = (snippet: string) => {
+    if (!contentTextAreaRef.current) {
+      setContent(prev => prev + '\n' + snippet);
+      return;
+    }
+    const textarea = contentTextAreaRef.current;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const currentVal = textarea.value;
+    const updated = currentVal.substring(0, start) + snippet + currentVal.substring(end);
+    setContent(updated);
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + snippet.length, start + snippet.length);
+    }, 50);
+  };
 
   // Sync state when active chapter changes
   useEffect(() => {
@@ -198,17 +217,75 @@ export default function ChapterEditor({
 
         {/* Chapter Markdown Content Textarea */}
         <div>
-          <label className="block font-bold text-gray-700 text-xs mb-1.5">
-            المحتوى التعليمي الموسع (يدعم تنسيق Markdown والعناوين)
-          </label>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+            <label className="block font-bold text-gray-700 text-xs">
+              المحتوى التعليمي الموسع (يدعم تنسيق Markdown والعناوين)
+            </label>
+            
+            {/* Quick Pedagogical Insert Toolbar */}
+            <div className="flex flex-wrap items-center gap-1.5 bg-gray-50 p-1.5 rounded-xl border border-gray-200">
+              <span className="text-[10px] font-black text-gray-400 px-1">قوالب تعليمية:</span>
+              <button
+                type="button"
+                onClick={() => insertSnippet('\n> [!IMPORTANT]\n> **📌 قانون / قاعدة هامة:**\n> اكتب المعادلة أو القانون هنا...\n')}
+                className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-lg text-[10px] font-black flex items-center gap-1 transition"
+                title="إدراج صندوق قانون وقاعدة هامة"
+              >
+                <Sigma className="w-3 h-3 text-amber-600" />
+                <span>صندوق قوانين</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => insertSnippet('\n### 📝 مثال تطبيقي محلول بالخطوات:\n- **المعطيات:** ...\n- **المطلوب:** ...\n- **خطوات الحل النموذجي:**\n  1. **الخطوة الأولى:** استخدام القانون...\n  2. **الخطوة الثانية:** التعويض وحساب الناتج...\n- **🎯 الناتج النهائي:** ...\n')}
+                className="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-lg text-[10px] font-black flex items-center gap-1 transition"
+                title="إدراج مسألة ومثال محلول بالخطوات"
+              >
+                <Lightbulb className="w-3 h-3 text-blue-600" />
+                <span>مسألة محلولة</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => insertSnippet('\n> [!WARNING]\n> **🚨 تريكة امتحان وفخ شائع:**\n> انتبه جيداً: يقع الطلاب في خطأ الخلط بين (...) و (...) بسبب...\n')}
+                className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-900 border border-rose-200 rounded-lg text-[10px] font-black flex items-center gap-1 transition"
+                title="إدراج تنبيه تريكة وفخ امتحان"
+              >
+                <ShieldAlert className="w-3 h-3 text-rose-600" />
+                <span>تريكة امتحان</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => insertSnippet('\n| وجه المقارنة | العنصر الأول | العنصر الثاني |\n| :--- | :--- | :--- |\n| التعريف | ... | ... |\n| الاستخدام | ... | ... |\n')}
+                className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 rounded-lg text-[10px] font-black flex items-center gap-1 transition"
+                title="إدراج جدول مقارنة"
+              >
+                <Table className="w-3 h-3 text-emerald-600" />
+                <span>جدول مقارنة</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => insertSnippet('\n$$\n\\Delta E = m \\cdot c^2\n$$\n')}
+                className="px-2 py-1 bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 rounded-lg text-[10px] font-black flex items-center gap-1 transition"
+                title="إدراج معادلة رياضية أو كيميائية LaTeX"
+              >
+                <Binary className="w-3 h-3 text-purple-600" />
+                <span>LaTeX</span>
+              </button>
+            </div>
+          </div>
+
           <textarea
+            ref={contentTextAreaRef}
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            rows={10}
-            className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-indigo-500 focus:bg-white transition text-xs font-mono leading-relaxed text-gray-900"
+            rows={12}
+            className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-indigo-500 focus:bg-white transition text-xs font-mono leading-relaxed text-gray-900 shadow-inner"
           />
           <span className="text-[10px] text-gray-400 mt-1 block">
-            يدعم كتابة الفقرات، القوائم النقطية، العناوين بالـ Markdown، والتشكيل باللغة العربية.
+            يدعم كتابة الفقرات، القوائم النقطية، العناوين بالـ Markdown، والتشكيل باللغة العربية وصناديق التنبيهات.
           </span>
         </div>
 

@@ -5,6 +5,7 @@ import os from "os";
 import crypto from "crypto";
 import { EdgeTTS } from "node-edge-tts";
 import { GoogleGenAI, Type } from "@google/genai";
+import { PDFParse } from "pdf-parse";
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
 
@@ -81,16 +82,27 @@ async function uploadAudioFileToSupabase(filePath: string, fileName: string): Pr
 
 function cleanScientificTextForSpeech(input: string): string {
   let cleaned = input || "";
-  // 1. Strip markdown bracketed emotions like [متحمس], [مبتسمة بدفء]
+
+  // 1. Strip markdown bracketed callout tags like [!IMPORTANT], [!WARNING], [!TIP], [!NOTE]
+  cleaned = cleaned.replace(/\[\!(IMPORTANT|WARNING|TIP|NOTE)\]/gi, " ");
+
+  // 2. Strip bracketed emotions/notes like [متحمس], [مبتسمة بدفء]
   cleaned = cleaned.replace(/\[.*?\]/g, " ");
 
-  // 2. Expand common Arabic scientific terms & chemical formulas e.g. H2O -> ماء
+  // 3. Strip ALL Unicode Emojis and Symbols so TTS engines (Edge-TTS) never speak emoji names!
+  // e.g. 🎒 -> "حقيبة ظهر", 🔍 -> "عدسة بحث", 💡 -> "مصباح", 🎮 -> "ألعاب", 📖 -> "كتاب", ⭐ -> "نجمة"
+  cleaned = cleaned.replace(/[\uD83C-\uDBFF\uDC00-\uDFFF]+/g, " ");
+  cleaned = cleaned.replace(/[\u2600-\u27BF\u2300-\u23FF\u2B50\u200D\uFE0F\u20E3\u2190-\u21FF]/g, " ");
+  cleaned = cleaned.replace(/[🔴🔵🟢🟣🟠🟡⚪⚫🔺🔻⭐✨💡📌🧭📏🗺️⚠️🚨🎉🎙️🎒🔍🎮📖📐🎯🧠💡]/gu, " ");
+
+  // 4. Expand common Arabic scientific terms & chemical formulas e.g. H2O -> ماء
   cleaned = cleaned.replace(/\bH2O\b/gi, "ماء");
   cleaned = cleaned.replace(/\bCO2\b/gi, "ثاني أكسيد الكربون");
   cleaned = cleaned.replace(/\bO2\b/gi, "أكسجين");
 
-  // 3. Strip code symbols and markdown formatting
-  cleaned = cleaned.replace(/[\*\_\#\`\~\<\>\=\+\-\|]/g, " ");
+  // 5. Strip code symbols, table pipes, brackets, and markdown formatting
+  cleaned = cleaned.replace(/[\*\_\#\`\~\[\]\(\)\{\}\$\|\\]/g, " ");
+  cleaned = cleaned.replace(/\s+/g, " ");
 
   return cleaned.trim();
 }
@@ -196,76 +208,106 @@ const getGenAIClient = (keyOverride?: string) => {
 const getAiInstance = (keyOverride?: string) => getGenAIClient(keyOverride);
 
 /**
+ * Dynamic Working Gemini Models Chain
+ * Prioritizes high-speed, 1M context, active models: gemini-3-flash-preview, gemini-flash-lite-latest, gemini-flash-latest
+ */
+const DEFAULT_GEMINI_MODELS = [
+  "gemini-3.6-flash",              // Ultra-fast, 100% Active (200 OK)
+  "gemini-3.5-flash",              // High-speed fallback (200 OK)
+  "gemini-3.5-flash-lite",         // Ultra-low latency ~1.5s (200 OK)
+  "gemini-3-flash-preview",        // 1M context active (200 OK)
+  "gemini-3.1-flash-lite-preview", // Active lite preview (200 OK)
+  "gemini-3.7-flash"
+];
+
+// Track temporarily disabled keys (e.g. 402 depleted credits or 429 quota exhausted)
+const disabledKeysMap = new Map<string, number>();
+
+/**
  * Executes a Gemini API call with instant failover across Multi-Keys and Lite & Fast models
- * Prioritizes cost-effective & fast models: gemini-3.7-flash, gemini-3.5-flash, gemini-3.8-flash, etc.
  */
 const generateContentWithRetry = async (
   _ai: any,
   params: any,
-  modelsChain: string[] = [
-    "gemini-3.7-flash",
-    "gemini-3.5-flash",
-    "gemini-3.8-flash",
-    "gemini-3.6-flash",
-    "gemini-3-flash",
-    "gemini-3.5-flash-lite",
-    "gemini-2.5-flash",
-    "gemini-2.0-flash",
-    "gemini-1.5-flash",
-    "gemini-1.5-pro"
-  ]
+  modelsChain: string[] = DEFAULT_GEMINI_MODELS
 ): Promise<any> => {
   const keysPool = getApiKeysPool();
   let lastError: any = null;
-
   const totalKeys = Math.max(1, keysPool.length);
+  const now = Date.now();
 
   for (let keyStep = 0; keyStep < totalKeys; keyStep++) {
     const keyIdx = (currentKeyIndex + keyStep) % totalKeys;
     const activeKey = keysPool[keyIdx];
+
+    // Check if key is temporarily disabled (cache for 5 minutes)
+    if (activeKey && disabledKeysMap.has(activeKey)) {
+      const disabledUntil = disabledKeysMap.get(activeKey)!;
+      if (now < disabledUntil) {
+        continue;
+      } else {
+        disabledKeysMap.delete(activeKey);
+      }
+    }
+
     const client = activeKey ? getGenAIClient(activeKey) : _ai;
     if (!client) continue;
 
     for (const model of modelsChain) {
       console.log(`[Gemini API] Dispatching to ${model} (Key #${keyIdx + 1}/${totalKeys})`);
       
-      // Fast single retry for transient 503s; instant switch for 429/404
-      for (let attempt = 1; attempt <= 2; attempt++) {
-        try {
-          const response = await client.models.generateContent({
-            ...params,
-            model,
-          });
-          return response;
-        } catch (err: any) {
-          lastError = err;
-          const errMessage = err?.message || String(err);
-          const errStatus = err?.status || "";
-          const errCode = err?.code || "";
-          const errStr = `${errMessage} ${errStatus} ${errCode}`.toLowerCase();
+      try {
+        const response = await client.models.generateContent({
+          ...params,
+          model,
+        });
+        // Success! Advance pointer for smooth round-robin load balancing
+        currentKeyIndex = (keyIdx + 1) % totalKeys;
+        return response;
+      } catch (err: any) {
+        lastError = err;
+        const errMessage = err?.message || String(err);
+        const errStatus = err?.status || "";
+        const errCode = err?.code || "";
+        const errStr = `${errMessage} ${errStatus} ${errCode}`.toLowerCase();
 
-          console.warn(
-            `[Gemini API] Model ${model} (Key #${keyIdx + 1}, attempt ${attempt}/2): ${errMessage.substring(0, 120)}`
-          );
+        console.warn(
+          `[Gemini API] Model ${model} (Key #${keyIdx + 1}): ${errMessage.substring(0, 140)}`
+        );
 
-          // 1. If 429 (Quota exceeded on this key), rotate key pointer immediately!
-          if (errStr.includes("429") || errStr.includes("quota") || errStr.includes("resource_exhausted")) {
-            console.log(`[Gemini API] Quota limit on Key #${keyIdx + 1}. Rotating to next API key/model...`);
-            currentKeyIndex = (currentKeyIndex + 1) % totalKeys;
-            break;
-          }
+        // 1. If 402 (Prepayment credits depleted) or 429 (Resource exhausted / Quota limit)
+        if (
+          errStr.includes("402") || 
+          errStr.includes("prepayment") || 
+          errStr.includes("depleted") || 
+          errStr.includes("429") || 
+          errStr.includes("quota") || 
+          errStr.includes("resource_exhausted")
+        ) {
+          console.warn(`[Gemini API] Key #${keyIdx + 1} exhausted/depleted. Blacklisting for 5m and rotating to next key...`);
+          if (activeKey) disabledKeysMap.set(activeKey, Date.now() + 5 * 60 * 1000);
+          currentKeyIndex = (currentKeyIndex + 1) % totalKeys;
+          break; // Break model loop, jump to next key immediately!
+        }
 
-          // 2. If 404 (Model not found/deprecated), try next model
-          if (errStr.includes("404") || errStr.includes("not found") || errStr.includes("no longer available")) {
-            break;
-          }
+        // 2. If 404 (Model deprecated or not found), try next model on same key
+        if (errStr.includes("404") || errStr.includes("not found") || errStr.includes("no longer available")) {
+          continue;
+        }
 
-          // 3. If 503 (High Demand) or transient network error, quick 800ms backoff once
-          if (attempt === 1 && (errStr.includes("503") || errStr.includes("high demand") || errStr.includes("fetch failed"))) {
-            console.log(`[Gemini API] Quick 800ms retry on ${model}...`);
-            await new Promise((resolve) => setTimeout(resolve, 800));
-          } else {
-            break; // Switch to next model immediately
+        // 3. If 503 (High demand) or transient socket error, quick 500ms retry once
+        if (errStr.includes("503") || errStr.includes("high demand") || errStr.includes("fetch failed") || errStr.includes("socket")) {
+          console.log(`[Gemini API] Retrying ${model} after brief 500ms backoff...`);
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          try {
+            const retryRes = await client.models.generateContent({
+              ...params,
+              model,
+            });
+            currentKeyIndex = (keyIdx + 1) % totalKeys;
+            return retryRes;
+          } catch (retryErr) {
+            // move to next model
           }
         }
       }
@@ -485,20 +527,36 @@ const ebookResponseSchema = {
               required: ["concept", "explanation"]
             }
           },
-          content: { type: Type.STRING, description: "Deep, thorough, and engaging chapter content in beautiful Markdown. Write several rich, detailed paragraphs explaining concepts, using bold text, list items, and quotes where appropriate. Do not skimp on depth." },
+          content: { type: Type.STRING, description: "Deep, thorough, and engaging chapter content in beautiful Markdown. For academic books, include learning objectives, formula/law callouts, worked step-by-step examples, exam traps/pitfalls, and summary tables." },
           imagePrompt: { type: Type.STRING, description: "A high-quality descriptive illustration prompt representing the core concept of this chapter. Perfect for an image generation AI." },
           quiz: {
             type: Type.ARRAY,
-            description: "A set of 3 multiple-choice questions to test the chapter concepts.",
+            description: "A rich set of 4-6 diverse questions covering multiple styles: MCQ, True/False (صح أم خطأ), Short Essay/Reasoning (علل وماذا يحدث لو), and Worked Textbook Examples (أمثلة محلولة من صلب المنهج).",
             items: {
               type: Type.OBJECT,
               properties: {
-                question: { type: Type.STRING, description: "Clear, conceptual, multiple choice question" },
-                options: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Exactly 4 options" },
-                correctOptionIndex: { type: Type.INTEGER, description: "0-based index of the correct option" },
-                explanation: { type: Type.STRING, description: "Detailed explanation of why the correct option is right and others are incorrect" }
+                question: { type: Type.STRING, description: "The question text or problem statement extracted or synthesized from the textbook" },
+                questionType: { type: Type.STRING, description: "Question format: 'mcq' | 'true_false' | 'essay' | 'worked_example'" },
+                options: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Options for MCQ (4 choices) or True/False (['صح', 'خطأ']). Optional for essay/worked_example." },
+                correctOptionIndex: { type: Type.INTEGER, description: "0-based index of correct option for MCQ/TF, 0 otherwise" },
+                explanation: { type: Type.STRING, description: "Detailed model answer, step-by-step intuition, explanation of why correct/wrong, or marking guide" },
+                difficulty: { type: Type.STRING, description: "easy | medium | hard" },
+                cognitiveLevel: { type: Type.STRING, description: "تذكر | فهم واستيعاب | تطبيق وحل مسائل | تحليل واستنتاج" }
               },
-              required: ["question", "options", "correctOptionIndex", "explanation"]
+              required: ["question", "explanation"]
+            }
+          },
+          flashcards: {
+            type: Type.ARRAY,
+            description: "A set of 4-6 active recall flashcards for spaced repetition (definitions, laws, reasoning, comparisons)",
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                front: { type: Type.STRING, description: "Front side: Question, key term, law, or reasoning trigger" },
+                back: { type: Type.STRING, description: "Back side: Concise model answer with highlighted core concept" },
+                difficulty: { type: Type.STRING, description: "easy, medium, or hard" }
+              },
+              required: ["front", "back"]
             }
           },
           videos: {
@@ -537,6 +595,61 @@ const ebookResponseSchema = {
 };
 
 // --- API ENDPOINTS ---
+
+// 🔍 Gemini API Keys Pool Health Check Endpoint
+app.get("/api/admin/gemini/health", async (req, res) => {
+  const keys = getApiKeysPool();
+  const results = [];
+
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    const maskedKey = key.substring(0, 8) + "..." + key.substring(key.length - 4);
+    const client = getGenAIClient(key);
+    
+    if (!client) {
+      results.push({ keyIndex: i + 1, maskedKey, status: "invalid", message: "Client creation failed" });
+      continue;
+    }
+
+    try {
+      const start = Date.now();
+      const testRes = await client.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: "Say OK in 1 word"
+      });
+      const latency = Date.now() - start;
+      results.push({
+        keyIndex: i + 1,
+        maskedKey,
+        status: "active",
+        model: "gemini-3-flash-preview",
+        latencyMs: latency,
+        sampleOutput: testRes.text?.trim()
+      });
+    } catch (err: any) {
+      const errStr = (err?.message || String(err)).toLowerCase();
+      let status = "error";
+      if (errStr.includes("402") || errStr.includes("prepayment")) status = "depleted_credits_402";
+      else if (errStr.includes("429") || errStr.includes("quota")) status = "quota_exhausted_429";
+
+      results.push({
+        keyIndex: i + 1,
+        maskedKey,
+        status,
+        error: (err?.message || String(err)).substring(0, 150)
+      });
+    }
+  }
+
+  const activeCount = results.filter(r => r.status === "active").length;
+  res.json({
+    totalKeys: keys.length,
+    activeKeys: activeCount,
+    healthStatus: activeCount > 0 ? "healthy" : "all_keys_exhausted",
+    activeModels: DEFAULT_GEMINI_MODELS,
+    keys: results
+  });
+});
 
 // 1. Get all ebooks
 app.get("/api/ebooks", (req, res) => {
@@ -707,24 +820,47 @@ async function runBackgroundEbookConversion(
         if (fileRes.ok) {
           const arrayBuf = await fileRes.arrayBuffer();
           const buffer = Buffer.from(arrayBuf);
-          const tempFilePath = path.join(os.tmpdir(), `gemini_upload_${Date.now()}_doc.pdf`);
-          fs.writeFileSync(tempFilePath, buffer);
+          let extractedText = "";
 
-          const uploadRes = await (ai.files as any).upload({
-            file: tempFilePath,
-            mimeType: fileType || "application/pdf"
-          });
-
-          contents.push({
-            fileData: {
-              fileUri: uploadRes.uri,
-              mimeType: uploadRes.mimeType
+          // Fast local PDF parsing
+          if (fileType === 'application/pdf' || (fileName && fileName.toLowerCase().endsWith('.pdf'))) {
+            try {
+              const parser = new PDFParse({ data: buffer });
+              const parsed = await parser.getText();
+              extractedText = (parsed?.text || "").trim();
+            } catch (pErr) {
+              console.warn("[Job Worker] Local PDF parsing from cloud URL warning:", pErr);
             }
-          });
+          }
 
-          try { fs.unlinkSync(tempFilePath); } catch (e) {}
-          job.progressStep = `تم استلام وتحليل الملف بنجاح! جاري بناء الفصول والأسئلة...`;
-          job.progressPercent = 45;
+          if (extractedText && extractedText.length > 50) {
+            console.log(`[Job Worker] Extracted ${extractedText.length} characters from cloud PDF.`);
+            contents.push({
+              text: `### SOURCE TEXTBOOK / CURRICULUM CONTENT (${fileName || "Uploaded Material"}):\n\n${extractedText.substring(0, 900000)}`
+            });
+            job.progressStep = `تم استخراج محتوى المذكرة (${(extractedText.length / 1000).toFixed(0)} ألف حرف) بنجاح!`;
+            job.progressPercent = 45;
+          } else {
+            // Fallback to Gemini Files API
+            const tempFilePath = path.join(os.tmpdir(), `gemini_upload_${Date.now()}_doc.pdf`);
+            fs.writeFileSync(tempFilePath, buffer);
+
+            const uploadRes = await (ai.files as any).upload({
+              file: tempFilePath,
+              mimeType: fileType || "application/pdf"
+            });
+
+            contents.push({
+              fileData: {
+                fileUri: uploadRes.uri,
+                mimeType: uploadRes.mimeType
+              }
+            });
+
+            try { fs.unlinkSync(tempFilePath); } catch (e) {}
+            job.progressStep = `تم استلام وتحليل الملف بنجاح! جاري بناء الفصول والأسئلة...`;
+            job.progressPercent = 45;
+          }
         }
       } catch (e) {
         console.warn("Could not fetch fileUrl for Gemini analysis:", e);
@@ -732,34 +868,69 @@ async function runBackgroundEbookConversion(
     } else if (fileBase64 && fileType) {
       const buffer = Buffer.from(fileBase64, 'base64');
       const sizeMB = (buffer.length / (1024 * 1024)).toFixed(1);
+      let extractedText = "";
 
-      // If file > 5MB, upload via Files API to prevent HTTP payload connection resets
-      if (buffer.length > 5 * 1024 * 1024) {
-        job.progressStep = `رفع الملف السحابي (${sizeMB} ميجابايت) عبر Gemini Cloud Files API...`;
+      // 1. Fast local PDF Extraction (Zero latency, no socket payload limit)
+      if (fileType === 'application/pdf' || (fileName && fileName.toLowerCase().endsWith('.pdf'))) {
+        job.progressStep = `جاري استخراج نصوص وهيكلية المذكرة (${sizeMB} ميجابايت) محلياً...`;
         job.progressPercent = 25;
-        console.log(`[Job Worker] Uploading large file (${sizeMB}MB) to Gemini Files API...`);
-
         try {
-          const tempFilePath = path.join(os.tmpdir(), `gemini_upload_${Date.now()}_doc.pdf`);
-          fs.writeFileSync(tempFilePath, buffer);
+          const parser = new PDFParse({ data: buffer });
+          const parsed = await parser.getText();
+          extractedText = (parsed?.text || "").trim();
+        } catch (parseErr) {
+          console.warn("[Job Worker] Local PDFParse extraction warning:", parseErr);
+        }
+      }
 
-          const uploadRes = await (ai.files as any).upload({
-            file: tempFilePath,
-            mimeType: fileType
-          });
+      if (extractedText && extractedText.length > 50) {
+        console.log(`[Job Worker] Local PDF extraction successful: ${extractedText.length} characters extracted from ${fileName || 'document'}.`);
+        contents.push({
+          text: `### SOURCE TEXTBOOK / CURRICULUM CONTENT (${fileName || "Uploaded Material"}):\n\n${extractedText.substring(0, 900000)}`
+        });
+        job.progressStep = `تم استخراج محتوى المذكرة (${(extractedText.length / 1000).toFixed(0)} ألف حرف) بنجاح! جاري البناء الأكاديمي...`;
+        job.progressPercent = 45;
+      } else {
+        // 2. Upload via Gemini Files API if large (> 5MB) or for non-text PDFs/images
+        if (buffer.length > 5 * 1024 * 1024) {
+          job.progressStep = `رفع الملف السحابي (${sizeMB} ميجابايت) عبر Gemini Cloud Files API...`;
+          job.progressPercent = 30;
+          console.log(`[Job Worker] Uploading large file (${sizeMB}MB) to Gemini Files API...`);
 
-          contents.push({
-            fileData: {
-              fileUri: uploadRes.uri,
-              mimeType: uploadRes.mimeType
+          try {
+            const tempFilePath = path.join(os.tmpdir(), `gemini_upload_${Date.now()}_doc.pdf`);
+            fs.writeFileSync(tempFilePath, buffer);
+
+            const uploadRes = await (ai.files as any).upload({
+              file: tempFilePath,
+              mimeType: fileType
+            });
+
+            contents.push({
+              fileData: {
+                fileUri: uploadRes.uri,
+                mimeType: uploadRes.mimeType
+              }
+            });
+
+            try { fs.unlinkSync(tempFilePath); } catch (e) {}
+            job.progressStep = `تم رفع الملف بنجاح (${sizeMB}MB)! جاري التحليل الأكاديمي الشامل...`;
+            job.progressPercent = 45;
+          } catch (uploadErr: any) {
+            console.warn("[Job Worker] Files API upload warning:", uploadErr);
+            // Only push inlineData if buffer is under 15MB to prevent HTTP socket resets
+            if (buffer.length <= 15 * 1024 * 1024) {
+              contents.push({
+                inlineData: {
+                  mimeType: fileType,
+                  data: fileBase64
+                }
+              });
+            } else {
+              throw new Error(`حجم الملف كبير (${sizeMB}MB) وتعذر رفعه للسحابة. يرجى رفع ملف أصغر أو نصي.`);
             }
-          });
-
-          try { fs.unlinkSync(tempFilePath); } catch (e) {}
-          job.progressStep = `تم رفع الملف بنجاح (${sizeMB}MB)! جاري التحليل الأكاديمي الشامل...`;
-          job.progressPercent = 40;
-        } catch (uploadErr: any) {
-          console.warn("[Job Worker] Files API fallback to inlineData:", uploadErr);
+          }
+        } else {
           contents.push({
             inlineData: {
               mimeType: fileType,
@@ -769,50 +940,126 @@ async function runBackgroundEbookConversion(
           job.progressStep = `معالجة مستند (${fileName || ""})...`;
           job.progressPercent = 30;
         }
-      } else {
-        contents.push({
-          inlineData: {
-            mimeType: fileType,
-            data: fileBase64
-          }
-        });
-        job.progressStep = `معالجة مستند (${fileName || ""})...`;
-        job.progressPercent = 30;
       }
     } else {
       job.progressStep = "تحليل التوجيهات وموضوعات المقرر المطلوبة...";
       job.progressPercent = 35;
     }
 
-    let instructionPrompt = `
-You are the world-class Interactive Ebook Converter & Academic Curriculum Architect.
-Your primary task is to convert the provided educational input (which is the attached document: "${fileName || 'Attached Document'}") into an engaging, structured, interactive educational ebook.
+    const isAcademic = category === 'academic_curriculum' || !category || category === 'digital_book';
+    const isPrimaryGrade = (grade_level && (grade_level.includes('ابتدائي') || grade_level.includes('primary') || /^[1-6]$/.test(grade_level) || grade_level.includes('رابع') || grade_level.includes('خامس') || grade_level.includes('سادس'))) ||
+      (fileName && (fileName.toLowerCase().includes('prim') || fileName.includes('ابتدائي') || fileName.includes('رابع')));
 
-CRITICAL CONTENT ACCURACY & FIDELITY MANDATE:
-- The book title, description, and ALL chapters MUST be extracted directly from the attached document and its specific subject matter (Document name: "${fileName || ''}").
-- DO NOT invent generic or unrelated topics (e.g. do NOT output generic Artificial Intelligence if the document is about Islamic studies, Self-development, Education, Law, or Mathematics).
-- Follow the actual chapters, names, and concepts of the uploaded document faithfully.
+    let instructionPrompt = '';
+    if (isAcademic) {
+      if (isPrimaryGrade) {
+        instructionPrompt = `
+You are the world's finest Primary School Curriculum Architect & Child Pedagogy Specialist (Osera Kids & Primary AI).
+Your mission is to transform the attached educational material ("${fileName || 'Attached Curriculum'}") into a fun, highly engaging, Ministry-grade interactive textbook suitable for primary school students (المرحلة الابتدائية - الصفوف 1-6).
 
-FAST INITIAL CURRICULUM EXTRACTION:
-1. Extract the authentic book title, comprehensive educational description, and the foundational Table of Contents from the document.
-2. Generate the first 5 core educational chapters (Chapters 1 through 5) in rich, multi-paragraph textbook depth with theories, examples, and Arabic vowel marks (Tashkeel) directly reflecting the document's content.
-3. If the document has more chapters, the system allows the user to easily expand and generate remaining chapters (Chapters 6-10, etc.) from inside the book.
+🌟 CRITICAL PRIMARY EDUCATION PEDAGOGICAL GUIDELINES:
+1. AGE-APPROPRIATE TONE & STORYTELLING:
+   - Use warm, encouraging, lively Arabic (فصحى مبسطة ومشوقة).
+   - Use characters like (المستكشف الصغير، أحمد، سارة، الروبوت فطن) to introduce ideas and pose curious questions.
+   - DO NOT use complex, scary mathematical formulas (like LaTeX $$ formulas) unless it's basic arithmetic (e.g. 5 + 3).
 
-For each of the 5 chapters, generate:
-- An inspiring and clear chapter 'title' reflecting the document.
-- 'originalContent': Excerpt or original segment from the document for this chapter.
-- 'concepts': An array containing key concepts and their detailed explanations.
-- 'summary': A concise summary of the chapter's main points.
-- 'content': Full educational textbook markdown content with clear headers and examples.
-- A descriptive 'imagePrompt' representing the chapter's core concept.
-- An interactive 'quiz' with 3 multiple-choice questions with 4 diverse options and detailed educational explanations.
-- A list of 'videos' with 2 YouTube search topics.
-- A 'mindMap' hierarchy of 4-6 concept nodes with 'id', 'label', 'parentId', and 'description'.
+2. LESSON STRUCTURE FOR PRIMARY CHAPTERS:
+   Each chapter's 'content' (Markdown) must include:
+   
+   # 🎒 أولاً: قصة الدرس والاستكشاف
+   * حكاية قصيرة شيقة مع أبطال الدرس لربط المفهوم بحياة الطفل اليومية (مثل: كيف يعرف أحمد طريقه إلى المدرسة؟).
+   
+   # 🔍 ثانياً: ماذا سنتعلم اليوم؟ (نواتج التعلّم)
+   * 3 نقاط بسيطة وواضحة جداً بما سيكتشفه التلميذ.
+   
+   # 🗺️ ثالثاً: الشرح المصور والمفاهيم الأساسية
+   * شرح المفاهيم خطوة بخطوة مع أمثلة بصرية ونشاطات واقعية (مثل: مخطط المنزل، وردة البوصلة، خريطة مصر، شروق وغروب الشمس).
+   
+   # 🎮 رابعاً: أنشطة وتطبيقات تفاعلية
+   > [!TIP]
+   > 💡 نشاط البطل الصغير: [نشاط ممتع يمكن للطفل تطبيقه في الغرفة أو مع أسرته].
+   
+   # 🚨 خامساً: انتبه وتذكر جيداً
+   > [!IMPORTANT]
+   > ⭐ معلومة ذهبية للامتحان: [ملخص مبسط جداً للنقطة الأهم].
 
-If the provided document or prompt is in Arabic, you MUST output ALL generated content in high-quality, formal Arabic (Fusha) with precise terminology.
+3. CHILD-FRIENDLY QUIZZES & FLASHCARDS:
+   - 3 fun multiple-choice questions with cheerful encouraging explanations.
+   - 4 flashcards with colorful, clear questions and answers.
+   - 4-5 MindMap nodes with simple visual terms.
 
-User Guidance / Notes: "${promptText || `Convert ${fileName || 'the uploaded document'} into a structured interactive ebook.`}"
+User Guidance / Notes: "${promptText || `Convert ${fileName || 'the uploaded document'} into a child-friendly primary interactive textbook.`}"
 `;
+      } else {
+        instructionPrompt = `
+You are the world's most advanced Educational Curriculum Architect and Hierarchical Learning Engineer (Osera Pedagogical AI).
+Your mission is to transform the attached educational material ("${fileName || 'Attached Curriculum'}") into an elite interactive academic syllabus and ministry-grade textbook.
+
+🏛️ CRITICAL PEDAGOGICAL STRUCTURE MANDATE:
+1. STRICT CHAPTER/LESSON ALIGNMENT:
+   - Extract and preserve the EXACT lesson structure and unit titles from the uploaded notes/PDF without skipping or merging topics.
+   - Maintain the authentic educational progression of the syllabus.
+
+2. SUB-LESSON CHUNKING:
+   - If a unit or lesson is extensive, cleanly divide it into logical progressive sub-lessons (e.g. "الدرس 1.1: المفاهيم والقوانين الأساسية", "الدرس 1.2: التطبيقات والمسائل وتريكات الامتحانات").
+
+3. MANDATORY PEDAGOGICAL SECTION FORMAT FOR EVERY CHAPTER 'content' (Markdown):
+   Each chapter's 'content' MUST follow this standardized high-yield academic structure:
+   
+   # 🎯 أولاً: نواتج التعلّم (Learning Objectives)
+   * تعداد دقيق لما سيكون الطالب قادراً على فهمه وتطبيقه وحله بعد دراسة هذا الفصل.
+   
+   # 💡 ثانياً: الشرح المفاهيمي المعمّق
+   * تفكيك المفاهيم بأسلوب شيق وممتع مع ضرب أمثلة من واقع الحياة اليومية لتثبيت المعنى.
+   
+   # 📌 ثالثاً: القوانين والمعادلات أو القواعد الأساسية
+   > [!IMPORTANT]
+   > 📌 القانون / القاعدة الأساسية:
+   > $$ [LaTeX Formula if scientific or rule definition] $$
+   > * دلالات الرموز، وحدات القياس، وشروط التطبيق وحالات الاستخدام.
+   
+   # 📝 رابعاً: مسائل وتطبيقات محلولة خطوة بخطوة (Worked Examples)
+   * مثال نموذجي مع:
+     - **طريقة التفكير (Intuition):** كيف يبدأ الطالب في التحليل؟
+     - **خطوات الحل التفصيلية (Step-by-Step):** خطوة 1، خطوة 2، التعويض الرياضي والناتج النهائي.
+   
+   # 🚨 خامساً: تريكات الامتحانات والأخطاء الشائعة (Exam Traps & Pitfalls)
+   > [!WARNING]
+   > ⚠️ خطأ شائع يقع فيه معظم الطلاب: [الخطأ] -> ✅ الصواب والتصحيح النموذجي: [الحل الصحيح والتعليل].
+   
+   # 📊 سادساً: جدول المقارنة والخلاصة السريعة
+   * جدول Markdown يقارن بين المفاهيم أو يلخص النقاط الجوهرية.
+
+4. BLOOM'S TAXONOMY QUIZ ENGINE (بنك أسئلة متدرج):
+   For each chapter, provide 3-4 challenging exam questions (MCQ) testing comprehension, application, and analysis.
+
+5. FLASHCARDS & MIND MAP:
+   - Provide 4-6 Active Recall Flashcards with 'front', 'back', and 'difficulty'.
+   - Provide 5-8 hierarchical MindMap nodes with parentId.
+
+6. LANGUAGE:
+   - High quality, precise formal Arabic (Fusha) with standard scientific terms.
+
+User Guidance / Notes: "${promptText || `Convert ${fileName || 'the uploaded document'} into a structured interactive academic syllabus.`}"
+`;
+      }
+    } else {
+      instructionPrompt = `
+You are the world-class Interactive Ebook Converter & Knowledge Architect.
+Your task is to convert the provided document ("${fileName || 'Attached Book'}") into an engaging, interactive digital book for general readers, business, literature, and self-help.
+
+Generate:
+- Clear title and executive description.
+- Core chapters reflecting the table of contents.
+- 'summary' and deep 'content' with markdown formatting and real-life takeaways.
+- 'quiz' with 3 multiple-choice conceptual questions with explanations.
+- 'flashcards' for key terms.
+- 'mindMap' hierarchy of 4-6 concept nodes.
+- 'videos' with 2 YouTube search topics.
+
+User Guidance / Notes: "${promptText || `Convert ${fileName || 'the uploaded document'} into an interactive book.`}"
+`;
+    }
 
     contents.push(instructionPrompt);
 
@@ -840,44 +1087,63 @@ User Guidance / Notes: "${promptText || `Convert ${fileName || 'the uploaded doc
     console.log("[Job Worker] Parsing generated JSON...");
     const parsedEbook = JSON.parse(resultText);
 
+    // Helper to sanitize newlines and formatting in strings
+    const cleanStr = (s: string | undefined): string => {
+      if (!s) return "";
+      return s.replace(/\\n/g, '\n').trim();
+    };
+
     // Formulate a clean Ebook object with IDs
     const ebookId = crypto.randomUUID();
     
     const finalizedEbook: any = {
       id: ebookId,
-      title: parsedEbook.title || "Untitled Educational Ebook",
-      description: parsedEbook.description || "A custom converted interactive learning course.",
+      title: cleanStr(parsedEbook.title) || "Untitled Educational Ebook",
+      description: cleanStr(parsedEbook.description) || "A custom converted interactive learning course.",
       sizeCategory: parsedEbook.sizeCategory || "short",
       createdAt: new Date().toISOString(),
       chapters: (parsedEbook.chapters || []).map((ch: any, cIdx: number) => {
         const chapterId = `ch-${ebookId}-${cIdx + 1}`;
         return {
           id: chapterId,
-          title: ch.title || `Chapter ${cIdx + 1}`,
-          content: ch.content || "Chapter content is currently processing.",
-          originalContent: ch.originalContent || "",
-          summary: ch.summary || "",
-          concepts: ch.concepts || [],
-          imagePrompt: ch.imagePrompt || "Minimal educational illustration",
+          title: cleanStr(ch.title) || `Chapter ${cIdx + 1}`,
+          content: cleanStr(ch.content) || "Chapter content is currently processing.",
+          originalContent: cleanStr(ch.originalContent) || "",
+          summary: cleanStr(ch.summary) || "",
+          concepts: (ch.concepts || []).map((c: any) => {
+            if (typeof c === 'string') return cleanStr(c);
+            return {
+              concept: cleanStr(c.concept || c.title),
+              explanation: cleanStr(c.explanation || c.description)
+            };
+          }),
+          imagePrompt: cleanStr(ch.imagePrompt) || "Minimal educational illustration",
           imageUrl: undefined, // Will generate on-demand or use fallback
           videos: (ch.videos || []).map((v: any, vIdx: number) => ({
             id: `v-${chapterId}-${vIdx + 1}`,
-            title: v.title || "Supplementary Video",
+            title: cleanStr(v.title) || "Supplementary Video",
             url: v.url || `https://www.youtube.com/results?search_query=${encodeURIComponent(v.title || "education")}`,
-            description: v.description || "Video description and summary."
+            description: cleanStr(v.description) || "Video description and summary."
           })),
           quiz: (ch.quiz || []).map((q: any, qIdx: number) => ({
             id: `q-${chapterId}-${qIdx + 1}`,
-            question: q.question || "Interactive Quiz Question?",
-            options: q.options && q.options.length === 4 ? q.options : ["Option A", "Option B", "Option C", "Option D"],
+            question: cleanStr(q.question) || "Interactive Quiz Question?",
+            options: (q.options && q.options.length === 4 ? q.options : ["Option A", "Option B", "Option C", "Option D"]).map((opt: string) => cleanStr(opt)),
             correctOptionIndex: typeof q.correctOptionIndex === "number" ? q.correctOptionIndex : 0,
-            explanation: q.explanation || "Detailed conceptual breakdown."
+            explanation: cleanStr(q.explanation) || "Detailed conceptual breakdown."
+          })),
+          flashcards: (ch.flashcards || []).map((f: any, fIdx: number) => ({
+            id: `fc-${chapterId}-${fIdx + 1}`,
+            front: cleanStr(f.front) || "Concept Question / Term",
+            back: cleanStr(f.back) || "Model answer / definition",
+            chapterTitle: cleanStr(ch.title) || `الفصل ${cIdx + 1}`,
+            difficulty: f.difficulty || "medium"
           })),
           mindMap: (ch.mindMap || []).map((m: any, mIdx: number) => ({
             id: m.id || `m-${chapterId}-${mIdx + 1}`,
-            label: m.label || "Concept",
+            label: cleanStr(m.label) || "Concept",
             parentId: m.parentId || null,
-            description: m.description || "Click to expand concept detail."
+            description: cleanStr(m.description) || "Click to expand concept detail."
           }))
         };
       })
@@ -1218,7 +1484,7 @@ app.post("/api/narrate-text", async (req, res) => {
   }
 });
 
-// 7.5 High-Quality Human Audio Engine (Arabic Neural Voices with Fast Failover)
+// 7.5 High-Quality Human Audio Engine (Arabic Neural Voices with Multi-Chunk Resilience)
 app.post("/api/tts/stream", async (req, res) => {
   try {
     const { text, speaker = "female" } = req.body;
@@ -1227,32 +1493,67 @@ app.post("/api/tts/stream", async (req, res) => {
     const cleanedText = cleanScientificTextForSpeech(text);
     if (!cleanedText) return res.status(400).json({ error: "Cleaned text is empty" });
 
-    // Safe length chunking to prevent EdgeTTS timeouts on huge blocks
-    const safeText = cleanedText.length > 700 ? cleanedText.substring(0, 700) + "..." : cleanedText;
-
     const isMale = speaker === "male" || speaker === "كريم" || speaker === "Alex";
     const primaryVoice = isMale ? "ar-EG-ShakirNeural" : "ar-EG-SalmaNeural";
     const fallbackVoice = isMale ? "ar-SA-HamedNeural" : "ar-SA-ZariyahNeural";
 
-    // Hash text for caching
-    const textHash = crypto.createHash("md5").update(`${primaryVoice}_${safeText}`).digest("hex");
+    // Hash entire text for caching
+    const textHash = crypto.createHash("md5").update(`${primaryVoice}_${cleanedText}`).digest("hex");
     const cachedFilePath = path.join(AUDIO_CACHE_DIR, `${textHash}.mp3`);
 
-    // Check if audio exists in local cache
+    // Check if audio already exists in local cache
     if (fs.existsSync(cachedFilePath)) {
       res.setHeader("Content-Type", "audio/mpeg");
       res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
       return fs.createReadStream(cachedFilePath).pipe(res);
     }
 
-    try {
-      const tts = new EdgeTTS({ voice: primaryVoice, timeout: 35000 });
-      await tts.ttsPromise(safeText, cachedFilePath);
-    } catch (primaryErr) {
-      console.warn(`[EdgeTTS] Primary voice ${primaryVoice} failed, trying fallback ${fallbackVoice}...`);
-      const fallbackTts = new EdgeTTS({ voice: fallbackVoice, timeout: 35000 });
-      await fallbackTts.ttsPromise(safeText, cachedFilePath);
+    // Split long text into smart sentence chunks of up to 550 characters to prevent EdgeTTS timeouts
+    const chunks: string[] = [];
+    if (cleanedText.length <= 600) {
+      chunks.push(cleanedText);
+    } else {
+      const sentences = cleanedText.split(/(?<=[.!\n؟،])/).map(s => s.trim()).filter(Boolean);
+      let currentChunk = "";
+      for (const s of sentences) {
+        if ((currentChunk + " " + s).length > 550) {
+          if (currentChunk) chunks.push(currentChunk.trim());
+          currentChunk = s;
+        } else {
+          currentChunk = currentChunk ? `${currentChunk} ${s}` : s;
+        }
+      }
+      if (currentChunk) chunks.push(currentChunk.trim());
     }
+
+    // Synthesize chunks sequentially and concatenate buffers
+    const chunkBuffers: Buffer[] = [];
+    for (let i = 0; i < chunks.length; i++) {
+      const chunkText = chunks[i];
+      const chunkFile = path.join(AUDIO_CACHE_DIR, `temp_${textHash}_${i}.mp3`);
+
+      try {
+        const tts = new EdgeTTS({ voice: primaryVoice, timeout: 35000 });
+        await tts.ttsPromise(chunkText, chunkFile);
+      } catch (primaryErr) {
+        console.warn(`[EdgeTTS] Primary voice failed for chunk ${i}, trying fallback ${fallbackVoice}...`);
+        const fallbackTts = new EdgeTTS({ voice: fallbackVoice, timeout: 35000 });
+        await fallbackTts.ttsPromise(chunkText, chunkFile);
+      }
+
+      if (fs.existsSync(chunkFile)) {
+        chunkBuffers.push(fs.readFileSync(chunkFile));
+        try { fs.unlinkSync(chunkFile); } catch (e) {}
+      }
+    }
+
+    if (chunkBuffers.length === 0) {
+      throw new Error("Failed to produce audio stream buffers.");
+    }
+
+    // Write combined buffer to cached file
+    const combinedBuffer = Buffer.concat(chunkBuffers);
+    fs.writeFileSync(cachedFilePath, combinedBuffer);
 
     res.setHeader("Content-Type", "audio/mpeg");
     res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
@@ -1303,37 +1604,51 @@ app.post("/api/ebooks/:id/podcast", async (req, res) => {
       console.log(`[Background] Generating 2-persona podcast script for chapter ${chapterId}...`);
       
       const scriptPrompt = isArabic
-        ? `أنت مخرج بودكاست تعليمي احترافي حواري ممتع للغاية.
-أنشئ حواراً صَوْتِيّاً دَافِئاً وَمُشَوِّقاً بين مُقَدِّمَيْنِ بَشَرِيَّيْنِ:
-1. "كريم": مُقَدِّمٌ ذَكِيٌّ وَفُضُولِيٌّ يطرح أسئلة استكشافية.
-2. "فرح": خَبِيرَةٌ وَمُعَلِّمَةٌ دَافِئَةٌ تُوَضِّحُ الفِكْرَةَ وتشرحها بأمثلة تطبيقية.
+        ? `أنت مخرج ومدير بودكاست تعليمي وثقافي احترافي وحواري ممتع للغاية (Osera Smart Podcast Studio).
+أنشئ حواراً صَوْتِيّاً دَافِئاً، ناضجاً، وَمُشَوِّقاً بين مُقَدِّمَيْنِ بَشَرِيَّيْنِ:
+1. "كريم": مُحَاوِرٌ ذَكِيٌّ وَفُضُولِيٌّ يطرح الأسئلة الجوهرية ويستنبط الفوائد والتطبيقات.
+2. "فرح": خَبِيرَةٌ وَمُعَلِّمَةٌ دَافِئَةٌ تُوَضِّحُ الفِكْرَةَ بعمق، وتضرب أمثلة حياتية مشوقة وتربطها بالامتحانات والواقع.
+
 موضوع الحلقة: فصل "${chapterTitle || 'الفصل التعليمي'}"
 محتوى ومصدر الفصل:
-${chapterContent.substring(0, 2500)}
+${chapterContent.substring(0, 3000)}
 
-الشروط الصارمة:
-1. استند حصرياً وبدقة على المعلومات المذكورة في نص الفصل أعلاه، دون اختراع أي معلومات خارج النص.
-2. اكتب الحوار في 5 إلى 7 تبادلات صوتية ممتعة وسريعة.
-3. ضع تشكيلاً بسيطاً على الكلمات الرئيسية لتسهيل القراءة الصوتية.
-4. الناتج بتنسيق JSON فقط:
-{ "title": "...", "summary": "...", "transcript": [ { "speaker": "كريم", "text": "..." }, { "speaker": "فرح", "text": "..." } ] }`
+🌟 قَوَاعِدُ الحِوَارِ الصَّارِمَة:
+1. 🚫 امْتِنَاعٌ تَامٌّ عَنْ تَكْرَارِ المُنَادَاةِ بِالأَسْمَاءِ: يُمنع منعاً باتاً تكرار "يا كريم" أو "يا فرح" أو "أهلاً يا كريم" في بداية كل جملة. يدخل المتحدثان فوراً في صلب الأفكار والنقاش العلمي الشيق كأنهما خبيران يتحدثان بعفوية وسلاسة.
+2. 💡 التَّرْكِيزُ عَلَى المَفَاهِيمِ وَالأَمْثِلَةِ: ربط كل فكرة بتطبيق واقعي أو مثال ملموس من الدرس أو تريكة امتحانية واستنتاج شيق.
+3. ⏱️ اكتب الحوار في 6 إلى 8 تبادلات صوتية ممتعة، مركزة، وخالية من الحشو.
+4. 🎙️ ضع تشكيلاً بسيطاً على الكلمات الرئيسية لتسهيل القراءة الصوتية الطبيعية.
+5. 📋 الناتج بتنسيق JSON فقط:
+{
+  "title": "عنوان جذاب ومشوق للحلقة",
+  "summary": "ملخص في سطرين لأهم ما يدور حوله الحوار",
+  "transcript": [
+    { "speaker": "كريم", "text": "..." },
+    { "speaker": "فرح", "text": "..." }
+  ]
+}`
         : `You are a professional educational podcast producer.
 Hosts:
-1. "Alex": Engaging, asks questions.
+1. "Alex": Inquisitive, engaging host.
 2. "Farah": Knowledgeable expert.
 Topic: "${chapterTitle || 'Chapter'}"
 Content Source:
-${chapterContent.substring(0, 2500)}
+${chapterContent.substring(0, 3000)}
 
-Instructions:
-1. Strictly base discussion on source content.
-2. 5-7 natural conversational exchanges.
-3. JSON ONLY format: { "title": "...", "summary": "...", "transcript": [{ "speaker": "Alex", "text": "..." }, { "speaker": "Farah", "text": "..." }] }`;
+Strict Instructions:
+1. NO repetitive name-calling ("Hey Alex", "Hey Farah" on every line). Dive straight into ideas and dialogue.
+2. 6-8 natural conversational exchanges packed with real examples and insights.
+3. JSON ONLY format:
+{
+  "title": "...",
+  "summary": "...",
+  "transcript": [{ "speaker": "Alex", "text": "..." }, { "speaker": "Farah", "text": "..." }]
+}`;
 
       const scriptResponse = await generateContentWithRetry(ai, {
         contents: [{ parts: [{ text: scriptPrompt }] }],
         config: { responseMimeType: "application/json" }
-      }, ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-3.7-flash"]);
+      }, ["gemini-3-flash-preview", "gemini-flash-latest", "gemini-flash-lite-latest"]);
 
       const jsonText = scriptResponse.text?.trim() || "";
       let podcastData = { title: chapterTitle || "Educational Podcast", summary: "Discussion of the chapter concepts", transcript: [] };
@@ -1368,6 +1683,152 @@ app.get("/api/ebooks/:id/podcast/status", (req, res) => {
     return res.json({ success: true, ...podcastCache.get(cacheKey) });
   } else {
     return res.json({ success: false, status: "not_started" });
+  }
+});
+
+// 8.2 Dynamic AI Interactive Lab & Game Activity Generator
+app.post("/api/ebooks/:id/generate-lab-activity", async (req, res) => {
+  const { chapterId, chapterTitle, chapterContent, bookCategory, grade_level } = req.body;
+  const bookId = req.params.id;
+
+  if (!chapterTitle && !chapterContent) {
+    return res.status(400).json({ error: "Chapter title and content are required." });
+  }
+
+  const ai = getGenAIClient();
+  if (!ai) {
+    return res.status(400).json({ error: "Gemini API key is required." });
+  }
+
+  try {
+    const isArabic = /[\u0600-\u06FF]/.test((chapterTitle || "") + (chapterContent || ""));
+    const isMath = /رياض|حساب|أعداد|كسور|ضرب|قسمة|جمع|طرح|هندسة|قيمة مكانية|math/i.test((chapterTitle || "") + (bookCategory || "") + (chapterContent || ""));
+
+    const labPrompt = isArabic
+      ? `أنت كبير مهندسي ومصممي الألعاب والمختبرات التعليمية التفاعلية الذكية (Osera Interactive Lab Architect).
+مهمتك: توليد لعبة أو محاكي تفاعلي أو تجربة علمية مصغرة وممتعة جداً ومصممة خصيصاً لموضوع هذا الفصل:
+عنوان الفصل: "${chapterTitle}"
+المرحلة/الفئة: "${grade_level || 'الصف الرابع الابتدائي'}"
+تصنيف المادة: "${bookCategory || (isMath ? 'رياضيات' : 'عام')}"
+محتوى الدرس الفعلي:
+${(chapterContent || "").substring(0, 3000)}
+
+اختر النمط الأنسب لموضوع الدرس من بين:
+${isMath ? `
+- 'place_value_board': لوحة القيمة المكانية التفاعلية (آحاد، عشرات، مئات، ألوف، عشرات الألوف، مئات الألوف) مع تحدي تركيب الأعداد والصيغة الممتدة والصيغة القياسية.
+- 'fraction_visualizer': محاكي مقارنة الكسور والنماذج الشريطية التفاعلية الملونة.
+- 'interactive_simulator': محاكي رياضي بياني بأشرطة تمرير لحساب العمليات والمساحات والأنماط.
+` : `
+- 'matching_game': لعبة مطابقة وربط مصطلحات، مفاهيم، اتجاهات، أو أسباب ونتائج مع توقيت ونقاط (مع نصوص واضحة ومكتملة تماماً وخالية من النجوم والرموز).
+- 'interactive_simulator': محاكي تفاعلي حي بأشرطة تمرير/خيارات، لمشاهدة النتيجة التفاعلية المباشرة والتفسير العلمي مع مؤشر ورسوم بيانية.
+- 'decision_scenario': سيناريو اتخاذ قرارات وحل مشكلات وتحديات خطوة بخطوة.
+`}
+
+الاشتراطات الصارمة:
+1. الارتباط 100% بموضوع الفصل وأمثلته الحقيقية.
+2. عدم كتابة نصوص مبتورة أو رموز ماركداون غير منسقة (ممنوع وضع نصوص مثل * في أحد الأيام...). النصوص يجب أن تكون عبارات كاملة وواضحة ومفيدة.
+3. التنسيق JSON فقط:
+{
+  "activityType": "place_value_board" | "fraction_visualizer" | "matching_game" | "interactive_simulator" | "decision_scenario",
+  "title": "عنوان جذاب ومشوق للنشاط التفاعلي",
+  "instructions": "تعليمات واضحة وبسيطة للطالب تشرح كيف يلعب أو يجرب",
+  "themeColor": "indigo" | "emerald" | "amber" | "rose" | "cyan",
+  "icon": "calculator" | "compass" | "flask" | "brain" | "sparkles" | "target" | "zap",
+  "data": {
+    "mathType": "place_value" | "fractions" | "operations",
+    "targetNumber": 4325,
+    "targetNumberWord": "أربعة آلاف وثلاثمائة وخمسة وعشرون",
+    "pairs": [
+      { "id": "p1", "item": "المفهوم أو المصطلح 1", "match": "التعريف أو الحل النموذجي 1", "hint": "تلميح ذكي" },
+      { "id": "p2", "item": "المفهوم أو المصطلح 2", "match": "التعريف أو الحل النموذجي 2", "hint": "تلميح ذكي" },
+      { "id": "p3", "item": "المفهوم أو المصطلح 3", "match": "التعريف أو الحل النموذجي 3", "hint": "تلميح ذكي" },
+      { "id": "p4", "item": "المفهوم أو المصطلح 4", "match": "التعريف أو الحل النموذجي 4", "hint": "تلميح ذكي" }
+    ],
+    "variables": [
+      { "id": "v1", "label": "القيمة الأولى", "min": 1, "max": 100, "step": 1, "defaultValue": 25, "unit": "وحدة" },
+      { "id": "v2", "label": "القيمة الثانية", "min": 1, "max": 100, "step": 1, "defaultValue": 50, "unit": "وحدة" }
+    ],
+    "outcomes": [
+      { "condition": "default", "visualEmoji": "📊", "stateTitle": "الاستنتاج الرياضي/العلمي", "explanation": "شرح النتيجة وتطبيق القاعدة." }
+    ],
+    "scenarioIntro": "مقدمة السيناريو التفاعلي",
+    "steps": [
+      {
+        "stepId": "s1",
+        "question": "ما هو الحل أو التصرف الصحيح للمسألة؟",
+        "options": [
+          { "text": "الحل النموذجي المباشر", "feedback": "أحسنت! هذا هو الحل الصحيح تماماً.", "isBest": true, "points": 10 },
+          { "text": "خيار غير دقيق", "feedback": "انتبه، راجع خطوات الحل والقاعدة.", "isBest": false, "points": 0 }
+        ]
+      }
+    ]
+  }
+}`
+      : `Generate an interactive math or science simulation JSON for chapter "${chapterTitle}".`;
+
+    let resultJson: any = null;
+    try {
+      const response = await generateContentWithRetry(ai, {
+        contents: [{ parts: [{ text: labPrompt }] }],
+        config: { responseMimeType: "application/json" }
+      }, DEFAULT_GEMINI_MODELS);
+
+      resultJson = JSON.parse(response.text?.trim() || "{}");
+    } catch (apiErr) {
+      console.warn("Gemini API Lab generation warning, building contextual interactive fallback:", apiErr);
+      
+      if (isMath) {
+        resultJson = {
+          activityType: "place_value_board",
+          title: `مختبر القيمة المكانية وبناء الأعداد: ${chapterTitle}`,
+          instructions: "استخدم العدادات التفاعلية لتركيب الأعداد واكتشاف الصيغة الممتدة والقيمة المكانية لكل رقم!",
+          themeColor: "indigo",
+          icon: "calculator",
+          data: {
+            mathType: "place_value",
+            targetNumber: 3524,
+            targetNumberWord: "ثلاثة آلاف وخمسمائة وأربعة وعشرون",
+            pairs: [
+              { id: "p1", item: "الرقم في خانة الآحاد", match: "يدل على الوحدات الفردية (من 0 إلى 9)", hint: "أول خانة من اليمين" },
+              { id: "p2", item: "الرقم في خانة العشرات", match: "يدل على مجموعات العشرات (كل 1 = 10)", hint: "الخانة الثانية" },
+              { id: "p3", item: "الرقم في خانة المئات", match: "يدل على مجموعات المئات (كل 1 = 100)", hint: "الخانة الثالثة" },
+              { id: "p4", item: "الرقم في خانة الألوف", match: "يدل على مجموعات الآلاف (كل 1 = 1000)", hint: "الخانة الرابعة" }
+            ]
+          }
+        };
+      } else {
+        resultJson = {
+          activityType: "matching_game",
+          title: `تحدي مطابقة المفاهيم التفاعلي: ${chapterTitle}`,
+          instructions: "انقر على المفهوم ثم انقر على التفسير الصحيح المقابل له لتوصيلهما!",
+          themeColor: "indigo",
+          icon: "compass",
+          data: {
+            pairs: [
+              { id: "p1", item: "المفهوم الرئيسي للدرس", match: "القاعدة الأساسية التي يركز عليها هذا الفصل", hint: "راجع بداية الفصل" },
+              { id: "p2", item: "التطبيق العملي", match: "استخدام المفهوم في حل المسائل والمواقف اليومية", hint: "فكر في التطبيق الواقعي" },
+              { id: "p3", item: "الاستنتاج والتحليل", match: "النتيجة التعليمية المستخلصة من الشرح والأمثلة", hint: "راجع خلاصة الدرس" },
+              { id: "p4", item: "التقييم والتحقق", match: "التأكد من صحة الحل ومطابقته للخطوات العلمية", hint: "خطوة المراجعة والتدقيق" }
+            ]
+          }
+        };
+      }
+    }
+    
+    // Save to chapter if book exists
+    const ebook = ebooks.find(e => e.id === bookId);
+    if (ebook) {
+      const chapter = ebook.chapters?.find((c: any) => c.id === chapterId || c.title === chapterTitle);
+      if (chapter) {
+        chapter.labActivity = resultJson;
+        saveEbooks(ebooks);
+      }
+    }
+
+    res.json({ success: true, activity: resultJson });
+  } catch (err: any) {
+    console.error("Error generating dynamic lab activity:", err);
+    res.status(500).json({ error: "فشل توليد النشاط التفاعلي: " + err.message });
   }
 });
 

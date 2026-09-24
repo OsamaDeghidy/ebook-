@@ -12,6 +12,7 @@
     "@google/genai": "^2.4.0",
     "@supabase/supabase-js": "^2.112.2",
     "@tailwindcss/vite": "^4.1.14",
+    "@types/pdf-parse": "^1.1.5",
     "@types/react-router-dom": "^5.3.3",
     "@vitejs/plugin-react": "^5.0.4",
     "canvas-confetti": "^1.9.4",
@@ -21,10 +22,12 @@
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
     "node-edge-tts": "^1.2.10",
+    "pdf-parse": "^2.4.5",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.18.2",
+    "remark-gfm": "^4.0.1",
     "vite": "^6.2.3"
   },
   "devDependencies": {

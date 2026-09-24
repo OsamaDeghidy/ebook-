@@ -2,6 +2,7 @@
 // Prevents any audio overlapping across the application.
 
 type AudioStateListener = (state: { activeId: string | null; isPlaying: boolean; isLoading: boolean }) => void;
+type AudioTimeListener = (currentTime: number, duration: number, activeId: string | null) => void;
 
 class GlobalAudioManager {
   private currentAudio: HTMLAudioElement | null = null;
@@ -9,7 +10,10 @@ class GlobalAudioManager {
   private activeId: string | null = null;
   private isPlaying: boolean = false;
   private isLoading: boolean = false;
+  private currentTime: number = 0;
+  private duration: number = 0;
   private listeners: Set<AudioStateListener> = new Set();
+  private timeListeners: Set<AudioTimeListener> = new Set();
 
   public subscribe(listener: AudioStateListener): () => void {
     this.listeners.add(listener);
@@ -23,6 +27,20 @@ class GlobalAudioManager {
     };
   }
 
+  public subscribeTime(listener: AudioTimeListener): () => void {
+    this.timeListeners.add(listener);
+    listener(this.currentTime, this.duration, this.activeId);
+    return () => {
+      this.timeListeners.delete(listener);
+    };
+  }
+
+  private notifyTime(time: number, dur: number) {
+    this.currentTime = time;
+    this.duration = dur;
+    this.timeListeners.forEach((l) => l(time, dur, this.activeId));
+  }
+
   private notify() {
     const state = {
       activeId: this.activeId,
@@ -34,6 +52,20 @@ class GlobalAudioManager {
 
   public getActiveId(): string | null {
     return this.activeId;
+  }
+
+  public getCurrentTime(): number {
+    return this.currentTime;
+  }
+
+  public getDuration(): number {
+    return this.duration;
+  }
+
+  public setPlaybackRate(rate: number): void {
+    if (this.currentAudio) {
+      this.currentAudio.playbackRate = rate;
+    }
   }
 
   public isCurrentlyPlaying(id?: string): boolean {
@@ -126,11 +158,24 @@ class GlobalAudioManager {
       const audio = new Audio(audioUrl);
       this.currentAudio = audio;
 
+      audio.onloadedmetadata = () => {
+        if (this.currentPlayId === thisPlayId) {
+          this.notifyTime(audio.currentTime, audio.duration || 0);
+        }
+      };
+
+      audio.ontimeupdate = () => {
+        if (this.currentPlayId === thisPlayId) {
+          this.notifyTime(audio.currentTime, audio.duration || 0);
+        }
+      };
+
       audio.onplay = () => {
         if (this.currentPlayId === thisPlayId) {
           this.isPlaying = true;
           this.isLoading = false;
           this.notify();
+          this.notifyTime(audio.currentTime, audio.duration || 0);
         }
       };
 

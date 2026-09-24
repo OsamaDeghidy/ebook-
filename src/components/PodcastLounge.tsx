@@ -61,7 +61,7 @@ export default function PodcastLounge({
   const [error, setError] = useState<string | null>(null);
 
   // Global Audio Manager hook
-  const { isItemPlaying, isItemLoading, play, stop } = useGlobalAudio();
+  const { isItemPlaying, isItemLoading, play, stop, currentTime, duration, setPlaybackRate } = useGlobalAudio();
 
   // Interactive Host Conversation State
   const [messages, setMessages] = useState<HostMessage[]>([]);
@@ -327,6 +327,78 @@ export default function PodcastLounge({
     }
   };
 
+  // Visual Presentation Slides derived from podcast transcript
+  const [activeSlideIndex, setActiveSlideIndex] = useState(0);
+  const [viewMode, setViewMode] = useState<'presentation' | 'transcript'>('presentation');
+  const [autoSyncSlides, setAutoSyncSlides] = useState(true);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+
+  // Derive slides from transcript pairs
+  const transcriptSlides: Array<{
+    title: string;
+    speaker: string;
+    points: string[];
+    summary: string;
+    dialogueExcerpt: string;
+  }> = [];
+
+  if (podcast?.transcript && podcast.transcript.length > 0) {
+    // Group transcript into logical slide units (every 2-3 dialogue turns)
+    for (let i = 0; i < podcast.transcript.length; i += 2) {
+      const turn1 = podcast.transcript[i];
+      const turn2 = podcast.transcript[i + 1];
+      
+      const combinedText = [turn1?.text, turn2?.text].filter(Boolean).join(' ');
+      const cleanPoints = combinedText
+        .split(/[.!؟]/)
+        .map(s => s.trim())
+        .filter(s => s.length > 10 && !s.startsWith('['))
+        .slice(0, 3);
+
+      transcriptSlides.push({
+        title: turn1 ? `${turn1.speaker}: ${turn1.text.substring(0, 45)}...` : `شريحة ${Math.floor(i / 2) + 1}`,
+        speaker: turn1?.speaker || 'مقدم البودكاست',
+        points: cleanPoints.length > 0 ? cleanPoints : [combinedText.substring(0, 120)],
+        summary: turn1?.text || '',
+        dialogueExcerpt: turn2 ? `${turn2.speaker}: ${turn2.text}` : ''
+      });
+    }
+  }
+
+  // Real-time audio time synchronization with slides
+  useEffect(() => {
+    if (!isEpisodePlaying || !autoSyncSlides || transcriptSlides.length === 0) return;
+    if (duration > 0 && currentTime >= 0) {
+      const progress = Math.min(0.999, Math.max(0, currentTime / duration));
+      const targetIndex = Math.min(
+        transcriptSlides.length - 1,
+        Math.floor(progress * transcriptSlides.length)
+      );
+      if (targetIndex !== activeSlideIndex) {
+        setActiveSlideIndex(targetIndex);
+      }
+    }
+  }, [currentTime, duration, isEpisodePlaying, autoSyncSlides, transcriptSlides.length, activeSlideIndex]);
+
+  // Fallback timer if audio duration is unknown/streaming
+  useEffect(() => {
+    if (!isEpisodePlaying || !autoSyncSlides || transcriptSlides.length <= 1) return;
+    if (duration > 0) return; // Time listener handles this directly
+    const interval = setInterval(() => {
+      setActiveSlideIndex(prev => (prev + 1) % transcriptSlides.length);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [isEpisodePlaying, autoSyncSlides, transcriptSlides.length, duration]);
+
+  const activeSlideSpeaker = transcriptSlides[activeSlideIndex]?.speaker || '';
+  const isKareemSpeaking = isEpisodePlaying && (activeSlideSpeaker.includes('كريم') || activeSlideIndex % 2 === 0);
+  const isFarahSpeaking = isEpisodePlaying && (activeSlideSpeaker.includes('فرح') || activeSlideIndex % 2 !== 0);
+
+  const handleSpeedChange = (speed: number) => {
+    setPlaybackSpeed(speed);
+    setPlaybackRate(speed);
+  };
+
   return (
     <div className="space-y-6 animate-fade-in" dir={isArabic ? 'rtl' : 'ltr'}>
       
@@ -336,30 +408,53 @@ export default function PodcastLounge({
           <div className="space-y-3 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-black tracking-wide">
               <Radio className="w-3.5 h-3.5 animate-pulse text-rose-400" />
-              <span>{isArabic ? "استوديو البودكاست التفاعلي المتطور" : "Interactive AI Podcast Studio"}</span>
+              <span>{isArabic ? "استوديو البودكاست والعرض التقديمي المرئي" : "Interactive AI Podcast & Slide Studio"}</span>
+              {isEpisodePlaying && (
+                <div className="flex items-center gap-0.5 mr-2">
+                  <span className="w-1 bg-emerald-400 rounded-full animate-[bounce_0.6s_infinite_100ms] h-2.5" />
+                  <span className="w-1 bg-emerald-400 rounded-full animate-[bounce_0.6s_infinite_300ms] h-3.5" />
+                  <span className="w-1 bg-emerald-400 rounded-full animate-[bounce_0.6s_infinite_200ms] h-2" />
+                  <span className="w-1 bg-emerald-400 rounded-full animate-[bounce_0.6s_infinite_400ms] h-3" />
+                </div>
+              )}
             </div>
 
             <h3 className="text-xl md:text-2xl font-black text-white leading-tight">
-              {podcast?.title || (isArabic ? `حلقة بودكاست: ${chapterTitle}` : `Podcast: ${chapterTitle}`)}
+              {podcast?.title || (isArabic ? `حلقة بودكاست وعرض تقديمي: ${chapterTitle}` : `Podcast & Slides: ${chapterTitle}`)}
             </h3>
 
             <p className="text-gray-300 text-xs md:text-sm leading-relaxed">
-              {podcast?.summary || (isArabic ? "حوار ممتع وطبيعي بين مقدمي البودكاست (كريم وفرح) يناقشان أهم مفاهيم هذا الفصل بشكل مبسط وشيق." : "An engaging, natural human conversation between podcast hosts breaking down this chapter's key ideas.")}
+              {podcast?.summary || (isArabic ? "حوار ممتع وطبيعي بين مقدمي البودكاست مصحوب بعرض تقديمي وشرائح بصرية متزامنة مع الصوت لتثبيت المفاهيم." : "An engaging conversation between podcast hosts paired with a synchronized visual slide deck.")}
             </p>
 
-            {/* HOST PERSONA BADGES */}
-            <div className="flex items-center gap-4 pt-1">
-              <div className="flex items-center gap-2 bg-white/10 border border-white/10 px-3 py-1.5 rounded-xl backdrop-blur-sm">
-                <div className="w-6 h-6 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 font-bold text-xs flex items-center justify-center">
+            {/* HOST PERSONA SPOTLIGHT CARDS */}
+            <div className="flex items-center gap-3 pt-1 flex-wrap">
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl backdrop-blur-sm transition-all border ${
+                isKareemSpeaking
+                  ? 'bg-amber-500/20 border-amber-400 ring-2 ring-amber-400/40 shadow-lg scale-105'
+                  : 'bg-white/10 border-white/10 opacity-75'
+              }`}>
+                <div className="w-6 h-6 rounded-full bg-amber-500/30 border border-amber-400 text-amber-300 font-bold text-xs flex items-center justify-center">
                   {isArabic ? "ك" : "A"}
                 </div>
-                <span className="text-xs font-bold text-gray-200">{isArabic ? "كريم (المحاور)" : "Alex (Co-Host)"}</span>
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-gray-200">{isArabic ? "كريم (المحاور)" : "Alex (Host)"}</span>
+                  {isKareemSpeaking && <span className="text-[9px] font-black text-amber-300 animate-pulse">🎙️ يتحدث الآن</span>}
+                </div>
               </div>
-              <div className="flex items-center gap-2 bg-white/10 border border-white/10 px-3 py-1.5 rounded-xl backdrop-blur-sm">
-                <div className="w-6 h-6 rounded-full bg-rose-500/20 border border-rose-400/40 text-rose-300 font-bold text-xs flex items-center justify-center">
+
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl backdrop-blur-sm transition-all border ${
+                isFarahSpeaking
+                  ? 'bg-rose-500/20 border-rose-400 ring-2 ring-rose-400/40 shadow-lg scale-105'
+                  : 'bg-white/10 border-white/10 opacity-75'
+              }`}>
+                <div className="w-6 h-6 rounded-full bg-rose-500/30 border border-rose-400 text-rose-300 font-bold text-xs flex items-center justify-center">
                   {isArabic ? "ف" : "F"}
                 </div>
-                <span className="text-xs font-bold text-gray-200">{isArabic ? "فرح (الخبيرة)" : "Farah (Expert Host)"}</span>
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-gray-200">{isArabic ? "فرح (الخبيرة)" : "Farah (Host)"}</span>
+                  {isFarahSpeaking && <span className="text-[9px] font-black text-rose-300 animate-pulse">🎙️ تتحدث الآن</span>}
+                </div>
               </div>
             </div>
           </div>
@@ -418,74 +513,234 @@ export default function PodcastLounge({
         </div>
       </div>
 
-      {/* TWO COLUMNS: PODCAST TRANSCRIPT & LIVE DISCUSSION LOUNGE */}
+      {/* TWO COLUMNS: PODCAST VISUAL PRESENTATION & LIVE DISCUSSION LOUNGE */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        {/* LEFT/MAIN: EPISODE TRANSCRIPT */}
+        {/* LEFT/MAIN: PRESENTATION & TRANSCRIPT */}
         <div className="lg:col-span-7 bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <h4 className="font-bold text-sm text-slate-800 flex items-center gap-2">
-              <Headphones className="w-4 h-4 text-indigo-600" />
-              <span>{isArabic ? "نص حوار الحلقة الصوتي" : "Episode Dialogue Transcript"}</span>
-            </h4>
+          <div className="flex flex-wrap items-center justify-between pb-3 border-b border-slate-100 gap-2">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setViewMode('presentation')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition ${
+                  viewMode === 'presentation'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                🖥️ {isArabic ? "العرض التقديمي (PowerPoint)" : "Visual Slides"}
+              </button>
+              <button
+                onClick={() => setViewMode('transcript')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition ${
+                  viewMode === 'transcript'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                📝 {isArabic ? "نص الحوار الصوتي" : "Dialogue Transcript"}
+              </button>
+            </div>
+
             <span className="text-[10px] text-gray-500 bg-slate-100 px-2.5 py-1 rounded-full font-medium">
-              {isArabic ? "انقر على أي نص للاستماع بصوت الراوي البشري" : "Click any line to hear in human voice"}
+              {isArabic ? "شرائح تفاعلية متزامنة مع الحوار" : "Interactive Slides"}
             </span>
           </div>
 
-          {podcast?.transcript && podcast.transcript.length > 0 ? (
-            <div className="space-y-3.5 max-h-[480px] overflow-y-auto pr-2 custom-scrollbar">
-              {podcast.transcript.map((item, idx) => {
-                const lineId = `podcast-line-${chapterId}-${idx}`;
-                const isHost1 = item.speaker.includes('كريم') || item.speaker.toLowerCase().includes('alex');
-                const isPlayingLine = isItemPlaying(lineId);
-                const isLoadingLine = isItemLoading(lineId);
+          {/* VIEW 1: INTERACTIVE POWERPOINT PRESENTATION SLIDES */}
+          {viewMode === 'presentation' && (
+            <div className="space-y-4">
+              {transcriptSlides.length > 0 ? (
+                <div className={`bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl p-6 border transition-all duration-500 shadow-xl flex flex-col justify-between min-h-[380px] relative overflow-hidden ${
+                  isEpisodePlaying ? 'border-amber-400/70 ring-2 ring-amber-400/20 shadow-[0_0_30px_rgba(251,191,36,0.15)]' : 'border-indigo-800/40'
+                }`}>
+                  {/* Top Live Audio Progress Indicator */}
+                  {isEpisodePlaying && (
+                    <div className="absolute top-0 left-0 right-0 h-1.5 bg-white/10">
+                      <div
+                        className="h-full bg-gradient-to-r from-amber-400 via-rose-400 to-emerald-400 transition-all duration-300"
+                        style={{ width: `${duration > 0 ? Math.min(100, Math.max(0, (currentTime / duration) * 100)) : ((activeSlideIndex + 1) / transcriptSlides.length) * 100}%` }}
+                      />
+                    </div>
+                  )}
 
-                return (
-                  <div
-                    key={idx}
-                    onClick={() => playAudioSnippet(item.text, undefined, undefined, item.speaker, lineId)}
-                    className={`p-3.5 rounded-xl border transition cursor-pointer relative group ${
-                      isPlayingLine
-                        ? 'bg-indigo-50/90 border-indigo-400 shadow-sm'
-                        : isHost1
-                        ? 'bg-amber-50/30 border-amber-100 hover:border-amber-200'
-                        : 'bg-rose-50/30 border-rose-100 hover:border-rose-200'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className={`text-[11px] font-extrabold px-2 py-0.5 rounded ${
-                        isHost1 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'
-                      }`}>
-                        {item.speaker}
-                      </span>
-                      <button
-                        className={`p-1 rounded transition ${
-                          isPlayingLine ? 'text-indigo-600' : 'text-gray-400 group-hover:text-indigo-600'
-                        }`}
-                        title="Play dialogue line voice"
-                      >
-                        {isLoadingLine ? (
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-600" />
-                        ) : isPlayingLine ? (
-                          <Square className="w-3.5 h-3.5 fill-current text-rose-600 animate-pulse" />
-                        ) : (
-                          <Volume2 className="w-3.5 h-3.5" />
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                          {isArabic ? `شريحة ${activeSlideIndex + 1} من ${transcriptSlides.length}` : `Slide ${activeSlideIndex + 1} of ${transcriptSlides.length}`}
+                        </span>
+                        <span className="text-xs font-bold text-gray-300">
+                          {transcriptSlides[activeSlideIndex]?.speaker}
+                        </span>
+                        {isEpisodePlaying && (
+                          <span className="text-[9px] font-black text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-400/30 animate-pulse flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                            <span>متزامن مع الصوت 🎙️</span>
+                          </span>
                         )}
-                      </button>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {/* Playback Speed Switcher */}
+                        <div className="flex items-center bg-white/10 rounded-lg p-0.5 border border-white/10 text-[10px] font-black">
+                          {[1, 1.25, 1.5].map((spd) => (
+                            <button
+                              key={spd}
+                              onClick={() => handleSpeedChange(spd)}
+                              className={`px-1.5 py-0.5 rounded transition ${
+                                playbackSpeed === spd ? 'bg-amber-400 text-slate-950 font-black' : 'text-gray-300 hover:text-white'
+                              }`}
+                            >
+                              {spd}x
+                            </button>
+                          ))}
+                        </div>
+
+                        <button
+                          onClick={() => setAutoSyncSlides(!autoSyncSlides)}
+                          className={`text-[10px] font-black px-2.5 py-1 rounded-lg border transition ${
+                            autoSyncSlides ? 'bg-amber-400/20 text-amber-300 border-amber-400/40' : 'bg-white/5 text-gray-400 border-white/10'
+                          }`}
+                          title="تشغيل/إيقاف الانتقال التلقائي للشرائح مع الكلام"
+                        >
+                          ⚡ {autoSyncSlides ? 'المزامنة مفعّلة' : 'المزامنة معطلة'}
+                        </button>
+                      </div>
                     </div>
 
-                    <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-sans">
-                      {item.text}
-                    </p>
+                    <div className="space-y-3.5">
+                      <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-400/30">
+                        <span className="text-[10px] font-black text-indigo-300 block mb-1">
+                          🗣️ {transcriptSlides[activeSlideIndex]?.speaker}:
+                        </span>
+                        <p className="text-sm sm:text-base font-bold text-indigo-100 leading-relaxed">
+                          "{transcriptSlides[activeSlideIndex]?.summary}"
+                        </p>
+                      </div>
+
+                      {transcriptSlides[activeSlideIndex]?.points.length > 0 && (
+                        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10 space-y-2">
+                          <span className="text-[11px] font-black text-amber-300 block">💡 {isArabic ? "أهم الأفكار والشرح:" : "Key Takeaways:"}</span>
+                          <ul className="space-y-2 text-xs sm:text-sm text-gray-200">
+                            {transcriptSlides[activeSlideIndex]?.points.map((pt, pIdx) => (
+                              <li key={pIdx} className="flex items-start gap-2.5">
+                                <span className="text-amber-400 font-bold text-base leading-none">•</span>
+                                <span className="leading-relaxed font-medium">{pt}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {transcriptSlides[activeSlideIndex]?.dialogueExcerpt && (
+                        <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-400/20 text-xs text-rose-200">
+                          <span className="font-bold text-rose-300 block mb-1">تعليق وملاحظة:</span>
+                          <p className="leading-relaxed">{transcriptSlides[activeSlideIndex]?.dialogueExcerpt}</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                );
-              })}
+
+                  {/* SLIDE NAVIGATION CONTROLS */}
+                  <div className="flex items-center justify-between pt-4 mt-4 border-t border-white/10">
+                    <div className="flex items-center gap-1.5">
+                      {transcriptSlides.map((_, sIdx) => (
+                        <button
+                          key={sIdx}
+                          onClick={() => setActiveSlideIndex(sIdx)}
+                          className={`h-2 rounded-full transition-all ${
+                            sIdx === activeSlideIndex ? 'w-6 bg-amber-400' : 'w-2 bg-white/30 hover:bg-white/50'
+                          }`}
+                        />
+                      ))}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setActiveSlideIndex(prev => Math.max(0, prev - 1))}
+                        disabled={activeSlideIndex === 0}
+                        className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed text-xs font-bold transition"
+                      >
+                        {isArabic ? "السابق ◀" : "◀ Prev"}
+                      </button>
+                      <button
+                        onClick={() => setActiveSlideIndex(prev => Math.min(transcriptSlides.length - 1, prev + 1))}
+                        disabled={activeSlideIndex === transcriptSlides.length - 1}
+                        className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed text-xs font-bold transition"
+                      >
+                        {isArabic ? "التالي ▶" : "Next ▶"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="py-12 text-center text-gray-500 space-y-2">
+                  <Radio className="w-8 h-8 mx-auto text-gray-400 animate-pulse" />
+                  <p className="text-xs">{isArabic ? "قم بإنتاج البودكاست أولاً لمشاهدة الشرائح التفاعلية..." : "Generate podcast first to view slides..."}</p>
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="py-12 text-center text-gray-500 space-y-2">
-              <Radio className="w-8 h-8 mx-auto text-gray-400 animate-pulse" />
-              <p className="text-xs">{isArabic ? "جاري تجهيز نص الحلقة الحواري..." : "Preparing episode script..."}</p>
+          )}
+
+          {/* VIEW 2: FULL TRANSCRIPT */}
+          {viewMode === 'transcript' && (
+            <div>
+              {podcast?.transcript && podcast.transcript.length > 0 ? (
+                <div className="space-y-3.5 max-h-[480px] overflow-y-auto pr-2 custom-scrollbar">
+                  {podcast.transcript.map((item, idx) => {
+                    const lineId = `podcast-line-${chapterId}-${idx}`;
+                    const isHost1 = item.speaker.includes('كريم') || item.speaker.toLowerCase().includes('alex');
+                    const isPlayingLine = isItemPlaying(lineId);
+                    const isLoadingLine = isItemLoading(lineId);
+
+                    return (
+                      <div
+                        key={idx}
+                        onClick={() => playAudioSnippet(item.text, undefined, undefined, item.speaker, lineId)}
+                        className={`p-3.5 rounded-xl border transition cursor-pointer relative group ${
+                          isPlayingLine
+                            ? 'bg-indigo-50/90 border-indigo-400 shadow-sm'
+                            : isHost1
+                            ? 'bg-amber-50/30 border-amber-100 hover:border-amber-200'
+                            : 'bg-rose-50/30 border-rose-100 hover:border-rose-200'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className={`text-[11px] font-extrabold px-2 py-0.5 rounded ${
+                            isHost1 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'
+                          }`}>
+                            {item.speaker}
+                          </span>
+                          <button
+                            className={`p-1 rounded transition ${
+                              isPlayingLine ? 'text-indigo-600' : 'text-gray-400 group-hover:text-indigo-600'
+                            }`}
+                            title="Play dialogue line voice"
+                          >
+                            {isLoadingLine ? (
+                              <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-600" />
+                            ) : isPlayingLine ? (
+                              <Square className="w-3.5 h-3.5 fill-current text-rose-600 animate-pulse" />
+                            ) : (
+                              <Volume2 className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        </div>
+
+                        <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-sans">
+                          {item.text}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="py-12 text-center text-gray-500 space-y-2">
+                  <Radio className="w-8 h-8 mx-auto text-gray-400 animate-pulse" />
+                  <p className="text-xs">{isArabic ? "جاري تجهيز نص الحلقة الحواري..." : "Preparing episode script..."}</p>
+                </div>
+              )}
             </div>
           )}
         </div>
