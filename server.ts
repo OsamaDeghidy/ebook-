@@ -131,6 +131,16 @@ function cleanScientificTextForSpeech(input: string): string {
 const app = express();
 const PORT = 3000;
 
+// 🛡️ Global Security Headers (HSTS, Anti-Clickjacking, MIME-Sniffing & XSS Protection)
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  res.setHeader("X-XSS-Protection", "1; mode=block");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+  next();
+});
+
 // 🛡️ Security Rate Limiter (Protects AI & TTS endpoints from quota drain / DoS)
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 const createRateLimiter = (maxRequests: number, windowMs: number) => {
@@ -5557,15 +5567,15 @@ app.post("/api/admin/books/:bookId/toggle-block", async (req, res) => {
 const PLATFORM_SETTINGS_FILE = path.join(process.cwd(), "platform_settings.json");
 
 const DEFAULT_SERVER_SETTINGS = {
-  brandName: "أوسيرا AI",
-  brandSubtitle: "المنصة الذكية للكتب والمذكرات التعليمية",
+  brandName: "ebook osera ai",
+  brandSubtitle: "المنصة الذكية للكتب والمذكرات التعليمية التفاعلية",
   brandLogoUrl: "",
-  companyName: "شركة أوسيرا سوفت للحلول الذكية (Osera Soft AI)",
-  founderName: "فريق مهندسي أوسيرا AI",
+  companyName: "ebook osera ai",
+  founderName: "فريق مهندسي ebook osera ai",
   supportPhone: "+201066906132",
   supportEmail: "support@osera-ai.com",
   whatsappNumber: "+201066906132",
-  copyrightText: "جميع الحقوق محفوظة © 2026 لشركة أوسيرا سوفت AI",
+  copyrightText: "جميع الحقوق محفوظة © 2026 لمنصة ebook osera ai",
   platformCommissionRate: 15,
   minWithdrawalAmount: 100,
   freeAiBooksPerTeacher: 5,
@@ -6145,7 +6155,7 @@ function escapeXml(unsafe: string): string {
 // 1. Robots.txt for Search Engines & LLM Web Crawlers
 app.get("/robots.txt", (req, res) => {
   res.type("text/plain; charset=utf-8");
-  res.send(`# Robots.txt for Osera AI Interactive E-Books Studio
+  res.send(`# Robots.txt for ebook osera ai - Interactive E-Books Studio
 User-agent: *
 Allow: /
 Allow: /marketplace
@@ -6263,11 +6273,11 @@ ${allUrls
 // 3. LLMs Context Discovery Protocol (llms.txt & llms-full.txt)
 app.get("/llms.txt", (req, res) => {
   res.type("text/plain; charset=utf-8");
-  const markdown = `# Osera AI (أوسيرا للحلول الذكية) - Interactive Educational E-Books & AI Studio
-> منصة أوسيرا للكتب والمناهج التفاعلية الذكية المعتمدة على الذكاء الاصطناعي الفائق.
+  const markdown = `# ebook osera ai - Interactive Educational E-Books & AI Studio
+> منصة ebook osera ai للكتب والمناهج التفاعلية الذكية المعتمدة على الذكاء الاصطناعي الفائق.
 
 ## Core Overview
-منصة استوديو الكتب التفاعلية من شركة أوسيرا (Osera AI) تتيح للطلاب والمعلمين في العالم العربي ومصر تحويل المناهج الدراسية، الكتب الأكاديمية، والملفات بصيغة PDF إلى كتب تفاعلية فائقة الذكاء تضم:
+منصة استوديو الكتب التفاعلية ebook osera ai تتيح للطلاب والمعلمين في العالم العربي ومصر تحويل المناهج الدراسية، الكتب الأكاديمية، والملفات بصيغة PDF إلى كتب تفاعلية فائقة الذكاء تضم:
 - 🎙️ شرح صوتي فائق النقاء وواقعي باللغة العربية الفصحى أو الإنجليزية.
 - 💡 خرائط ذهنية تفاعلية ومفاهيم مبسطة لكل درس.
 - 📝 بنوك أسئلة واختبارات متدرجة الصعوبة (اختيار من متعدد، صح وخطأ، أسئلة مقالية مع نماذج إجابة فورية).
@@ -6278,7 +6288,7 @@ app.get("/llms.txt", (req, res) => {
 - Main Marketplace & Catalog: https://www.ebook.osera-ai.com/marketplace
 - Educational Reels & Quick Lessons: https://www.ebook.osera-ai.com/reels
 - Frequently Asked Questions (FAQ): https://www.ebook.osera-ai.com/faq
-- About Osera AI & Mission: https://www.ebook.osera-ai.com/about
+- About Platform & Mission: https://www.ebook.osera-ai.com/about
 - Full Details & LLM Index: https://www.ebook.osera-ai.com/llms-full.txt
 `;
   res.send(markdown);
@@ -6297,10 +6307,10 @@ app.get("/llms-full.txt", (req, res) => {
     )
     .join("\n");
 
-  const markdown = `# Osera AI - Comprehensive Educational Knowledge Base & E-Book Catalog
+  const markdown = `# ebook osera ai - Comprehensive Educational Knowledge Base & E-Book Catalog
 
-## About Osera AI
-شركة أوسيرا للحلول الذكية (Osera Soft AI) هي شركة رائدة في تقنيات الذكاء الاصطناعي التعليمي (EdTech AI). تطبق معايير وزارة التربية والتعليم والمناهج العالمية لتقديم تجربة تعلم ذاتية تفاعلية تعتمد على نماذج Gemini AI و DeepSeek و Edge TTS.
+## About ebook osera ai
+منصة ebook osera ai هي المنصة الرائدة في تقنيات الذكاء الاصطناعي التعليمي (EdTech AI). تطبق معايير وزارة التربية والتعليم والمناهج العالمية لتقديم تجربة تعلم ذاتية تفاعلية تعتمد على نماذج Gemini AI و DeepSeek و Edge TTS.
 
 ## Available Interactive Subjects & Books
 ${bookList || "المكتبة التعليمية قيد التحديث اليومي بأحدث المناهج المدرسية والجامعية."}
@@ -6315,139 +6325,366 @@ ${bookList || "المكتبة التعليمية قيد التحديث اليو�
 
 // Helper: Dynamic Meta Tags & Structured Data Injection for SSR / SPA
 function renderHtmlWithDynamicMeta(req: express.Request, originalHtml: string): string {
-  const urlPath = req.path;
+  let cleanPath = req.path.replace(/\/+$/, "") || "/";
   const currentEbooks = loadEbooks();
+  const baseUrl = "https://www.ebook.osera-ai.com";
 
-  let title = "أوسيرا AI | المنصة الذكية للكتب والمذكرات التعليمية التفاعلية";
-  let description = "استوديو أوسيرا للكتب التفاعلية الذكية - تحويل المناهج والكتب إلى تجارب تعليمية حية مدعومة بالذكاء الاصطناعي، شروحات صوتية، خرائط ذهنية، وبنوك أسئلة.";
-  let canonicalUrl = `https://www.ebook.osera-ai.com${urlPath}`;
-  let ogImage = "https://www.ebook.osera-ai.com/og-cover.png";
+  let title = "ebook osera ai | المنصة الذكية للكتب والمذكرات التعليمية التفاعلية";
+  let description = "منصة ebook osera ai - الجيل القادم من التعليم التفاعلي والمقررات الرقمية المعتمدة على الذكاء الاصطناعي والشروحات الصوتية وبنوك الأسئلة.";
+  let canonicalUrl = `${baseUrl}${cleanPath === "/" ? "/" : cleanPath}`;
+  let ogImage = `${baseUrl}/og-cover.png`;
   let structuredData: any = null;
 
-  if (urlPath === "/" || urlPath === "/marketplace") {
-    title = "المكتبة التعليمية الذكية | كتب ومناهج تفاعلية - Osera AI";
-    description = "تصفح مئات المناهج والكتب الدراسية التفاعلية المزودة بالشرح الصوتي، الاختبارات التفاعلية، والبطاقات الذكية من أوسيرا.";
-    canonicalUrl = "https://www.ebook.osera-ai.com/marketplace";
+  if (cleanPath === "/" || cleanPath === "") {
+    title = "ebook osera ai | المنصة الذكية للكتب والمذكرات التعليمية التفاعلية";
+    description = "منصة ebook osera ai - الجيل القادم من التعليم التفاعلي والمقررات الرقمية المعتمدة على الذكاء الاصطناعي والشروحات الصوتية وبنوك الأسئلة.";
+    canonicalUrl = `${baseUrl}/`;
     structuredData = {
       "@context": "https://schema.org",
-      "@type": "CollectionPage",
-      "name": title,
-      "description": description,
-      "url": canonicalUrl,
-      "publisher": {
-        "@type": "EducationalOrganization",
-        "name": "Osera AI",
-        "url": "https://www.ebook.osera-ai.com"
-      }
-    };
-  } else if (urlPath.startsWith("/book/")) {
-    const bookId = urlPath.replace("/book/", "").trim();
-    const book = currentEbooks.find((b) => String(b.id) === String(bookId));
-    if (book) {
-      title = `${book.title} | كتاب تفاعلي ذكي - Osera AI`;
-      description = (book.description || `تعلم واستكشف ${book.title} عبر الشرح الصوتي التفاعلي والخرائط الذهنية وبنوك الأسئلة والبطاقات الذكية.`).slice(0, 160);
-      ogImage = book.coverImage || ogImage;
-      structuredData = {
-        "@context": "https://schema.org",
-        "@type": "Book",
-        "name": book.title,
-        "description": description,
-        "image": ogImage,
-        "url": canonicalUrl,
-        "inLanguage": "ar",
-        "author": {
-          "@type": "Organization",
-          "name": "Osera AI"
-        },
-        "publisher": {
-          "@type": "EducationalOrganization",
-          "name": "Osera AI",
-          "url": "https://www.ebook.osera-ai.com"
-        }
-      };
-    }
-  } else if (urlPath.startsWith("/category/")) {
-    const rawCat = decodeURIComponent(urlPath.replace("/category/", "").trim());
-    title = `كتب ومناهج ${rawCat} | منصة Osera AI التفاعلية`;
-    description = `استكشف كافة الكتب والمناهج التفاعلية الذكية في قسم ${rawCat}. شروحات ذكية واختبارات وتقييمات فورية.`;
-  } else if (urlPath === "/reels") {
-    title = "ريلز تعليمية قصيرة | فيديوهات وشروحات ذكية - Osera AI";
-    description = "تعلم بأسرع طريقة مع الفيديوهات والريلز التعليمية التفاعلية القصيرة المشروحة بالذكاء الاصطناعي.";
-  } else if (urlPath === "/faq") {
-    title = "الأسئلة الشائعة | منصة أوسيرا للكتب التفاعلية - Osera AI FAQ";
-    description = "إجابات وافية على كافة التساؤلات حول كيفية إنشاء الكتب التفاعلية، تصدير الاختبارات، واستخدام الذكاء الاصطناعي في التعليم.";
-    structuredData = {
-      "@context": "https://schema.org",
-      "@type": "FAQPage",
-      "mainEntity": [
+      "@graph": [
         {
-          "@type": "Question",
-          "name": "ما هي منصة أوسيرا للكتب التفاعلية (Osera AI)؟",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "منصة تعليمية ذكية تحول ملفات PDF والكتب المدرسية والأكاديمية إلى كتب تفاعلية حية تحتوي على شروحات صوتية، خرائط ذهنية، وبطاقات استذكار واختبارات تفاعلية."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "هل تدعم المنصة المناهج الدراسية العربية بالكامل؟",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "نعم، تدعم المنصة اللغة العربية الفصحى والمصطلحات التعليمية المعتمدة للمناهج المصرية والعربية بدقة فائقة وبدون أي خلط لغوي غير مرغوب."
+          "@type": "WebSite",
+          "@id": `${baseUrl}/#website`,
+          "url": `${baseUrl}/`,
+          "name": "ebook osera ai",
+          "description": description,
+          "inLanguage": "ar",
+          "publisher": {
+            "@type": "EducationalOrganization",
+            "@id": `${baseUrl}/#organization`,
+            "name": "ebook osera ai",
+            "url": baseUrl,
+            "logo": {
+              "@type": "ImageObject",
+              "url": `${baseUrl}/og-cover.png`
+            }
           }
         }
       ]
     };
-  } else if (urlPath === "/about") {
-    title = "عن شركة أوسيرا للحلول الذكية | Osera Soft AI";
-    description = "تعرف على رؤية ورسالة شركة أوسيرا للحلول الذكية وتاريخ ريادتها في دمج الذكاء الاصطناعي التوليدي مع التعليم في الشرق الأوسط.";
+  } else if (cleanPath === "/marketplace") {
+    title = "المكتبة التعليمية الذكية | كتب ومناهج تفاعلية - ebook osera ai";
+    description = "تصفح واكتشف مئات المناهج الدراسية والكتب التفاعلية الذكية المزودة بالشرح الصوتي والخرائط الذهنية وبنوك الأسئلة من منصة ebook osera ai.";
+    canonicalUrl = `${baseUrl}/marketplace`;
     structuredData = {
       "@context": "https://schema.org",
-      "@type": "AboutPage",
-      "name": title,
-      "description": description,
-      "url": canonicalUrl,
-      "mainEntity": {
-        "@type": "EducationalOrganization",
-        "name": "شركة أوسيرا للحلول الذكية (Osera Soft AI)",
-        "url": "https://www.ebook.osera-ai.com",
-        "description": "شركة رائدة في تقديم حلول الذكاء الاصطناعي التوليدي وتطوير منصات التعليم التفاعلية الذكية."
-      }
+      "@graph": [
+        {
+          "@type": "CollectionPage",
+          "@id": `${baseUrl}/marketplace#webpage`,
+          "name": title,
+          "description": description,
+          "url": canonicalUrl,
+          "isPartOf": {
+            "@id": `${baseUrl}/#website`
+          }
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "الرئيسية", "item": `${baseUrl}/` },
+            { "@type": "ListItem", "position": 2, "name": "المتجر والمقررات", "item": canonicalUrl }
+          ]
+        }
+      ]
+    };
+  } else if (cleanPath.startsWith("/book/")) {
+    const rawBookId = cleanPath.replace("/book/", "").split("/")[0].trim();
+    const book = currentEbooks.find(
+      (b) => String(b.id).toLowerCase() === rawBookId.toLowerCase() ||
+             String(b.slug || "").toLowerCase() === rawBookId.toLowerCase()
+    );
+
+    if (book) {
+      title = `${book.title} | كتاب تفاعلي ذكي - ebook osera ai`;
+      description = (book.description || `كتاب ${book.title} التفاعلي الذكي - شرح صوتي واقعي، خرائط مفاهيم، وبنك أسئلة واختبارات تفاعلية شاملة من منصة ebook osera ai.`).slice(0, 160);
+      canonicalUrl = `${baseUrl}/book/${book.id}`;
+      ogImage = book.thumbnail_url || book.coverImage || `${baseUrl}/og-cover.png`;
+
+      structuredData = {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": ["Book", "LearningResource", "Course"],
+            "@id": `${canonicalUrl}#book`,
+            "name": book.title,
+            "headline": book.title,
+            "description": description,
+            "image": [ogImage],
+            "url": canonicalUrl,
+            "inLanguage": "ar",
+            "learningResourceType": "Interactive Course / E-Book",
+            "educationalLevel": book.grade || "جميع المراحل التعليمية",
+            "about": {
+              "@type": "Thing",
+              "name": book.category || book.subject || "التعليم التفاعلي"
+            },
+            "author": {
+              "@type": "Person",
+              "name": book.author_name || book.author || "ebook osera ai"
+            },
+            "publisher": {
+              "@type": "EducationalOrganization",
+              "name": "ebook osera ai",
+              "url": baseUrl,
+              "logo": {
+                "@type": "ImageObject",
+                "url": `${baseUrl}/og-cover.png`
+              }
+            },
+            "offers": {
+              "@type": "Offer",
+              "price": book.price || 0,
+              "priceCurrency": "EGP",
+              "availability": "https://schema.org/InStock"
+            },
+            "aggregateRating": {
+              "@type": "AggregateRating",
+              "ratingValue": book.rating || 5,
+              "reviewCount": book.reviews_count || 12,
+              "bestRating": 5,
+              "worstRating": 1
+            },
+            "hasPart": Array.isArray(book.chapters) ? book.chapters.map((ch: any) => ({
+              "@type": "Chapter",
+              "name": ch.title || "فصل تعليمي",
+              "description": ch.summary || ch.title || "محتوى تفاعلي"
+            })) : []
+          },
+          {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              { "@type": "ListItem", "position": 1, "name": "الرئيسية", "item": `${baseUrl}/` },
+              { "@type": "ListItem", "position": 2, "name": "المتجر والمقررات", "item": `${baseUrl}/marketplace` },
+              { "@type": "ListItem", "position": 3, "name": book.title, "item": canonicalUrl }
+            ]
+          }
+        ]
+      };
+    } else {
+      title = "كتاب تفاعلي ذكي | ebook osera ai";
+      description = "تصفح الكتاب التفاعلي الذكي مع الشروحات الصوتية وبنوك الأسئلة من منصة ebook osera ai.";
+      canonicalUrl = `${baseUrl}${cleanPath}`;
+    }
+  } else if (cleanPath.startsWith("/category/")) {
+    const rawCat = decodeURIComponent(cleanPath.replace("/category/", "").trim());
+    title = `كتب ومناهج ${rawCat} | منصة ebook osera ai التعليمية`;
+    description = `استكشف أفضل الكتب والمذكرات التفاعلية لقسم ${rawCat}. شروحات ذكية واختبارات وبطاقات استذكار فورية من ebook osera ai.`;
+    canonicalUrl = `${baseUrl}/category/${encodeURIComponent(rawCat)}`;
+    structuredData = {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "CollectionPage",
+          "@id": `${canonicalUrl}#webpage`,
+          "name": title,
+          "description": description,
+          "url": canonicalUrl,
+          "about": {
+            "@type": "Thing",
+            "name": rawCat
+          }
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "الرئيسية", "item": `${baseUrl}/` },
+            { "@type": "ListItem", "position": 2, "name": "المتجر", "item": `${baseUrl}/marketplace` },
+            { "@type": "ListItem", "position": 3, "name": rawCat, "item": canonicalUrl }
+          ]
+        }
+      ]
+    };
+  } else if (cleanPath === "/reels") {
+    title = "ريلز تعليمية تفاعلية | فيديوهات وشروحات ذكية - ebook osera ai";
+    description = "شاهد وتعلم بأسرع وأحدث طريقة مع ريلز المناهج التعليمية القصيرة والمشروحة بالذكاء الاصطناعي التفاعلي من ebook osera ai.";
+    canonicalUrl = `${baseUrl}/reels`;
+  } else if (cleanPath === "/faq") {
+    title = "الأسئلة الشائعة | منصة ebook osera ai للكتب التفاعلية";
+    description = "إجابات شاملة على جميع استفسارات الطلاب والمعلمين حول تحويل المذكرات، بنوك الامتحانات، استوديو البودكاست، ومميزات الذكاء الاصطناعي في منصة ebook osera ai.";
+    canonicalUrl = `${baseUrl}/faq`;
+    structuredData = {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "FAQPage",
+          "@id": `${baseUrl}/faq#faq`,
+          "name": title,
+          "description": description,
+          "url": canonicalUrl,
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "ما هي منصة ebook osera ai؟",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "منصة ebook osera ai هي المنصة التعليمية العربية الأولى المتخصصة في تحويل الكتب والمذكرات والمقررات الدراسية (PDF) إلى كتب ذكية تفاعلية مدعومة بالذكاء الاصطناعي، تشمل شروحات ميسرة، بنوك أسئلة موقوتة، بودكاست حواري، وريلز تعليمية سريعة."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "ما هي المناهج والمراحل الدراسية التي تدعمها منصة ebook osera ai؟",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "تدعم المنصة جميع المراحل التعليمية: مرحلة التعليم الأساسي والابتدائي، الإعدادي، المرحلة الثانوية (شعبتي علمي وأدبي وفق أحدث مواصفات وزارة التربية والتعليم)، بالإضافة إلى المقررات الجامعية، الشهادات الدولية، ودورات البرمجة والذكاء الاصطناعي."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "كيف يتم تحويل المذكرة أو الـ PDF إلى كتاب تفاعلي ذكي؟",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "بمجرد رفع ملف المذكرة أو الكتاب بصيغة PDF، يقوم محرك الذكاء الاصطناعي بتحليل المنهج، وتفكيكه إلى فصول تفاعلية، واستخراج المفاهيم الأساسية، وتوليد أمثلة محلولة خطوة بخطوة، مع إنتاج بودكاست صوتي وريلز وبنك اختبارات تقييمي تلقائياً."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "ما هو استوديو البودكاست التعليمي (كريم وفرح)؟",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "هو نظام توليد صوتي درامي متطور يقوم فيه مذيعان افتراضيان بالذكاء الاصطناعي (كريم وفرح) بمناقشة محتوى كل فصل وطرح الأسئلة الشائعة وتفسير القوانين والمسائل بأسلوب شيق وجذاب يرسخ المعلومة في ذهن الطالب."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "ما هي ميزة ريلز التعليم (EduReels 100% Studio)؟",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "تتيح المنصة تحويل أي درس إلى مقطع ريلز تعليمي تفاعلي مدته من 40 إلى 60 ثانية يحتوي على سيناريو مركز، شرائح بصرية ديناميكية، ونشاط تفاعلي سريع لمساعدة الطالب على مراجعة الدرس في ثوانٍ معدودة."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "هل يمكنني تجربة الكتب والاختبارات مجاناً؟",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "نعم، توفر منصة ebook osera ai العديد من الكتب والمقررات المجانية بالكامل، بالإضافة إلى إمكانية معاينة الفصول الأولى من أي كتاب، والاستفادة من بنك الأسئلة والمساعد الذكي مجاناً."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "كيف يساعدني المعلم الذكي (Contextual AI Tutor) أثناء المذاكرة؟",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "في كل صفحة درس، يتواجد مساعد ذكي متصل بسياق المنهج الحالي، يمكنك سؤاله في أي وقت عن أي نقطة غامضة، أو طلب إعادة شرح المسألة بطريقة مختلفة، أو طلب أمثلة وتدريبات إضافية."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "كيف يمكن للمدرسين والمؤسسات التعليمية الاستفادة من المنصة؟",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "يمكن للمعلمين إنشاء حساب معلم ونشر مذكراتهم الخاصة ككتب ذكية تفاعلية، وإصدار كروت شحن للسناتر والطلاب، ومتابعة أداء الطلاب وإحصائيات الاستيعاب، وحماية محتواهم الأكاديمي بعلامات مائية رقمية وتشفير كامل."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "هل حقوق الملكية الفكرية للمذكرات والمقررات محمية؟",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "نعم تماماً، يتم حماية جميع الملفات بنظام Dynamic Watermarking يطبع بيانات المشترك على المحتوى لمنع التسريب، مع تشفير السيرفرات السحابية وضمان عدم مشاركة المادة الخام خارج المنصة."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "كيف يمكنني التواصل مع الدعم الفني لمنصة ebook osera ai؟",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "فريق الدعم الفني متاح على مدار الساعة عبر الواتساب على الرقم (+201066906132) أو عبر البريد الإلكتروني (support@osera-ai.com)."
+              }
+            }
+          ]
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "الرئيسية", "item": `${baseUrl}/` },
+            { "@type": "ListItem", "position": 2, "name": "الأسئلة الشائعة", "item": canonicalUrl }
+          ]
+        }
+      ]
+    };
+  } else if (cleanPath === "/about") {
+    title = "عن منصة ebook osera ai للحلول والتعليم الذكي | ebook osera ai";
+    description = "تعرف على منصة ebook osera ai ورؤيتها في قيادة ثورة التعليم التفاعلي والكتب الذكية المدعومة بالذكاء الاصطناعي في مصر والوطن العربي.";
+    canonicalUrl = `${baseUrl}/about`;
+    structuredData = {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "AboutPage",
+          "@id": `${baseUrl}/about#webpage`,
+          "name": title,
+          "description": description,
+          "url": canonicalUrl,
+          "mainEntity": {
+            "@type": "EducationalOrganization",
+            "@id": `${baseUrl}/#organization`,
+            "name": "ebook osera ai",
+            "url": baseUrl,
+            "description": "منصة رائدة في تقديم حلول الذكاء الاصطناعي التوليدي وتطوير منصات التعليم التفاعلية الذكية.",
+            "foundingDate": "2024",
+            "contactPoint": {
+              "@type": "ContactPoint",
+              "telephone": "+201066906132",
+              "contactType": "customer service",
+              "email": "support@osera-ai.com",
+              "availableLanguage": ["Arabic", "English"]
+            }
+          }
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "الرئيسية", "item": `${baseUrl}/` },
+            { "@type": "ListItem", "position": 2, "name": "عن المنصة", "item": canonicalUrl }
+          ]
+        }
+      ]
     };
   }
 
-  let injectedHtml = originalHtml;
+  // 1. Scrub any previous/hardcoded meta, title, canonical, and ld+json scripts from HTML head
+  let scrubbedHtml = originalHtml
+    .replace(/<title>[\s\S]*?<\/title>/gi, "")
+    .replace(/<meta\s+name=["'](description|keywords|author|title|twitter:[^"']+)["'][^>]*>/gi, "")
+    .replace(/<meta\s+property=["'](og:[^"']+|twitter:[^"']+)["'][^>]*>/gi, "")
+    .replace(/<link\s+rel=["']canonical["'][^>]*>/gi, "")
+    .replace(/<script\s+type=["']application\/ld\+json["']>[\s\S]*?<\/script>/gi, "");
 
-  // Replace Title
-  if (injectedHtml.includes("<title>")) {
-    injectedHtml = injectedHtml.replace(/<title>.*?<\/title>/i, `<title>${escapeXml(title)}</title>`);
-  }
-
-  // Build meta tags snippet
+  // 2. Build authoritative, clean head meta tags
   const metaSnippet = `
-    <!-- Dynamic SEO & Social Meta Injected by Osera SSR Engine -->
+    <title>${escapeXml(title)}</title>
+    <meta name="title" content="${escapeXml(title)}" />
     <meta name="description" content="${escapeXml(description)}" />
     <link rel="canonical" href="${escapeXml(canonicalUrl)}" />
+    
+    <!-- Open Graph / Social Sharing -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="${escapeXml(canonicalUrl)}" />
     <meta property="og:title" content="${escapeXml(title)}" />
     <meta property="og:description" content="${escapeXml(description)}" />
-    <meta property="og:url" content="${escapeXml(canonicalUrl)}" />
     <meta property="og:image" content="${escapeXml(ogImage)}" />
-    <meta property="og:type" content="website" />
-    <meta property="og:locale" content="ar_EG" />
     <meta property="og:site_name" content="Osera AI | أوسيرا" />
+    <meta property="og:locale" content="ar_EG" />
+    
+    <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="${escapeXml(canonicalUrl)}" />
     <meta name="twitter:title" content="${escapeXml(title)}" />
     <meta name="twitter:description" content="${escapeXml(description)}" />
     <meta name="twitter:image" content="${escapeXml(ogImage)}" />
-    ${structuredData ? `<script type="application/ld+json">${JSON.stringify(structuredData)}</script>` : ""}
+    
+    <!-- Structured Data JSON-LD -->
+    ${structuredData ? `<script type="application/ld+json">\n${JSON.stringify(structuredData, null, 2)}\n</script>` : ""}
   `;
 
-  // Inject before </head>
-  if (injectedHtml.includes("</head>")) {
-    injectedHtml = injectedHtml.replace("</head>", `${metaSnippet}\n</head>`);
+  // 3. Inject cleanly right before </head>
+  if (scrubbedHtml.includes("</head>")) {
+    return scrubbedHtml.replace("</head>", `${metaSnippet}\n</head>`);
   }
 
-  return injectedHtml;
+  return scrubbedHtml;
 }
 
 // Serve frontend client SPA

@@ -33,15 +33,15 @@ export interface PlatformConfig {
 const STORAGE_KEY = 'edureels_platform_config';
 
 export const DEFAULT_PLATFORM_CONFIG: PlatformConfig = {
-  brandName: 'أوسيرا AI',
-  brandSubtitle: 'المنصة الذكية للكتب والمذكرات التعليمية',
+  brandName: 'ebook osera ai',
+  brandSubtitle: 'المنصة الذكية للكتب والمذكرات التعليمية التفاعلية',
   brandLogoUrl: '',
-  companyName: 'شركة أوسيرا سوفت للحلول الذكية (Osera Soft AI)',
-  founderName: 'فريق مهندسي أوسيرا AI',
+  companyName: 'ebook osera ai',
+  founderName: 'فريق مهندسي ebook osera ai',
   supportPhone: '+201066906132',
   supportEmail: 'support@osera-ai.com',
   whatsappNumber: '+201066906132',
-  copyrightText: 'جميع الحقوق محفوظة © 2026 لشركة أوسيرا سوفت AI',
+  copyrightText: 'جميع الحقوق محفوظة © 2026 لمنصة ebook osera ai',
   
   // Financial Defaults
   platformCommissionRate: 15,

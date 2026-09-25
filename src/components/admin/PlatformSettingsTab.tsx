@@ -245,7 +245,7 @@ export const PlatformSettingsTab: React.FC = () => {
               type="text"
               value={config.brandName}
               onChange={(e) => setConfig({ ...config, brandName: e.target.value })}
-              placeholder="مثال: أوسيرا AI"
+              placeholder="مثال: ebook osera ai"
               className="w-full px-3.5 py-2.5 bg-slate-950 border border-white/15 rounded-xl text-white font-bold text-xs outline-none focus:border-indigo-500 transition"
             />
           </div>
@@ -256,7 +256,7 @@ export const PlatformSettingsTab: React.FC = () => {
               type="text"
               value={config.brandSubtitle}
               onChange={(e) => setConfig({ ...config, brandSubtitle: e.target.value })}
-              placeholder="مثال: المنصة الذكية للكتب والمذكرات التعليمية"
+              placeholder="مثال: المنصة الذكية للكتب والمذكرات التعليمية التفاعلية"
               className="w-full px-3.5 py-2.5 bg-slate-950 border border-white/15 rounded-xl text-white font-bold text-xs outline-none focus:border-indigo-500 transition"
             />
           </div>
@@ -267,7 +267,7 @@ export const PlatformSettingsTab: React.FC = () => {
               type="text"
               value={config.companyName}
               onChange={(e) => setConfig({ ...config, companyName: e.target.value })}
-              placeholder="مثال: شركة أوسيرا سوفت للحلول الذكية"
+              placeholder="مثال: ebook osera ai"
               className="w-full px-3.5 py-2.5 bg-slate-950 border border-white/15 rounded-xl text-white font-bold text-xs outline-none focus:border-indigo-500 transition"
             />
           </div>
@@ -278,7 +278,7 @@ export const PlatformSettingsTab: React.FC = () => {
               type="text"
               value={config.founderName}
               onChange={(e) => setConfig({ ...config, founderName: e.target.value })}
-              placeholder="مثال: فريق أوسيرا سوفت للذكاء الاصطناعي"
+              placeholder="مثال: فريق مهندسي ebook osera ai"
               className="w-full px-3.5 py-2.5 bg-slate-950 border border-white/15 rounded-xl text-white font-bold text-xs outline-none focus:border-indigo-500 transition"
             />
           </div>

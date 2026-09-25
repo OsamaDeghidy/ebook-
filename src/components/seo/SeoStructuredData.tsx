@@ -13,15 +13,15 @@ export const SeoStructuredData: React.FC<SeoStructuredDataProps> = ({
   type,
   book,
   chapter,
-  platformName = 'Osera AI',
+  platformName = 'ebook osera ai',
   url
 }) => {
   useEffect(() => {
     // 1. Update Title & Meta Tags dynamically
     const currentUrl = url || window.location.href;
     let pageTitle = platformName;
-    let pageDescription = 'منصة التعلم التفاعلي الذكي والكتب والمناهج الدراسية المدعومة بالذكاء الاصطناعي';
-    let ogImage = 'https://osera.ai/og-default.png';
+    let pageDescription = 'منصة ebook osera ai للتعلم التفاعلي الذكي والكتب والمناهج الدراسية المدعومة بالذكاء الاصطناعي';
+    let ogImage = 'https://www.ebook.osera-ai.com/og-cover.png';
 
     if (type === 'book' && book) {
       pageTitle = `${book.title} | ${book.stage || book.category || 'مقرر دراسي'} - ${platformName}`;

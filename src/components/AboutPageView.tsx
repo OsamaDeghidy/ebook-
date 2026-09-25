@@ -26,12 +26,12 @@ export function AboutPageView() {
 
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-400/20 text-teal-300 text-xs font-black border border-teal-400/30">
             <Building2 className="w-3.5 h-3.5" />
-            <span>شركة أوسيرا للحلول البرمجية والذكاء الاصطناعي</span>
+            <span>منصة ebook osera ai للحلول والتعليم الذكي</span>
           </div>
         </div>
 
         <h1 className="text-2xl sm:text-4xl font-black text-white leading-tight">
-          عن منصة <span className="text-teal-400">أوسيرا AI</span> (Osera AI)
+          عن منصة <span className="text-teal-400">ebook osera ai</span>
         </h1>
         <p className="text-slate-300 text-xs sm:text-base max-w-3xl mt-4 leading-relaxed font-medium">
           المنصة التعليمية الأولى عربياً المتخصصة في إعادة ابتكار المذكرات والكتب الدراسية وتحويلها إلى بيئات تعلم تفاعلية متعددة الوسائط (Multimodal AI Learning Ecosystem)، تجمع بين الشرح الأكاديمي الرصين، البودكاست الحواري، ريلز المراجعة السريعة، والاختبارات التقييمية الذكية.
@@ -89,7 +89,7 @@ export function AboutPageView() {
           </div>
           <div>
             <span className="text-[10px] font-black text-amber-600 block">معايير الجودة والمصداقية</span>
-            <h3 className="text-base sm:text-lg font-black text-slate-900">ركائز الأمان والجودة في أوسيرا AI</h3>
+            <h3 className="text-base sm:text-lg font-black text-slate-900">ركائز الأمان والجودة في ebook osera ai</h3>
           </div>
         </div>
 
@@ -130,7 +130,7 @@ export function AboutPageView() {
       <div className="bg-gradient-to-r from-slate-900 to-indigo-950 text-white rounded-3xl p-8 shadow-md border border-slate-800 space-y-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-white/10">
           <div>
-            <h4 className="font-black text-lg text-white">شركة أوسيرا للحلول الذكية (Osera Soft AI)</h4>
+            <h4 className="font-black text-lg text-white">منصة ebook osera ai</h4>
             <p className="text-xs text-slate-300 mt-1">تطوير منظومات التعلم الرقمي والذكاء الاصطناعي التوليدي</p>
           </div>
           <div className="px-4 py-2 rounded-xl bg-teal-500/20 text-teal-300 border border-teal-400/30 text-xs font-black">
