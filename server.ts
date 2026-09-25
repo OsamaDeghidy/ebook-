@@ -6129,6 +6129,327 @@ app.post("/api/admin/support/tickets/:id/reply", async (req, res) => {
   }
 });
 
+// ==========================================
+// 🌐 SEO & GEO (Generative Engine Optimization) Infrastructure
+// ==========================================
+
+function escapeXml(unsafe: string): string {
+  return (unsafe || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+// 1. Robots.txt for Search Engines & LLM Web Crawlers
+app.get("/robots.txt", (req, res) => {
+  res.type("text/plain; charset=utf-8");
+  res.send(`# Robots.txt for Osera AI Interactive E-Books Studio
+User-agent: *
+Allow: /
+Allow: /marketplace
+Allow: /reels
+Allow: /book/
+Allow: /category/
+Allow: /faq
+Allow: /about
+Disallow: /api/
+Disallow: /admin
+Disallow: /auth/callback
+
+# AI & LLM Crawlers (GEO - Generative Engine Optimization)
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: cohere-ai
+Allow: /
+
+User-agent: meta-externalagent
+Allow: /
+
+# Sitemaps & LLM Context Files
+Sitemap: https://www.ebook.osera-ai.com/sitemap.xml
+`);
+});
+
+// 2. Dynamic Sitemap with 1-Hour Caching
+let sitemapCache: { xml: string; generatedAt: number } | null = null;
+const SITEMAP_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
+app.get("/sitemap.xml", (req, res) => {
+  const now = Date.now();
+  if (sitemapCache && now - sitemapCache.generatedAt < SITEMAP_CACHE_TTL) {
+    res.type("application/xml; charset=utf-8");
+    return res.send(sitemapCache.xml);
+  }
+
+  const currentEbooks = loadEbooks();
+  const baseUrl = "https://www.ebook.osera-ai.com";
+  const nowIso = new Date().toISOString();
+
+  // Static core routes
+  const staticRoutes = [
+    { loc: `${baseUrl}/`, priority: "1.0", changefreq: "daily" },
+    { loc: `${baseUrl}/marketplace`, priority: "0.9", changefreq: "hourly" },
+    { loc: `${baseUrl}/reels`, priority: "0.8", changefreq: "daily" },
+    { loc: `${baseUrl}/faq`, priority: "0.7", changefreq: "weekly" },
+    { loc: `${baseUrl}/about`, priority: "0.7", changefreq: "monthly" },
+  ];
+
+  // Dynamic Categories
+  const categories = Array.from(
+    new Set(
+      currentEbooks
+        .map((b) => b.category || b.subject)
+        .filter(Boolean)
+    )
+  );
+
+  const categoryRoutes = categories.map((cat) => ({
+    loc: `${baseUrl}/category/${encodeURIComponent(cat)}`,
+    priority: "0.8",
+    changefreq: "daily",
+  }));
+
+  // Dynamic Books
+  const bookRoutes = currentEbooks
+    .filter((b) => b && b.id)
+    .map((b) => {
+      const lastMod = b.updatedAt || b.createdAt || nowIso;
+      return {
+        loc: `${baseUrl}/book/${encodeURIComponent(b.id)}`,
+        lastmod: new Date(lastMod).toISOString(),
+        priority: "0.85",
+        changefreq: "weekly",
+      };
+    });
+
+  const allUrls = [...staticRoutes, ...categoryRoutes, ...bookRoutes];
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+${allUrls
+  .map((item: any) => `  <url>
+    <loc>${escapeXml(item.loc)}</loc>
+    ${item.lastmod ? `<lastmod>${item.lastmod}</lastmod>` : `<lastmod>${nowIso}</lastmod>`}
+    <changefreq>${item.changefreq || "weekly"}</changefreq>
+    <priority>${item.priority || "0.5"}</priority>
+  </url>`)
+  .join("\n")}
+</urlset>`;
+
+  sitemapCache = { xml, generatedAt: now };
+  res.type("application/xml; charset=utf-8");
+  res.send(xml);
+});
+
+// 3. LLMs Context Discovery Protocol (llms.txt & llms-full.txt)
+app.get("/llms.txt", (req, res) => {
+  res.type("text/plain; charset=utf-8");
+  const markdown = `# Osera AI (أوسيرا للحلول الذكية) - Interactive Educational E-Books & AI Studio
+> منصة أوسيرا للكتب والمناهج التفاعلية الذكية المعتمدة على الذكاء الاصطناعي الفائق.
+
+## Core Overview
+منصة استوديو الكتب التفاعلية من شركة أوسيرا (Osera AI) تتيح للطلاب والمعلمين في العالم العربي ومصر تحويل المناهج الدراسية، الكتب الأكاديمية، والملفات بصيغة PDF إلى كتب تفاعلية فائقة الذكاء تضم:
+- 🎙️ شرح صوتي فائق النقاء وواقعي باللغة العربية الفصحى أو الإنجليزية.
+- 💡 خرائط ذهنية تفاعلية ومفاهيم مبسطة لكل درس.
+- 📝 بنوك أسئلة واختبارات متدرجة الصعوبة (اختيار من متعدد، صح وخطأ، أسئلة مقالية مع نماذج إجابة فورية).
+- 🃏 بطاقات استذكار نشط ومتباعد (Active Recall Flashcards).
+- 🎬 ريلز وفيديوهات تعليمية قصيرة مشروحة بالذكاء الاصطناعي.
+
+## Important URLs
+- Main Marketplace & Catalog: https://www.ebook.osera-ai.com/marketplace
+- Educational Reels & Quick Lessons: https://www.ebook.osera-ai.com/reels
+- Frequently Asked Questions (FAQ): https://www.ebook.osera-ai.com/faq
+- About Osera AI & Mission: https://www.ebook.osera-ai.com/about
+- Full Details & LLM Index: https://www.ebook.osera-ai.com/llms-full.txt
+`;
+  res.send(markdown);
+});
+
+app.get("/llms-full.txt", (req, res) => {
+  res.type("text/plain; charset=utf-8");
+  const currentEbooks = loadEbooks();
+  const bookList = currentEbooks
+    .slice(0, 50)
+    .map(
+      (b) =>
+        `- [${b.title || "كتاب تفاعلي"}](https://www.ebook.osera-ai.com/book/${b.id}): ${
+          b.description || "منهج تفاعلي متكامل يضم شروحاً واختبارات وبطاقات استذكار."
+        } (القسم: ${b.category || b.subject || "عام"})`
+    )
+    .join("\n");
+
+  const markdown = `# Osera AI - Comprehensive Educational Knowledge Base & E-Book Catalog
+
+## About Osera AI
+شركة أوسيرا للحلول الذكية (Osera Soft AI) هي شركة رائدة في تقنيات الذكاء الاصطناعي التعليمي (EdTech AI). تطبق معايير وزارة التربية والتعليم والمناهج العالمية لتقديم تجربة تعلم ذاتية تفاعلية تعتمد على نماذج Gemini AI و DeepSeek و Edge TTS.
+
+## Available Interactive Subjects & Books
+${bookList || "المكتبة التعليمية قيد التحديث اليومي بأحدث المناهج المدرسية والجامعية."}
+
+## Features & Capabilities
+1. Instant PDF-to-Interactive-Book Conversion
+2. Multi-sensory learning (Visual Mind Maps, Audio TTS, Interactive Quizzes, Reels)
+3. 100% Native Arabic curriculum support with precise pedagogical terms.
+`;
+  res.send(markdown);
+});
+
+// Helper: Dynamic Meta Tags & Structured Data Injection for SSR / SPA
+function renderHtmlWithDynamicMeta(req: express.Request, originalHtml: string): string {
+  const urlPath = req.path;
+  const currentEbooks = loadEbooks();
+
+  let title = "أوسيرا AI | المنصة الذكية للكتب والمذكرات التعليمية التفاعلية";
+  let description = "استوديو أوسيرا للكتب التفاعلية الذكية - تحويل المناهج والكتب إلى تجارب تعليمية حية مدعومة بالذكاء الاصطناعي، شروحات صوتية، خرائط ذهنية، وبنوك أسئلة.";
+  let canonicalUrl = `https://www.ebook.osera-ai.com${urlPath}`;
+  let ogImage = "https://www.ebook.osera-ai.com/og-cover.png";
+  let structuredData: any = null;
+
+  if (urlPath === "/" || urlPath === "/marketplace") {
+    title = "المكتبة التعليمية الذكية | كتب ومناهج تفاعلية - Osera AI";
+    description = "تصفح مئات المناهج والكتب الدراسية التفاعلية المزودة بالشرح الصوتي، الاختبارات التفاعلية، والبطاقات الذكية من أوسيرا.";
+    canonicalUrl = "https://www.ebook.osera-ai.com/marketplace";
+    structuredData = {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      "name": title,
+      "description": description,
+      "url": canonicalUrl,
+      "publisher": {
+        "@type": "EducationalOrganization",
+        "name": "Osera AI",
+        "url": "https://www.ebook.osera-ai.com"
+      }
+    };
+  } else if (urlPath.startsWith("/book/")) {
+    const bookId = urlPath.replace("/book/", "").trim();
+    const book = currentEbooks.find((b) => String(b.id) === String(bookId));
+    if (book) {
+      title = `${book.title} | كتاب تفاعلي ذكي - Osera AI`;
+      description = (book.description || `تعلم واستكشف ${book.title} عبر الشرح الصوتي التفاعلي والخرائط الذهنية وبنوك الأسئلة والبطاقات الذكية.`).slice(0, 160);
+      ogImage = book.coverImage || ogImage;
+      structuredData = {
+        "@context": "https://schema.org",
+        "@type": "Book",
+        "name": book.title,
+        "description": description,
+        "image": ogImage,
+        "url": canonicalUrl,
+        "inLanguage": "ar",
+        "author": {
+          "@type": "Organization",
+          "name": "Osera AI"
+        },
+        "publisher": {
+          "@type": "EducationalOrganization",
+          "name": "Osera AI",
+          "url": "https://www.ebook.osera-ai.com"
+        }
+      };
+    }
+  } else if (urlPath.startsWith("/category/")) {
+    const rawCat = decodeURIComponent(urlPath.replace("/category/", "").trim());
+    title = `كتب ومناهج ${rawCat} | منصة Osera AI التفاعلية`;
+    description = `استكشف كافة الكتب والمناهج التفاعلية الذكية في قسم ${rawCat}. شروحات ذكية واختبارات وتقييمات فورية.`;
+  } else if (urlPath === "/reels") {
+    title = "ريلز تعليمية قصيرة | فيديوهات وشروحات ذكية - Osera AI";
+    description = "تعلم بأسرع طريقة مع الفيديوهات والريلز التعليمية التفاعلية القصيرة المشروحة بالذكاء الاصطناعي.";
+  } else if (urlPath === "/faq") {
+    title = "الأسئلة الشائعة | منصة أوسيرا للكتب التفاعلية - Osera AI FAQ";
+    description = "إجابات وافية على كافة التساؤلات حول كيفية إنشاء الكتب التفاعلية، تصدير الاختبارات، واستخدام الذكاء الاصطناعي في التعليم.";
+    structuredData = {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "ما هي منصة أوسيرا للكتب التفاعلية (Osera AI)؟",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "منصة تعليمية ذكية تحول ملفات PDF والكتب المدرسية والأكاديمية إلى كتب تفاعلية حية تحتوي على شروحات صوتية، خرائط ذهنية، وبطاقات استذكار واختبارات تفاعلية."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "هل تدعم المنصة المناهج الدراسية العربية بالكامل؟",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "نعم، تدعم المنصة اللغة العربية الفصحى والمصطلحات التعليمية المعتمدة للمناهج المصرية والعربية بدقة فائقة وبدون أي خلط لغوي غير مرغوب."
+          }
+        }
+      ]
+    };
+  } else if (urlPath === "/about") {
+    title = "عن شركة أوسيرا للحلول الذكية | Osera Soft AI";
+    description = "تعرف على رؤية ورسالة شركة أوسيرا للحلول الذكية وتاريخ ريادتها في دمج الذكاء الاصطناعي التوليدي مع التعليم في الشرق الأوسط.";
+    structuredData = {
+      "@context": "https://schema.org",
+      "@type": "AboutPage",
+      "name": title,
+      "description": description,
+      "url": canonicalUrl,
+      "mainEntity": {
+        "@type": "EducationalOrganization",
+        "name": "شركة أوسيرا للحلول الذكية (Osera Soft AI)",
+        "url": "https://www.ebook.osera-ai.com",
+        "description": "شركة رائدة في تقديم حلول الذكاء الاصطناعي التوليدي وتطوير منصات التعليم التفاعلية الذكية."
+      }
+    };
+  }
+
+  let injectedHtml = originalHtml;
+
+  // Replace Title
+  if (injectedHtml.includes("<title>")) {
+    injectedHtml = injectedHtml.replace(/<title>.*?<\/title>/i, `<title>${escapeXml(title)}</title>`);
+  }
+
+  // Build meta tags snippet
+  const metaSnippet = `
+    <!-- Dynamic SEO & Social Meta Injected by Osera SSR Engine -->
+    <meta name="description" content="${escapeXml(description)}" />
+    <link rel="canonical" href="${escapeXml(canonicalUrl)}" />
+    <meta property="og:title" content="${escapeXml(title)}" />
+    <meta property="og:description" content="${escapeXml(description)}" />
+    <meta property="og:url" content="${escapeXml(canonicalUrl)}" />
+    <meta property="og:image" content="${escapeXml(ogImage)}" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="ar_EG" />
+    <meta property="og:site_name" content="Osera AI | أوسيرا" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${escapeXml(title)}" />
+    <meta name="twitter:description" content="${escapeXml(description)}" />
+    <meta name="twitter:image" content="${escapeXml(ogImage)}" />
+    ${structuredData ? `<script type="application/ld+json">${JSON.stringify(structuredData)}</script>` : ""}
+  `;
+
+  // Inject before </head>
+  if (injectedHtml.includes("</head>")) {
+    injectedHtml = injectedHtml.replace("</head>", `${metaSnippet}\n</head>`);
+  }
+
+  return injectedHtml;
+}
+
 // Serve frontend client SPA
 const startServer = async () => {
 
@@ -6158,9 +6479,19 @@ const startServer = async () => {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
+    const indexPath = path.join(distPath, "index.html");
+    app.use(express.static(distPath, { index: false }));
     app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
+      try {
+        if (fs.existsSync(indexPath)) {
+          const rawHtml = fs.readFileSync(indexPath, "utf-8");
+          const finalHtml = renderHtmlWithDynamicMeta(req, rawHtml);
+          return res.send(finalHtml);
+        }
+      } catch (err) {
+        console.error("SSR Meta injection error:", err);
+      }
+      res.sendFile(indexPath);
     });
   }
 

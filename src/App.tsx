@@ -19,6 +19,8 @@ import { AddExternalBookModal } from './components/AddExternalBookModal';
 import { AdminInstructorHub } from './components/admin/AdminInstructorHub';
 import { StudentStreakBadge } from './components/gamification/StudentStreakBadge';
 import { EduReelsFeedView } from './components/reels/EduReelsFeedView';
+import { FaqPageView } from './components/FaqPageView';
+import { AboutPageView } from './components/AboutPageView';
 import BookDetailsRoute from './routes/BookDetailsRoute';
 import { SupportModal } from './components/support/SupportModal';
 import { FloatingAiMascot } from './components/ai/FloatingAiMascot';
@@ -1124,6 +1126,28 @@ function AppContent() {
               />
             </div>
           } />
+          <Route path="/faq" element={<FaqPageView />} />
+          <Route path="/about" element={<AboutPageView />} />
+          <Route path="/category/:categorySlug" element={
+            <div className="p-4 sm:p-6 max-w-7xl mx-auto w-full space-y-6">
+              <MarketplaceView
+                books={ebooks}
+                userRole={userRole}
+                isAdminMode={isAdminMode}
+                purchasedBookIds={purchasedBookIds}
+                currentUser={currentUser}
+                onOpenAuth={() => setIsAuthModalOpen(true)}
+                onLaunchBook={handleLaunchBook}
+                onLaunchQuiz={handleLaunchQuiz}
+                onOpenCreateModal={() => setIsAiCreateModalOpen(true)}
+                onOpenExternalModal={() => setIsExternalModalOpen(true)}
+                onTogglePublish={handleTogglePublish}
+                onDeleteBook={handleDeleteBook}
+                onUpdateBook={handleUpdateBook}
+                onPurchaseBook={handlePurchaseBook}
+              />
+            </div>
+          } />
           <Route path="/reels" element={
             <EduReelsFeedView
               currentUser={currentUser}
@@ -1155,9 +1179,23 @@ function AppContent() {
               </div>
             </div>
 
+            <div className="flex items-center gap-6 text-xs font-bold">
+              <Link to="/marketplace" className="text-slate-400 hover:text-teal-400 transition">
+                المتجر والمقررات
+              </Link>
+              <Link to="/reels" className="text-slate-400 hover:text-teal-400 transition">
+                الريلز التعليمية
+              </Link>
+              <Link to="/faq" className="text-slate-400 hover:text-teal-400 transition">
+                الأسئلة الشائعة
+              </Link>
+              <Link to="/about" className="text-slate-400 hover:text-teal-400 transition">
+                عن المنصة
+              </Link>
+            </div>
+
             <div className="text-center md:text-right text-[11px] text-slate-500 space-y-1">
               <p>{platformConfig.copyrightText || `جميع الحقوق محفوظة © ${new Date().getFullYear()} لشركة ${platformConfig.companyName}`}</p>
-              <p className="text-slate-600">{platformConfig.companyName} | مؤسس المنصة: {platformConfig.founderName}</p>
             </div>
 
             <div className="flex items-center gap-4 text-xs font-bold">
