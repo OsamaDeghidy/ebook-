@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Play, Code, Calculator, Sparkles, Terminal, BookOpen, Check, RefreshCw, 
+  Play, Pause, Code, Calculator, Sparkles, Terminal, BookOpen, Check, RefreshCw, 
   Languages, Zap, Lightbulb, Compass, Navigation, MapPin, Footprints, 
-  FlaskConical, Gauge, Award, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, RotateCw,
+  FlaskConical, Gauge, Award, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, RotateCw, RotateCcw,
   Gamepad2, CheckCircle2, XCircle, Brain, Target, Shuffle, Clock, Trophy,
-  Plus, Minus, BarChart3, PieChart, Layers
+  Plus, Minus, BarChart3, PieChart, Layers, Headphones, Volume2, VolumeX,
+  Eye, EyeOff, FileText, CheckCircle, HelpCircle
 } from 'lucide-react';
 import { MarketplaceBook, Chapter } from '../types';
 
@@ -18,6 +19,14 @@ export default function DynamicDomainSandbox({ book, chapter }: DynamicDomainSan
   const [activity, setActivity] = useState<any>((chapter as any).labActivity || null);
   const [isGeneratingActivity, setIsGeneratingActivity] = useState(false);
   const [activityError, setActivityError] = useState<string | null>(null);
+
+  // Language & Listening Lab State
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [audioSpeed, setAudioSpeed] = useState<number>(1.0);
+  const [showTranscript, setShowTranscript] = useState(false);
+  const [listeningAnswers, setListeningAnswers] = useState<Record<string, number>>({});
+  const [listeningScore, setListeningScore] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Math Place Value Board State
   const [thousands, setThousands] = useState(3);
@@ -186,6 +195,7 @@ export default function DynamicDomainSandbox({ book, chapter }: DynamicDomainSan
   // VIEW: DYNAMIC AI GENERATED ACTIVITY
   // -------------------------------------------------------------
   if (activity) {
+    const isListeningLab = activity.activityType === 'language_listening_lab';
     const isPlaceValue = activity.activityType === 'place_value_board';
     const isFraction = activity.activityType === 'fraction_visualizer';
     const isMatching = activity.activityType === 'matching_game' && activity.data?.pairs;
@@ -198,13 +208,21 @@ export default function DynamicDomainSandbox({ book, chapter }: DynamicDomainSan
         {/* ACTIVITY HEADER */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-gray-100 gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-600 to-indigo-700 text-white flex items-center justify-center font-bold shadow-md">
-              {isPlaceValue || isFraction ? <Calculator className="w-6 h-6" /> : isSimulator ? <BarChart3 className="w-6 h-6" /> : <Gamepad2 className="w-6 h-6" />}
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold shadow-md text-white ${
+              isListeningLab 
+                ? 'bg-gradient-to-br from-emerald-500 via-teal-600 to-emerald-700' 
+                : 'bg-gradient-to-br from-indigo-500 via-purple-600 to-indigo-700'
+            }`}>
+              {isListeningLab ? <Headphones className="w-6 h-6" /> : isPlaceValue || isFraction ? <Calculator className="w-6 h-6" /> : isSimulator ? <BarChart3 className="w-6 h-6" /> : <Gamepad2 className="w-6 h-6" />}
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-                  {isPlaceValue ? '🔢 معمل القيمة المكانية التفاعلي' : isFraction ? '📐 محاكي الكسور والنماذج الشريطية' : '🎮 نشاط تفاعلي ذكي'}
+                <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border ${
+                  isListeningLab
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                }`}>
+                  {isListeningLab ? '🎧 مختبر الاستماع والفهم اللغوي' : isPlaceValue ? '🔢 معمل القيمة المكانية التفاعلي' : isFraction ? '📐 محاكي الكسور والنماذج الشريطية' : '🎮 نشاط تفاعلي ذكي'}
                 </span>
                 <span className="text-xs font-mono font-bold text-gray-400">الفصل: {chapter.title}</span>
               </div>
@@ -789,6 +807,201 @@ export default function DynamicDomainSandbox({ book, chapter }: DynamicDomainSan
                     <p>{scenarioFeedback.feedback}</p>
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 6. LANGUAGE & LISTENING COMPREHENSION LAB UI */}
+        {isListeningLab && (
+          <div className="space-y-6">
+            {/* AUDIO PLAYER & LISTENING CONTROLS */}
+            <div className="bg-gradient-to-r from-emerald-950 via-teal-900 to-slate-900 text-white p-6 rounded-3xl border border-emerald-700/50 shadow-md space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-lg">
+                    <Headphones className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <span className="text-xs text-emerald-300 font-bold block">التسجيل الصوتي النقي للدرس:</span>
+                    <h4 className="text-base font-black">{activity.title || chapter.title}</h4>
+                  </div>
+                </div>
+
+                {/* PLAYBACK CONTROLS */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      if (!audioRef.current) {
+                        const audio = new Audio(`/api/tts/stream?text=${encodeURIComponent(activity.data?.transcript || chapter.content || '')}`);
+                        audio.playbackRate = audioSpeed;
+                        audio.onended = () => setIsPlayingAudio(false);
+                        audioRef.current = audio;
+                      }
+                      if (isPlayingAudio) {
+                        audioRef.current.pause();
+                        setIsPlayingAudio(false);
+                      } else {
+                        audioRef.current.play().catch(() => {});
+                        setIsPlayingAudio(true);
+                      }
+                    }}
+                    className={`px-5 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 transition shadow-md ${
+                      isPlayingAudio
+                        ? 'bg-amber-400 hover:bg-amber-300 text-slate-950'
+                        : 'bg-emerald-500 hover:bg-emerald-400 text-white'
+                    }`}
+                  >
+                    {isPlayingAudio ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
+                    <span>{isPlayingAudio ? 'إيقاف مؤقت' : 'تشغيل الاستماع 🎧'}</span>
+                  </button>
+
+                  {/* SPEED TOGGLE */}
+                  <div className="flex items-center bg-slate-800/80 p-1 rounded-xl border border-emerald-800/60 text-xs">
+                    {[0.75, 1.0, 1.25].map(spd => (
+                      <button
+                        key={spd}
+                        onClick={() => {
+                          setAudioSpeed(spd);
+                          if (audioRef.current) audioRef.current.playbackRate = spd;
+                        }}
+                        className={`px-2 py-1 rounded-lg font-mono font-bold transition ${
+                          audioSpeed === spd ? 'bg-emerald-500 text-white' : 'text-gray-400 hover:text-white'
+                        }`}
+                      >
+                        {spd}x
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* TRANSCRIPT TOGGLE (SHOW / HIDE) */}
+              <div className="pt-3 border-t border-emerald-800/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <p className="text-xs text-emerald-200">
+                  💡 <strong>نصيحة تعليمية:</strong> استمع للتسجيل أولاً وأجب عن أسئلة الفهم، ثم أظهر النص للمطابقة وتدريب القراءة.
+                </p>
+
+                <button
+                  onClick={() => setShowTranscript(prev => !prev)}
+                  className="px-4 py-2 bg-emerald-900/80 hover:bg-emerald-800 text-emerald-200 border border-emerald-700/60 rounded-xl text-xs font-bold flex items-center gap-2 transition self-start sm:self-auto shrink-0"
+                >
+                  {showTranscript ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  <span>{showTranscript ? 'إخفاء النص (اختبار استماع) 🎧' : 'إظهار النص المكتوب للتدقيق 👁️'}</span>
+                </button>
+              </div>
+
+              {/* EXPANDABLE TRANSCRIPT VIEW */}
+              {showTranscript && (
+                <div className="mt-3 p-4 bg-slate-950/80 rounded-2xl border border-emerald-800/70 text-sm leading-relaxed text-gray-200 animate-fade-in font-arabic">
+                  <div className="flex items-center gap-2 text-xs text-emerald-400 font-bold mb-2">
+                    <FileText className="w-4 h-4" />
+                    <span>النص الكامل المعتمد للدرس:</span>
+                  </div>
+                  <div className="whitespace-pre-line text-xs sm:text-sm text-gray-200 bg-slate-900 p-4 rounded-xl border border-slate-800 max-h-64 overflow-y-auto">
+                    {activity.data?.transcript || chapter.content}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* LISTENING COMPREHENSION QUESTIONS */}
+            {activity.data?.listeningQuestions && activity.data.listeningQuestions.length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+                  <div className="flex items-center gap-2 text-xs font-black text-gray-800">
+                    <CheckCircle className="w-4 h-4 text-emerald-600" />
+                    <span>أسئلة فهم المسموع والاستيعاب:</span>
+                  </div>
+                  <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                    درجة الاستيعاب: {listeningScore} / {activity.data.listeningQuestions.length * 10}
+                  </span>
+                </div>
+
+                <div className="space-y-4">
+                  {activity.data.listeningQuestions.map((q: any, qIdx: number) => {
+                    const answered = listeningAnswers[q.id || `q-${qIdx}`] !== undefined;
+                    const selectedIdx = listeningAnswers[q.id || `q-${qIdx}`];
+                    const isCorrect = selectedIdx === (q.correctOptionIndex ?? 0);
+
+                    return (
+                      <div key={q.id || qIdx} className="p-5 rounded-2xl border border-gray-200 bg-gray-50/50 space-y-3">
+                        <div className="flex items-start gap-2">
+                          <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-800 text-xs font-black flex items-center justify-center shrink-0 mt-0.5">
+                            {qIdx + 1}
+                          </span>
+                          <h5 className="font-bold text-sm text-gray-900 leading-relaxed">{q.question}</h5>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                          {q.options?.map((optText: string, oIdx: number) => {
+                            const isThisSelected = selectedIdx === oIdx;
+                            const isThisCorrect = oIdx === (q.correctOptionIndex ?? 0);
+
+                            let btnStyle = "bg-white hover:bg-emerald-50/40 border-gray-200 text-gray-800";
+                            if (answered) {
+                              if (isThisCorrect) {
+                                btnStyle = "bg-emerald-50 border-emerald-500 text-emerald-950 font-black";
+                              } else if (isThisSelected && !isThisCorrect) {
+                                btnStyle = "bg-rose-50 border-rose-400 text-rose-950";
+                              } else {
+                                btnStyle = "bg-gray-100 border-gray-200 text-gray-400 opacity-60";
+                              }
+                            }
+
+                            return (
+                              <button
+                                key={oIdx}
+                                disabled={answered}
+                                onClick={() => {
+                                  setListeningAnswers(prev => ({ ...prev, [q.id || `q-${qIdx}`]: oIdx }));
+                                  if (oIdx === (q.correctOptionIndex ?? 0)) {
+                                    setListeningScore(s => s + 10);
+                                  }
+                                }}
+                                className={`p-3 rounded-xl border text-right text-xs transition flex items-center justify-between ${btnStyle}`}
+                              >
+                                <span>{optText}</span>
+                                {answered && isThisCorrect && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />}
+                                {answered && isThisSelected && !isThisCorrect && <XCircle className="w-4 h-4 text-rose-500 shrink-0" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {answered && q.explanation && (
+                          <div className={`p-3 rounded-xl text-xs leading-relaxed font-bold animate-fade-in ${
+                            isCorrect ? 'bg-emerald-50 text-emerald-900 border border-emerald-200' : 'bg-rose-50 text-rose-900 border border-rose-200'
+                          }`}>
+                            <span>{isCorrect ? '🌟 إجابة صحيحة: ' : '💡 التوضيح النموذجي: '}</span>
+                            <span>{q.explanation}</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* GRAMMAR & VOCABULARY CARDS */}
+            {activity.data?.grammarAndVocab && activity.data.grammarAndVocab.length > 0 && (
+              <div className="space-y-3 pt-2">
+                <span className="text-xs font-black text-gray-800 block">📚 المفردات والتراكيب والقواعد المستفادة:</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {activity.data.grammarAndVocab.map((gv: any, gIdx: number) => (
+                    <div key={gIdx} className="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-black text-xs text-indigo-900">{gv.term}</span>
+                        <span className="text-[10px] font-bold text-indigo-600 bg-indigo-100/60 px-2 py-0.5 rounded-full">قاعدة / مفردة</span>
+                      </div>
+                      <p className="text-xs text-gray-700 font-medium">{gv.meaningOrRule}</p>
+                      {gv.example && (
+                        <p className="text-[11px] text-gray-500 italic mt-1">مثال: {gv.example}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>

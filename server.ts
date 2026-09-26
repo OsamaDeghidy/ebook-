@@ -489,12 +489,49 @@ const sampleEbooks: any[] = [
 let ebooks: any[] = [];
 const EBOOKS_FILE = path.join(process.cwd(), "ebooks-db.json");
 
+// Asynchronously sync a book with full chapters, mindmap, questions, and media to Supabase
+async function syncBookToSupabase(book: any) {
+  try {
+    if (!book || !book.id) return;
+    const basePayload: any = {
+      id: book.id,
+      title: book.title || "مقرر تفاعلي",
+      description: book.description || "",
+      author_name: book.author_name || "خبير المادة",
+      category: book.category || "digital_book",
+      subcategory: book.subcategory || "",
+      education_level: book.education_level || "",
+      academic_system: book.academic_system || "",
+      grade_level: book.grade_level || "",
+      semester: book.semester || "",
+      academic_year: book.academic_year || "",
+      price: Number(book.price) || 0,
+      thumbnail_url: book.thumbnail_url || "",
+      preview_video_url: book.preview_video_url || null,
+      is_published: book.is_published !== false,
+      chapters: book.chapters || [],
+      mind_map: book.mind_map || [],
+      question_bank: book.question_bank || [],
+      tags: book.tags || ['كتاب_تفاعلي']
+    };
+    if (book.approval_status) basePayload.approval_status = book.approval_status;
+    if (book.created_at || book.createdAt) basePayload.created_at = book.created_at || book.createdAt;
+
+    const { error } = await supabase.from('books').upsert(basePayload, { onConflict: 'id' });
+    if (error) {
+      console.warn(`[Supabase Sync] Warning for book ${book.id}:`, error.message);
+    }
+  } catch (err: any) {
+    console.warn(`[Supabase Sync] Exception syncing book ${book?.id}:`, err?.message || err);
+  }
+}
+
 function loadEbooks(): any[] {
   try {
     if (fs.existsSync(EBOOKS_FILE)) {
       const data = fs.readFileSync(EBOOKS_FILE, "utf-8");
       const loaded = JSON.parse(data);
-      if (Array.isArray(loaded)) {
+      if (Array.isArray(loaded) && loaded.length > 0) {
         ebooks = loaded;
         return ebooks;
       }
@@ -502,7 +539,7 @@ function loadEbooks(): any[] {
   } catch (err) {
     console.error("Error loading persisted ebooks database:", err);
   }
-  ebooks = [];
+  ebooks = sampleEbooks;
   return ebooks;
 }
 
@@ -512,10 +549,41 @@ function saveEbooks(data: any[]) {
   } catch (err) {
     console.error("Error writing ebooks database file:", err);
   }
+
+  // Asynchronously persist all modified books to Supabase Cloud DB
+  if (Array.isArray(data) && data.length > 0) {
+    Promise.allSettled(data.map(b => syncBookToSupabase(b))).catch(err => {
+      console.warn("[Supabase Sync] Bulk sync error:", err);
+    });
+  }
 }
 
-// Initial load
+// Background sync from Supabase on startup
+async function initSupabaseSync() {
+  try {
+    const { data, error } = await supabase.from('books').select('*').order('created_at', { ascending: false });
+    if (!error && Array.isArray(data) && data.length > 0) {
+      console.log(`[Supabase Init] Loaded ${data.length} books from Supabase cloud database.`);
+      for (const dbBook of data) {
+        const idx = ebooks.findIndex(b => b.id === dbBook.id);
+        if (idx >= 0) {
+          ebooks[idx] = { ...ebooks[idx], ...dbBook };
+        } else {
+          ebooks.push(dbBook);
+        }
+      }
+      try {
+        fs.writeFileSync(EBOOKS_FILE, JSON.stringify(ebooks, null, 2), "utf-8");
+      } catch (e) {}
+    }
+  } catch (err) {
+    console.warn("[Supabase Init] Could not fetch remote books:", err);
+  }
+}
+
+// Initial load and cloud sync
 loadEbooks();
+initSupabaseSync();
 
 // Active background conversion jobs store
 interface ConversionJob {
@@ -542,7 +610,7 @@ const ebookResponseSchema = {
       items: {
         type: Type.OBJECT,
         properties: {
-          title: { type: Type.STRING, description: "Inspiring, clear chapter or section title" },
+          title: { type: Type.STRING, description: "Official, authentic lesson or chapter title extracted directly from the textbook/PDF without inventing generic or artificial titles (e.g., 'كل منا له حلم', 'المادة وخواصها', 'أدوات تحديد الموقع'). If this is a free listening lesson, prefix with 'نص استماع متحرر: [العنوان]'." },
           originalContent: { type: Type.STRING, description: "The original, unaltered text segment extracted directly from the source document that corresponds to this chapter." },
           summary: { type: Type.STRING, description: "A concise but comprehensive summary of the chapter's key points." },
           concepts: { 
@@ -988,12 +1056,17 @@ You are the world's finest Primary School Curriculum Architect & Child Pedagogy 
 Your mission is to transform the attached educational material ("${fileName || 'Attached Curriculum'}") into a fun, highly engaging, Ministry-grade interactive textbook suitable for primary school students (المرحلة الابتدائية - الصفوف 1-6).
 
 🌟 CRITICAL PRIMARY EDUCATION PEDAGOGICAL GUIDELINES:
-1. AGE-APPROPRIATE TONE & STORYTELLING:
+1. STRICT AUTHENTIC OFFICIAL LESSON TITLES:
+   - Extract and preserve the EXACT official lesson title directly from the textbook/PDF (e.g., "كل منا له حلم", "المادة وخواصها", "الدرس الأول: أدوات تحديد الموقع").
+   - 🚫 NEVER invent artificial or generic composite titles like "نصوص الاستماع والقراءات التاريخية والبيئية والصحية". The student and parent must see the exact official Ministry lesson title.
+   - If a chapter represents a free listening text, strictly name it: "نص استماع متحرر: [عنوان الدرس]".
+
+2. AGE-APPROPRIATE TONE & STORYTELLING:
    - Use warm, encouraging, lively Arabic (فصحى مبسطة ومشوقة).
    - Use characters like (المستكشف الصغير، أحمد، سارة، الروبوت فطن) to introduce ideas and pose curious questions.
    - DO NOT use complex, scary mathematical formulas (like LaTeX $$ formulas) unless it's basic arithmetic (e.g. 5 + 3).
 
-2. LESSON STRUCTURE FOR PRIMARY CHAPTERS:
+3. LESSON STRUCTURE FOR PRIMARY CHAPTERS:
    Each chapter's 'content' (Markdown) must include:
    
    # 🎒 أولاً: قصة الدرس والاستكشاف
@@ -1013,8 +1086,8 @@ Your mission is to transform the attached educational material ("${fileName || '
    > [!IMPORTANT]
    > ⭐ معلومة ذهبية للامتحان: [ملخص مبسط جداً للنقطة الأهم].
 
-3. CHILD-FRIENDLY QUIZZES & FLASHCARDS:
-   - 3 fun multiple-choice questions with cheerful encouraging explanations.
+4. CHILD-FRIENDLY & LISTENING COMPREHENSION QUIZZES:
+   - 3-4 fun multiple-choice questions with cheerful encouraging explanations. For reading/listening lessons, include listening comprehension questions (أسئلة فهم المقروء/المسموع).
    - 4 flashcards with colorful, clear questions and answers.
    - 4-5 MindMap nodes with simple visual terms.
 
@@ -1026,8 +1099,10 @@ You are the world's most advanced Educational Curriculum Architect and Hierarchi
 Your mission is to transform the attached educational material ("${fileName || 'Attached Curriculum'}") into an elite interactive academic syllabus and ministry-grade textbook.
 
 🏛️ CRITICAL PEDAGOGICAL STRUCTURE MANDATE:
-1. STRICT CHAPTER/LESSON ALIGNMENT:
-   - Extract and preserve the EXACT lesson structure and unit titles from the uploaded notes/PDF without skipping or merging topics.
+1. STRICT CHAPTER/LESSON ALIGNMENT & OFFICIAL TITLES:
+   - Extract and preserve the EXACT lesson structure and authentic unit/lesson titles from the uploaded notes/PDF without skipping or merging topics (e.g., "كل منا له حلم", "المادة وخواصها", "أشخاص الدعوى الدولية").
+   - 🚫 NEVER invent artificial or generic composite chapter titles (e.g. NEVER generate titles like "نصوص الاستماع والقراءات التاريخية والبيئية والصحية").
+   - If a chapter represents a free listening text, name it clearly: "نص استماع متحرر: [عنوان الدرس]".
    - Maintain the authentic educational progression of the syllabus.
 
 2. SUB-LESSON CHUNKING:
@@ -1061,7 +1136,7 @@ Your mission is to transform the attached educational material ("${fileName || '
    * جدول Markdown يقارن بين المفاهيم أو يلخص النقاط الجوهرية.
 
 4. BLOOM'S TAXONOMY QUIZ ENGINE (بنك أسئلة متدرج):
-   For each chapter, provide 3-4 challenging exam questions (MCQ) testing comprehension, application, and analysis.
+   For each chapter, provide 3-4 challenging exam questions (MCQ) testing comprehension, application, and analysis (and listening comprehension for language lessons).
 
 5. FLASHCARDS & MIND MAP:
    - Provide 4-6 Active Recall Flashcards with 'front', 'back', and 'difficulty'.
@@ -1733,68 +1808,75 @@ app.post("/api/ebooks/:id/generate-lab-activity", async (req, res) => {
   try {
     const isArabic = /[\u0600-\u06FF]/.test((chapterTitle || "") + (chapterContent || ""));
     const isMath = /رياض|حساب|أعداد|كسور|ضرب|قسمة|جمع|طرح|هندسة|قيمة مكانية|math/i.test((chapterTitle || "") + (bookCategory || "") + (chapterContent || ""));
+    const isLanguage = /لغة|عربي|نصوص|استماع|قراءة|إنجليزي|انجليزي|english|french|فرنسي|بلاغة|نحو|محادثة|listening/i.test((chapterTitle || "") + (bookCategory || "") + (chapterContent || ""));
 
     const labPrompt = isArabic
       ? `أنت كبير مهندسي ومصممي الألعاب والمختبرات التعليمية التفاعلية الذكية (Osera Interactive Lab Architect).
 مهمتك: توليد لعبة أو محاكي تفاعلي أو تجربة علمية مصغرة وممتعة جداً ومصممة خصيصاً لموضوع هذا الفصل:
 عنوان الفصل: "${chapterTitle}"
 المرحلة/الفئة: "${grade_level || 'الصف الرابع الابتدائي'}"
-تصنيف المادة: "${bookCategory || (isMath ? 'رياضيات' : 'عام')}"
+تصنيف المادة: "${bookCategory || (isLanguage ? 'لغة عربية' : (isMath ? 'رياضيات' : 'عام'))}"
 محتوى الدرس الفعلي:
 ${(chapterContent || "").substring(0, 3000)}
 
 اختر النمط الأنسب لموضوع الدرس من بين:
-${isMath ? `
+${isLanguage ? `
+- 'language_listening_lab': مختبر الاستماع والفهم اللغوي الذكي (تدريب استماع متقدم: نص مسموع كامل + 3-4 أسئلة استيعاب وفهم مسموع + كروت المفردات والقواعد النحوية المستخرجة).
+- 'matching_game': لعبة مطابقة وربط المفردات، المعاني، المرادفات، أو الأسباب والنتائج مع نقاط.
+` : (isMath ? `
 - 'place_value_board': لوحة القيمة المكانية التفاعلية (آحاد، عشرات، مئات، ألوف، عشرات الألوف، مئات الألوف) مع تحدي تركيب الأعداد والصيغة الممتدة والصيغة القياسية.
 - 'fraction_visualizer': محاكي مقارنة الكسور والنماذج الشريطية التفاعلية الملونة.
 - 'interactive_simulator': محاكي رياضي بياني بأشرطة تمرير لحساب العمليات والمساحات والأنماط.
 ` : `
-- 'matching_game': لعبة مطابقة وربط مصطلحات، مفاهيم، اتجاهات، أو أسباب ونتائج مع توقيت ونقاط (مع نصوص واضحة ومكتملة تماماً وخالية من النجوم والرموز).
+- 'matching_game': لعبة مطابقة وربط مصطلحات، مفاهيم، اتجاهات، أو أسباب ونتائج مع توقيت ونقاط.
 - 'interactive_simulator': محاكي تفاعلي حي بأشرطة تمرير/خيارات، لمشاهدة النتيجة التفاعلية المباشرة والتفسير العلمي مع مؤشر ورسوم بيانية.
 - 'decision_scenario': سيناريو اتخاذ قرارات وحل مشكلات وتحديات خطوة بخطوة.
-`}
+`)}
 
 الاشتراطات الصارمة:
 1. الارتباط 100% بموضوع الفصل وأمثلته الحقيقية.
-2. عدم كتابة نصوص مبتورة أو رموز ماركداون غير منسقة (ممنوع وضع نصوص مثل * في أحد الأيام...). النصوص يجب أن تكون عبارات كاملة وواضحة ومفيدة.
+2. عدم كتابة نصوص مبتورة أو رموز ماركداون غير منسقة. النصوص يجب أن تكون عبارات كاملة وواضحة ومفيدة.
 3. التنسيق JSON فقط:
 {
-  "activityType": "place_value_board" | "fraction_visualizer" | "matching_game" | "interactive_simulator" | "decision_scenario",
+  "activityType": "language_listening_lab" | "place_value_board" | "fraction_visualizer" | "matching_game" | "interactive_simulator" | "decision_scenario",
   "title": "عنوان جذاب ومشوق للنشاط التفاعلي",
   "instructions": "تعليمات واضحة وبسيطة للطالب تشرح كيف يلعب أو يجرب",
-  "themeColor": "indigo" | "emerald" | "amber" | "rose" | "cyan",
-  "icon": "calculator" | "compass" | "flask" | "brain" | "sparkles" | "target" | "zap",
+  "themeColor": "emerald" | "indigo" | "amber" | "rose" | "cyan",
+  "icon": "headphones" | "calculator" | "compass" | "flask" | "brain" | "sparkles" | "target" | "zap",
   "data": {
+    "transcript": "النص الكامل المخصص للاستماع والقراءة...",
+    "listeningQuestions": [
+      {
+        "id": "lq1",
+        "question": "سؤال فهم واستيعاب على النص المسموع؟",
+        "options": ["خيار أ صحيح", "خيار ب", "خيار ج"],
+        "correctOptionIndex": 0,
+        "explanation": "شرح توضيحي لإجابة السؤال المسموع"
+      }
+    ],
+    "grammarAndVocab": [
+      {
+        "term": "المفردة أو القاعدة النحوية",
+        "meaningOrRule": "معناها الدقيق أو قاعدتها الإعرابية",
+        "example": "مثال من واقع الدرس"
+      }
+    ],
     "mathType": "place_value" | "fractions" | "operations",
     "targetNumber": 4325,
     "targetNumberWord": "أربعة آلاف وثلاثمائة وخمسة وعشرون",
     "pairs": [
       { "id": "p1", "item": "المفهوم أو المصطلح 1", "match": "التعريف أو الحل النموذجي 1", "hint": "تلميح ذكي" },
-      { "id": "p2", "item": "المفهوم أو المصطلح 2", "match": "التعريف أو الحل النموذجي 2", "hint": "تلميح ذكي" },
-      { "id": "p3", "item": "المفهوم أو المصطلح 3", "match": "التعريف أو الحل النموذجي 3", "hint": "تلميح ذكي" },
-      { "id": "p4", "item": "المفهوم أو المصطلح 4", "match": "التعريف أو الحل النموذجي 4", "hint": "تلميح ذكي" }
+      { "id": "p2", "item": "المفهوم أو المصطلح 2", "match": "التعريف أو الحل النموذجي 2", "hint": "تلميح ذكي" }
     ],
     "variables": [
-      { "id": "v1", "label": "القيمة الأولى", "min": 1, "max": 100, "step": 1, "defaultValue": 25, "unit": "وحدة" },
-      { "id": "v2", "label": "القيمة الثانية", "min": 1, "max": 100, "step": 1, "defaultValue": 50, "unit": "وحدة" }
+      { "id": "v1", "label": "القيمة الأولى", "min": 1, "max": 100, "step": 1, "defaultValue": 25, "unit": "وحدة" }
     ],
     "outcomes": [
       { "condition": "default", "visualEmoji": "📊", "stateTitle": "الاستنتاج الرياضي/العلمي", "explanation": "شرح النتيجة وتطبيق القاعدة." }
-    ],
-    "scenarioIntro": "مقدمة السيناريو التفاعلي",
-    "steps": [
-      {
-        "stepId": "s1",
-        "question": "ما هو الحل أو التصرف الصحيح للمسألة؟",
-        "options": [
-          { "text": "الحل النموذجي المباشر", "feedback": "أحسنت! هذا هو الحل الصحيح تماماً.", "isBest": true, "points": 10 },
-          { "text": "خيار غير دقيق", "feedback": "انتبه، راجع خطوات الحل والقاعدة.", "isBest": false, "points": 0 }
-        ]
-      }
     ]
   }
 }`
-      : `Generate an interactive math or science simulation JSON for chapter "${chapterTitle}".`;
+      : `Generate an interactive language, math, or science simulation JSON for chapter "${chapterTitle}".`;
 
     let resultJson: any = null;
     try {
@@ -1807,7 +1889,38 @@ ${isMath ? `
     } catch (apiErr) {
       console.warn("Gemini API Lab generation warning, building contextual interactive fallback:", apiErr);
       
-      if (isMath) {
+      if (isLanguage) {
+        resultJson = {
+          activityType: "language_listening_lab",
+          title: `مختبر الاستماع والفهم اللغوي: ${chapterTitle}`,
+          instructions: "استمع للنص الصوتي بتركيز، ثم أجب عن أسئلة الفهم المسموع دون النظر للنص. يمكنك إظهار النص لاحقاً للتدقيق والمطابقة!",
+          themeColor: "emerald",
+          icon: "headphones",
+          data: {
+            transcript: chapterContent || `نص درس (${chapterTitle}) للاستماع والتطبيق اللغوي.`,
+            listeningQuestions: [
+              {
+                id: "lq1",
+                question: `ما الفكرة الرئيسية التي يدور حولها درس (${chapterTitle})؟`,
+                options: ["الفكرة الجوهرية للدرس وقيمته الأخلاقية والعلمية", "تفاصيل ثانوية غير مؤكدة", "موضوع خارجي غير مرتبط"],
+                correctOptionIndex: 0,
+                explanation: "الفكرة الرئيسية تلخص الهدف التعليمي والتربوي للدرس."
+              },
+              {
+                id: "lq2",
+                question: "ما الدرس المستفاد الذي نتعلمه ونطبقه في حياتنا من هذا النص؟",
+                options: ["العمل الجاد وتطوير الذات والإصرار على النجاح", "الاعتماد على الآخرين دون محاولة", "تجاهل الأهداف التعليمية"],
+                correctOptionIndex: 0,
+                explanation: "التطبيق العملي يربط الدرس بالسلوك الإيجابي والقيم التربوية."
+              }
+            ],
+            grammarAndVocab: [
+              { term: "المفردات والتراكيب", meaningOrRule: "معاني الكلمات المستخلصة من سياق الجمل", example: "فهم المعنى من السياق" },
+              { term: "القواعد والتطبيق", meaningOrRule: "استخراج الأفعال والأسماء وعلامات الإعراب", example: "التطبيق النحوي المباشر" }
+            ]
+          }
+        };
+      } else if (isMath) {
         resultJson = {
           activityType: "place_value_board",
           title: `مختبر القيمة المكانية وبناء الأعداد: ${chapterTitle}`,
