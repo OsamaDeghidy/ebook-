@@ -1807,76 +1807,99 @@ app.post("/api/ebooks/:id/generate-lab-activity", async (req, res) => {
 
   try {
     const isArabic = /[\u0600-\u06FF]/.test((chapterTitle || "") + (chapterContent || ""));
-    const isMath = /رياض|حساب|أعداد|كسور|ضرب|قسمة|جمع|طرح|هندسة|قيمة مكانية|math/i.test((chapterTitle || "") + (bookCategory || "") + (chapterContent || ""));
-    const isLanguage = /لغة|عربي|نصوص|استماع|قراءة|إنجليزي|انجليزي|english|french|فرنسي|بلاغة|نحو|محادثة|listening/i.test((chapterTitle || "") + (bookCategory || "") + (chapterContent || ""));
+    const combinedStr = ((chapterTitle || "") + " " + (bookCategory || "") + " " + (chapterContent || "")).toLowerCase();
+    
+    // Domain & Subject Classifiers
+    const isMath = /رياض|حساب|أعداد|كسور|ضرب|قسمة|جمع|طرح|هندسة|قيمة مكانية|algebra|math|geometry|calculus/i.test(combinedStr);
+    const isScience = /علوم|فيزياء|كيمياء|أحياء|بيولوجي|طب|صيدلة|مادة|تفاعل|خلية|طاقة|سرعة|قوة|science|physics|chemistry|biology/i.test(combinedStr);
+    const isBusiness = /مالية|محاسبة|إدارة|تسويق|اقتصاد|استثمار|أرباح|تكاليف|مشروع|بزنس|سوق|business|finance|accounting|economics|management|roi|startup/i.test(combinedStr);
+    const isLaw = /قانون|دعوى|محكمة|قضاء|حقوق|دستور|معاهدة|مجلس الأمن|محكمة العدل|نزاع دولي|law|legal|court|treaty/i.test(combinedStr);
+    const isGeographyHistory = /جغرافيا|تاريخ|دراسات|خريطة|موقع|بيئة|حضارة|فرعون|آثار|بوصلة|معالم|geography|history/i.test(combinedStr);
+    const isStoryArabic = /لغة عربية|نصوص|قراءة|استماع|قصة|برديات|حسي رع|شعر|محادثة|أدب|عربي|arabic|story/i.test(combinedStr);
 
     const labPrompt = isArabic
-      ? `أنت كبير مهندسي ومصممي الألعاب والمختبرات التعليمية التفاعلية الذكية (Osera Interactive Lab Architect).
-مهمتك: توليد لعبة أو محاكي تفاعلي أو تجربة علمية مصغرة وممتعة جداً ومصممة خصيصاً لموضوع هذا الفصل:
-عنوان الفصل: "${chapterTitle}"
-المرحلة/الفئة: "${grade_level || 'الصف الرابع الابتدائي'}"
-تصنيف المادة: "${bookCategory || (isLanguage ? 'لغة عربية' : (isMath ? 'رياضيات' : 'عام'))}"
-محتوى الدرس الفعلي:
-${(chapterContent || "").substring(0, 3000)}
+      ? `أنت كبير مهندسي ومصممي الألعاب والمختبرات والمحاكيات التعليمية التفاعلية الذكية (Osera Adaptive Simulation Architect).
+مهمتك: تصميم محاكي بصري تفاعلي أو لعبة استكشافية متقدمة وفريدة ومصممة خصيصاً لموضوع هذا الفصل، بحسب المادة الدراسية والفئة العمرية ومستوى المتعلم.
 
-اختر النمط الأنسب لموضوع الدرس من بين:
-${isLanguage ? `
-- 'language_listening_lab': مختبر الاستماع والفهم اللغوي الذكي (تدريب استماع متقدم: نص مسموع كامل + 3-4 أسئلة استيعاب وفهم مسموع + كروت المفردات والقواعد النحوية المستخرجة).
-- 'matching_game': لعبة مطابقة وربط المفردات، المعاني، المرادفات، أو الأسباب والنتائج مع نقاط.
-` : (isMath ? `
-- 'place_value_board': لوحة القيمة المكانية التفاعلية (آحاد، عشرات، مئات، ألوف، عشرات الألوف، مئات الألوف) مع تحدي تركيب الأعداد والصيغة الممتدة والصيغة القياسية.
-- 'fraction_visualizer': محاكي مقارنة الكسور والنماذج الشريطية التفاعلية الملونة.
-- 'interactive_simulator': محاكي رياضي بياني بأشرطة تمرير لحساب العمليات والمساحات والأنماط.
-` : `
-- 'matching_game': لعبة مطابقة وربط مصطلحات، مفاهيم، اتجاهات، أو أسباب ونتائج مع توقيت ونقاط.
-- 'interactive_simulator': محاكي تفاعلي حي بأشرطة تمرير/خيارات، لمشاهدة النتيجة التفاعلية المباشرة والتفسير العلمي مع مؤشر ورسوم بيانية.
-- 'decision_scenario': سيناريو اتخاذ قرارات وحل مشكلات وتحديات خطوة بخطوة.
-`)}
+بيانات المادة والدرس:
+- عنوان الفصل: "${chapterTitle}"
+- المرحلة/الصف: "${grade_level || 'عام'}"
+- تصنيف المادة: "${bookCategory || 'تعليمي'}"
+- محتوى وسياق الدرس الفعلي:
+"""
+${(chapterContent || "").substring(0, 3000)}
+"""
+
+اختر بدقة النمط الأنسب والأكثر إبهاراً وتفاعلية لموضوع الدرس:
+1. **'story_papyrus_explorer'** (للغة العربية، القصص، التاريخ، الآثار، الشخصيات مثل حسي رع، المحاور الابتدائية):
+   - يحتوي على: 'artifacts' (بطاقات برديات ومعالم أثرية تفاعلية ينقر عليها الطالب لاكتشاف الأسرار والمعاني)، و 'storyEvents' (أحداث القصة لترتيبها زمنياً)، و 'transcript' الصوتي.
+2. **'social_geography_explorer'** (للدراسات، الجغرافيا، الخرائط، المواقع):
+   - يحتوي على: 'compassData' (بوصلة تفاعلية للاتجاهات)، 'landmarks' (نقاط خريطة تفاعلية لاكتشاف المواقع)، 'scaleCalc' (مقياس الرسم).
+3. **'business_financial_simulator'** (لإدارة الأعمال، المحاسبة، الاقتصاد، التمويل والاستثمار):
+   - يحتوي على: 'financialMetrics' (سلايدرز تفاعلية: رأس المال، التكاليف، سعر الوحدة، المبيعات)، 'chartData' (بيانات التدفق النقدي ونقطة التعادل)، و 'strategicDecision'.
+4. **'legal_moot_court'** (للقانون، الحقوق، العلاقات الدولية، المحاكم):
+   - يحتوي على: 'caseSummary' (وقائع الدعوى)، 'plaintiffClaims' (دفوع المدعي)، 'defendantDefense' (دفوع المدعى عليه)، 'applicableLaws' (المواد والمعاهدات)، 'verdictOptions' (خيارات الحكم القضائي مع التعليل).
+5. **'science_virtual_experiment'** (للعلوم، الفيزياء، الكيمياء، الأحياء، الطب):
+   - يحتوي على: 'apparatus' (الأجهزة والأدوات المعملية)، 'variables' (سلايدرز المتغيرات مثل الحرارة والضغط والتركيز)، 'outcomes' (النتيجة العلمية والرسوم البيانية التفاعلية).
+6. **'place_value_board' / 'fraction_visualizer'** (للرياضيات والحساب):
+   - لوحة القيمة المكانية، النماذج الشريطية للكسور، أو الرسوم البيانية الرياضية.
+7. **'language_listening_lab'** (للتدريب اللغوي والاستماع):
+   - نص مسموع كامل + 3 أسئلة فهم مسموع + كروت مفردات وقواعد.
 
 الاشتراطات الصارمة:
 1. الارتباط 100% بموضوع الفصل وأمثلته الحقيقية.
-2. عدم كتابة نصوص مبتورة أو رموز ماركداون غير منسقة. النصوص يجب أن تكون عبارات كاملة وواضحة ومفيدة.
+2. ممنوع وضع نصوص مبتورة أو رموز ماركداون غير منسقة. النصوص يجب أن تكون عبارات كاملة وواضحة ومفيدة.
 3. التنسيق JSON فقط:
 {
-  "activityType": "language_listening_lab" | "place_value_board" | "fraction_visualizer" | "matching_game" | "interactive_simulator" | "decision_scenario",
+  "activityType": "story_papyrus_explorer" | "social_geography_explorer" | "business_financial_simulator" | "legal_moot_court" | "science_virtual_experiment" | "place_value_board" | "fraction_visualizer" | "language_listening_lab",
   "title": "عنوان جذاب ومشوق للنشاط التفاعلي",
-  "instructions": "تعليمات واضحة وبسيطة للطالب تشرح كيف يلعب أو يجرب",
-  "themeColor": "emerald" | "indigo" | "amber" | "rose" | "cyan",
-  "icon": "headphones" | "calculator" | "compass" | "flask" | "brain" | "sparkles" | "target" | "zap",
+  "instructions": "تعليمات واضحة وبسيطة للمتعلم تشرح كيف يجرب ويتفاعل",
+  "themeColor": "emerald" | "indigo" | "amber" | "rose" | "cyan" | "purple",
+  "icon": "scroll" | "compass" | "landmark" | "scale" | "flask" | "calculator" | "headphones" | "brain",
   "data": {
-    "transcript": "النص الكامل المخصص للاستماع والقراءة...",
-    "listeningQuestions": [
-      {
-        "id": "lq1",
-        "question": "سؤال فهم واستيعاب على النص المسموع؟",
-        "options": ["خيار أ صحيح", "خيار ب", "خيار ج"],
-        "correctOptionIndex": 0,
-        "explanation": "شرح توضيحي لإجابة السؤال المسموع"
-      }
+    "transcript": "النص الكامل الصوتي...",
+    "artifacts": [
+      { "id": "a1", "name": "اسم البردية / المعلم", "icon": "📜", "fact": "المعلومة التاريخية أو اللغوية", "significance": "الأهمية والدلالة" }
     ],
-    "grammarAndVocab": [
-      {
-        "term": "المفردة أو القاعدة النحوية",
-        "meaningOrRule": "معناها الدقيق أو قاعدتها الإعرابية",
-        "example": "مثال من واقع الدرس"
-      }
+    "storyEvents": [
+      { "id": "e1", "order": 1, "text": "الحدث الأول في الدرس" },
+      { "id": "e2", "order": 2, "text": "الحدث الثاني في الدرس" }
     ],
-    "mathType": "place_value" | "fractions" | "operations",
-    "targetNumber": 4325,
-    "targetNumberWord": "أربعة آلاف وثلاثمائة وخمسة وعشرون",
-    "pairs": [
-      { "id": "p1", "item": "المفهوم أو المصطلح 1", "match": "التعريف أو الحل النموذجي 1", "hint": "تلميح ذكي" },
-      { "id": "p2", "item": "المفهوم أو المصطلح 2", "match": "التعريف أو الحل النموذجي 2", "hint": "تلميح ذكي" }
+    "landmarks": [
+      { "id": "lm1", "name": "اسم الموقع / الظاهرة", "coordinates": "الشمال الشرقي", "details": "شرح الموقع وأهميته" }
+    ],
+    "financialMetrics": {
+      "initialCapital": 100000,
+      "unitPrice": 50,
+      "unitCost": 30,
+      "fixedMonthlyCost": 20000,
+      "expectedSales": 1500
+    },
+    "caseSummary": "ملخص وقائع الدعوى أو القضية القانونية",
+    "plaintiffClaims": ["الدفع القانوني الأول للمدعي"],
+    "defendantDefense": ["الدفع القانوني الأول للمدعى عليه"],
+    "applicableLaws": ["المادة القانونية أو المعاهدة المطبقة"],
+    "verdictOptions": [
+      { "verdictTitle": "الحكم القضائي الصحيح", "isCorrect": true, "reasoning": "التأصيل والتعليل القانوني المعتمد" }
     ],
     "variables": [
-      { "id": "v1", "label": "القيمة الأولى", "min": 1, "max": 100, "step": 1, "defaultValue": 25, "unit": "وحدة" }
+      { "id": "v1", "label": "المتغير المعملي (حرارة/ضغط/تركيز)", "min": 10, "max": 100, "defaultValue": 50, "unit": "°C" }
     ],
     "outcomes": [
-      { "condition": "default", "visualEmoji": "📊", "stateTitle": "الاستنتاج الرياضي/العلمي", "explanation": "شرح النتيجة وتطبيق القاعدة." }
+      { "condition": "default", "visualEmoji": "⚗️", "stateTitle": "الملاحظة العلمية", "explanation": "التفسير العلمي والاستنتاج." }
+    ],
+    "listeningQuestions": [
+      { "id": "lq1", "question": "سؤال فهم مسموع؟", "options": ["خيار أ", "خيار ب", "خيار ج"], "correctOptionIndex": 0, "explanation": "التوضيح" }
+    ],
+    "grammarAndVocab": [
+      { "term": "المفردة / القاعدة", "meaningOrRule": "المعنى أو الإعراب", "example": "مثال توضيحي" }
+    ],
+    "pairs": [
+      { "id": "p1", "item": "المصطلح", "match": "التفسير", "hint": "تلميح" }
     ]
   }
 }`
-      : `Generate an interactive language, math, or science simulation JSON for chapter "${chapterTitle}".`;
+      : `Generate an interactive domain-specific simulation JSON for chapter "${chapterTitle}".`;
 
     let resultJson: any = null;
     try {
@@ -1889,7 +1912,96 @@ ${isLanguage ? `
     } catch (apiErr) {
       console.warn("Gemini API Lab generation warning, building contextual interactive fallback:", apiErr);
       
-      if (isLanguage) {
+      if (isBusiness) {
+        resultJson = {
+          activityType: "business_financial_simulator",
+          title: `محاكي دراسة الجدوى ونموذج الأعمال: ${chapterTitle}`,
+          instructions: "حرّك أشرطة رأس المال والتكاليف وسعر البيع لمشاهدة نقطة التعادل وصافي الأرباح ومعدل العائد (ROI) في الوقت الفعلي!",
+          themeColor: "indigo",
+          icon: "calculator",
+          data: {
+            financialMetrics: {
+              initialCapital: 150000,
+              unitPrice: 120,
+              unitCost: 70,
+              fixedMonthlyCost: 25000,
+              expectedSales: 800
+            },
+            strategicDecision: {
+              question: "ما هو أفضل قرار لتعظيم الأرباح عند زيادة المنافسة في السوق؟",
+              options: [
+                { text: "خفض تكلفة الوحدة وتحسين جودة الخدمة لزيادة حصة السوق", isBest: true, feedback: "قرار استراتيجي ممتاز يحافظ على هامش الربح والولاء." },
+                { text: "مضاعفة السعر فوراً لتعويض التكاليف", isBest: false, feedback: "قرار محفوف بالمخاطر قد يؤدي لفقدان العملاء." }
+              ]
+            }
+          }
+        };
+      } else if (isLaw) {
+        resultJson = {
+          activityType: "legal_moot_court",
+          title: `المحكمة الافتراضية وتحليل الدعوى: ${chapterTitle}`,
+          instructions: "ادرس وقائع الدعوى ودفوع الطرفين، ثم اختر الحكم القضائي الصحيح مع التأصيل والتعليل القانوني!",
+          themeColor: "purple",
+          icon: "scale",
+          data: {
+            caseSummary: `نزاع قضائي يتمحور حول أحكام (${chapterTitle}) وقواعد الاختصاص والمسؤولية القانونية.`,
+            plaintiffClaims: ["المطالبة بالحق الثابت بموجب القواعد والاتفاقيات المعتمدة", "إثبات الضرر والمسؤولية المباشرة"],
+            defendantDefense: ["الدفع بعدم قبول الدعوى أو انعدام الصفة", "التمسك بالحصانة القضائية أو نصوص الإعفاء"],
+            applicableLaws: ["المادة القانونية المنظمة للنزاع", "المبادئ المستقرة في القضاء والمحاكم العليا"],
+            verdictOptions: [
+              { verdictTitle: "قبول الدعوى وإلزام المدعى عليه بالمسؤولية القانونية والتعويض", isCorrect: true, reasoning: "لتوافر الصفة والمصلحة وثبوت الخطأ والضرر وعلاقة السببية وفقاً لصحيح القانون." },
+              { verdictTitle: "رفض الدعوى لعدم الاختصاص أو انعدام السند", isCorrect: false, reasoning: "الدفع غير سديد لمطابقة الدعوى لقواعد الاختصاص المباشرة." }
+            ]
+          }
+        };
+      } else if (isGeographyHistory || /حسي رع|بردي|مصري|آثار|متحف|وطني/i.test(combinedStr)) {
+        resultJson = {
+          activityType: "story_papyrus_explorer",
+          title: `مستكشف البرديات والآثار التفاعلي: ${chapterTitle}`,
+          instructions: "انقر على البرديات والمعالم لاكتشاف الأسرار، ورتّب الأحداث التاريخية لتجمع نقاط المستكشف البارع!",
+          themeColor: "amber",
+          icon: "scroll",
+          data: {
+            transcript: chapterContent || `نص درس (${chapterTitle}) للاستكشاف والتعلم.`,
+            artifacts: [
+              { id: "a1", name: "لوحات حسي رع الخشبية", icon: "🪵", fact: "اكتشفت عام 1912م بمقبرته بسقارة، وتظهر إتقاناً مبهراً للنحت في الدولة القديمة.", significance: "تدل على عظمة المعلم والطبيب المصري القديم ومكانته الرفيعة." },
+              { id: "a2", name: "رمزية المائتي جنيه", icon: "💵", fact: "تزين ورقة الـ 200 جنيه صورة المعلم حسي رع جالساً ومعه أدوات الكتابة والبردي.", significance: "فخر وتقدير وطني لدور المعلم في بناء الحضارة المصرية." },
+              { id: "a3", name: "جامعة برعنخ القديمة", icon: "🏛️", fact: "الاسم الذي أطلقه المصريون القدماء على جامعاتهم الكبرى المتقدمة (بيت الحياة).", significance: "أولى الجامعات في تاريخ الإنسانية لنشر العلوم والآداب." }
+            ],
+            storyEvents: [
+              { id: "e1", order: 1, text: "بدء مشروع ترميم اللوحات الخشبية للمعلم حسي رع بالمتحف المصري بالتحرير." },
+              { id: "e2", order: 2, text: "اكتشاف المقبرة واللوحات المحفورة بإتقان شديد منذ عهد الدولة القديمة." },
+              { id: "e3", order: 3, text: "تقدير مكانة الكاتب والمعلم في مصر القديمة كأرقى مهنة ينصح بها الحكماء أبناءهم." }
+            ],
+            listeningQuestions: [
+              {
+                id: "lq1",
+                question: "لماذا كان الحكماء في مصر القديمة ينصحون أبناءهم بأن يكونوا كتاباً ومعلمين؟",
+                options: ["لأن مهنة الكاتب والمعلم كانت أرقى المهن للوصول للمناصب الرفيعة", "لأنها مهنة سهلة لا تتطلب تعلماً", "لعدم وجود مهن أخرى"],
+                correctOptionIndex: 0,
+                explanation: "التعليم كان بوابـة الارتقاء والمكانة المرموقة في المجتمع المصري القديم."
+              }
+            ]
+          }
+        };
+      } else if (isScience) {
+        resultJson = {
+          activityType: "science_virtual_experiment",
+          title: `المختبر العلمي الافتراضي ومحاكي التجارب: ${chapterTitle}`,
+          instructions: "تحكم في المتغيرات المعملية وشاهد التفاعل الحي والرسم البياني وتفسير الظاهرة العلمية!",
+          themeColor: "cyan",
+          icon: "flask",
+          data: {
+            variables: [
+              { id: "v1", label: "درجة الحرارة المؤثرة", min: 0, max: 100, defaultValue: 25, unit: "°C" },
+              { id: "v2", label: "الضغط / التركيز", min: 1, max: 10, defaultValue: 3, unit: "Atm" }
+            ],
+            outcomes: [
+              { condition: "default", visualEmoji: "🧪", stateTitle: "الاستنتاج المعملي", explanation: "تغيير المتغيرات يؤثر مباشرة على سرعة الجزيئات وتوازن التفاعل وفقاً للقوانين العلمية." }
+            ]
+          }
+        };
+      } else if (isLanguage) {
         resultJson = {
           activityType: "language_listening_lab",
           title: `مختبر الاستماع والفهم اللغوي: ${chapterTitle}`,
@@ -1905,13 +2017,6 @@ ${isLanguage ? `
                 options: ["الفكرة الجوهرية للدرس وقيمته الأخلاقية والعلمية", "تفاصيل ثانوية غير مؤكدة", "موضوع خارجي غير مرتبط"],
                 correctOptionIndex: 0,
                 explanation: "الفكرة الرئيسية تلخص الهدف التعليمي والتربوي للدرس."
-              },
-              {
-                id: "lq2",
-                question: "ما الدرس المستفاد الذي نتعلمه ونطبقه في حياتنا من هذا النص؟",
-                options: ["العمل الجاد وتطوير الذات والإصرار على النجاح", "الاعتماد على الآخرين دون محاولة", "تجاهل الأهداف التعليمية"],
-                correctOptionIndex: 0,
-                explanation: "التطبيق العملي يربط الدرس بالسلوك الإيجابي والقيم التربوية."
               }
             ],
             grammarAndVocab: [
@@ -1933,25 +2038,21 @@ ${isLanguage ? `
             targetNumberWord: "ثلاثة آلاف وخمسمائة وأربعة وعشرون",
             pairs: [
               { id: "p1", item: "الرقم في خانة الآحاد", match: "يدل على الوحدات الفردية (من 0 إلى 9)", hint: "أول خانة من اليمين" },
-              { id: "p2", item: "الرقم في خانة العشرات", match: "يدل على مجموعات العشرات (كل 1 = 10)", hint: "الخانة الثانية" },
-              { id: "p3", item: "الرقم في خانة المئات", match: "يدل على مجموعات المئات (كل 1 = 100)", hint: "الخانة الثالثة" },
-              { id: "p4", item: "الرقم في خانة الألوف", match: "يدل على مجموعات الآلاف (كل 1 = 1000)", hint: "الخانة الرابعة" }
+              { id: "p2", item: "الرقم في خانة العشرات", match: "يدل على مجموعات العشرات (كل 1 = 10)", hint: "الخانة الثانية" }
             ]
           }
         };
       } else {
         resultJson = {
-          activityType: "matching_game",
-          title: `تحدي مطابقة المفاهيم التفاعلي: ${chapterTitle}`,
-          instructions: "انقر على المفهوم ثم انقر على التفسير الصحيح المقابل له لتوصيلهما!",
+          activityType: "story_papyrus_explorer",
+          title: `المختبر التفاعلي الذكي: ${chapterTitle}`,
+          instructions: "استكشف عناصر الدرس وتفاعل مع المحتوى لتثبيت الفهم!",
           themeColor: "indigo",
-          icon: "compass",
+          icon: "brain",
           data: {
-            pairs: [
-              { id: "p1", item: "المفهوم الرئيسي للدرس", match: "القاعدة الأساسية التي يركز عليها هذا الفصل", hint: "راجع بداية الفصل" },
-              { id: "p2", item: "التطبيق العملي", match: "استخدام المفهوم في حل المسائل والمواقف اليومية", hint: "فكر في التطبيق الواقعي" },
-              { id: "p3", item: "الاستنتاج والتحليل", match: "النتيجة التعليمية المستخلصة من الشرح والأمثلة", hint: "راجع خلاصة الدرس" },
-              { id: "p4", item: "التقييم والتحقق", match: "التأكد من صحة الحل ومطابقته للخطوات العلمية", hint: "خطوة المراجعة والتدقيق" }
+            transcript: chapterContent,
+            artifacts: [
+              { id: "a1", name: "العنصر المحوري", icon: "💡", fact: "النقطة الأساسية التي يركز عليها الدرس.", significance: "تطبيق المفهوم في الحياة اليومية والامتحان." }
             ]
           }
         };
@@ -2119,28 +2220,32 @@ app.post("/api/ebooks/:id/expand-chapters", async (req, res) => {
 
   const currentChapters = ebook.chapters || [];
   const currentTitles = currentChapters.map((c: any, i: number) => `${i + 1}. ${c.title}`).join("\n");
+  const sourceOutline = (ebook as any).original_text || ebook.description || "";
 
   const expansionPrompt = `
-You are the world-class Interactive Ebook Curriculum Architect.
-The user has an interactive educational book titled: "${ebook.title}"
-Description: "${ebook.description || ''}"
+You are the world-class Interactive Ebook Curriculum Architect (Osera Pedagogical AI).
+The user has an interactive educational textbook titled: "${ebook.title}"
+Category: "${ebook.category || 'تعليمي'}" - Grade/Level: "${(ebook as any).grade_level || 'عام'}"
+Original Curriculum / Syllabus Context:
+"""
+${sourceOutline.substring(0, 15000)}
+"""
 
-Current existing chapters in this book:
+Current existing chapters already generated in this book:
 ${currentTitles || "No chapters yet"}
 
-Task:
-Generate the NEXT batch of ${additionalCount} comprehensive, progressive educational chapters that seamlessly continue from where chapter ${currentChapters.length} left off.
-Do NOT repeat the existing chapters above! Create chapters ${currentChapters.length + 1} to ${currentChapters.length + additionalCount}.
-Output in formal, high-quality Arabic (Fusha) if the book is Arabic.
+CRITICAL MANDATORY RULES FOR EXPANDING CHAPTERS:
+1. STRICT AUTHENTIC LESSON TITLES:
+   - Follow the EXACT sequential syllabus and authentic lesson titles directly from the source textbook outline above (e.g., "كل منا له حلم", "المادة وخواصها", "الدرس الرابع: النماذج الشريطية").
+   - 🚫 NEVER invent artificial, generic, or composite chapter titles (e.g. NEVER generate titles like "نصوص الاستماع والقراءات التاريخية والبيئية والصحية").
+   - If a chapter is a free listening lesson, strictly name it: "نص استماع متحرر: [عنوان الدرس]".
+   - Seamlessly continue from where chapter ${currentChapters.length} left off without repeating existing chapters! Generate the NEXT ${additionalCount} chapters.
 
-For each chapter, provide:
-- 'title': Clear and engaging chapter title
-- 'summary': Summary of the chapter's core ideas
-- 'content': Full educational markdown content with theories, examples, and Arabic Tashkeel on key terms
-- 'concepts': Array of key conceptual terms and definitions
-- 'quiz': 3 multiple choice questions with 4 options and detailed explanations
-- 'mindMap': 5-7 hierarchical nodes with 'id', 'label', 'parentId', 'description'
-- 'videos': 2 curated search topics
+2. NO DASHED MARKDOWN TABLES:
+   - 🚫 DO NOT use pipe markdown tables with dashes (| ---: |). Format comparisons as styled bullet lists or clean text cards.
+
+3. HIGH-YIELD PEDAGOGICAL MARKDOWN CONTENT:
+   - Include learning objectives, deep clear explanation, key concepts, worked examples, and exam pitfalls.
 `;
 
   try {
@@ -2155,7 +2260,7 @@ For each chapter, provide:
           },
           required: ["chapters"]
         },
-        temperature: 0.3
+        temperature: 0.2
       }
     }, ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-3.7-flash"]);
 

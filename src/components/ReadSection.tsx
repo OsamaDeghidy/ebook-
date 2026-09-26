@@ -47,7 +47,9 @@ function sanitizeEducationalMarkdown(text: string | undefined): string {
   // 3. Remove raw callout tags
   cleaned = cleaned.replace(/\[!(IMPORTANT|WARNING|TIP|NOTE)\]/gi, '');
 
-  // 4. Fix collapsed single-line tables (e.g. "| col1 | col2 | | :--- | :--- | | val1 | val2 |")
+  // 4. Fix collapsed single-line tables and strip raw dashed separator rows
+  cleaned = cleaned.replace(/^[ \t]*\|?[-:\s|]{3,}\|?[ \t]*$/gm, '');
+  cleaned = cleaned.replace(/\|\s*[-:\s]{2,}\s*\|/g, '|');
   cleaned = cleaned.replace(/\|\s*\|\s*/g, '|\n| ');
   cleaned = cleaned.replace(/\|\|/g, '|\n|');
 
@@ -255,28 +257,56 @@ const markdownComponents = {
   p: ({ children }: any) => {
     const rawText = extractRawText(children);
 
-    if (rawText.includes('|') && (rawText.includes('---') || rawText.includes(':---') || rawText.trim().startsWith('|'))) {
+    if (rawText.includes('|')) {
       const lines = rawText.trim().split('\n').map(l => l.trim()).filter(Boolean);
-      const sepIndex = lines.findIndex(l => l.includes('---'));
+      const sepIndex = lines.findIndex(l => l.includes('---') || l.includes(':--'));
       
       if (sepIndex > 0) {
         const headerLine = lines[sepIndex - 1];
         const headerCells = headerLine.split('|').map(c => c.trim()).filter(Boolean);
-        const dataLines = lines.slice(sepIndex + 1).filter(l => l.startsWith('|'));
-        const dataRows = dataLines.map(row => row.split('|').map(c => c.trim()).filter(Boolean));
+        const dataLines = lines.slice(sepIndex + 1).filter(l => l.includes('|') && !l.includes('---'));
+        const dataRows = dataLines.map(row => row.split('|').map(c => c.trim()).filter(Boolean)).filter(r => r.length > 0);
         const leadLines = lines.slice(0, sepIndex - 1);
 
+        if (headerCells.length > 0 && dataRows.length > 0) {
+          return (
+            <div className="space-y-2 my-3">
+              {leadLines.length > 0 && (
+                <p className="my-2 text-xs sm:text-sm text-gray-700 leading-relaxed font-bold">
+                  {leadLines.join('\n')}
+                </p>
+              )}
+              <VisualComparisonCards headerCells={headerCells} dataRows={dataRows} />
+            </div>
+          );
+        }
+      }
+
+      // Handle direct pipe lists without dashed lines
+      const cleanedLines = rawText
+        .replace(/\|\s*[-:\s|]{2,}\s*\|/g, '')
+        .split('\n')
+        .map(l => l.trim())
+        .filter(l => l && !l.match(/^[-:\s|]+$/));
+
+      const tableRows = cleanedLines
+        .filter(l => l.includes('|'))
+        .map(l => l.split('|').map(c => c.trim()).filter(Boolean))
+        .filter(r => r.length >= 2);
+
+      if (tableRows.length >= 2) {
+        const headerCells = tableRows[0];
+        const dataRows = tableRows.slice(1);
         return (
-          <div className="space-y-2">
-            {leadLines.length > 0 && (
-              <p className="my-2 text-xs sm:text-sm text-gray-700 leading-relaxed font-bold">
-                {leadLines.join('\n')}
-              </p>
-            )}
+          <div className="space-y-2 my-3">
             <VisualComparisonCards headerCells={headerCells} dataRows={dataRows} />
           </div>
         );
       }
+    }
+
+    if (rawText.match(/^[-:\s|]{3,}$/)) {
+      return null;
     }
 
     return (
