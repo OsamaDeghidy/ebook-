@@ -123,10 +123,28 @@ export default function ContentUploader({
 
   const processFile = (file: File) => {
     setErrorMsg(null);
-    const validTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp'];
+    const validMimes = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/msword',
+      'text/plain',
+      'image/png',
+      'image/jpeg',
+      'image/webp'
+    ];
+    const fileNameLower = file.name.toLowerCase();
+    const isValidExt = 
+      fileNameLower.endsWith('.pdf') ||
+      fileNameLower.endsWith('.docx') ||
+      fileNameLower.endsWith('.doc') ||
+      fileNameLower.endsWith('.txt') ||
+      fileNameLower.endsWith('.png') ||
+      fileNameLower.endsWith('.jpg') ||
+      fileNameLower.endsWith('.jpeg') ||
+      fileNameLower.endsWith('.webp');
     
-    if (!validTypes.includes(file.type)) {
-      setErrorMsg("صيغة الملف غير مدعومة. يرجى رفع ملف PDF أو صورة (PNG, JPG, WEBP).");
+    if (!validMimes.includes(file.type) && !isValidExt) {
+      setErrorMsg("صيغة الملف غير مدعومة. يرجى رفع ملف PDF، Word (DOCX)، نصي (TXT)، أو صورة.");
       return;
     }
 
@@ -416,7 +434,7 @@ export default function ContentUploader({
           <input
             ref={fileInputRef}
             type="file"
-            accept=".pdf,image/png,image/jpeg,image/webp"
+            accept=".pdf,.docx,.doc,.txt,image/png,image/jpeg,image/webp,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword,application/pdf"
             onChange={handleFileInputChange}
             disabled={isConverting}
             className="hidden"
@@ -440,7 +458,7 @@ export default function ContentUploader({
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </h4>
-                  <p className="text-xs text-gray-400 font-bold">{selectedFile.type.toUpperCase()} • {selectedFile.size}</p>
+                  <p className="text-xs text-gray-400 font-bold">{selectedFile.type.toUpperCase() || "DOCUMENT"} • {selectedFile.size}</p>
                 </div>
               </>
             ) : (
@@ -449,8 +467,8 @@ export default function ContentUploader({
                   <Upload className="w-6 h-6" />
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm font-bold text-gray-700">اسحب وأفلت ملف الـ PDF هنا، أو <span className="text-indigo-600 underline">تصفح جهازك</span></p>
-                  <p className="text-xs text-gray-400">يدعم كتب الـ PDF، المذكرات، والمراجع حتى 100 ميجابايت</p>
+                  <p className="text-sm font-bold text-gray-700">اسحب وأفلت ملف الـ PDF أو Word (DOCX) هنا، أو <span className="text-indigo-600 underline">تصفح جهازك</span></p>
+                  <p className="text-xs text-gray-400">يدعم كتب الـ PDF، مستندات Word (DOCX)، المذكرات والمراجع حتى 100 ميجابايت</p>
                 </div>
               </>
             )}

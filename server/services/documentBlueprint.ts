@@ -1,0 +1,381 @@
+import { Type } from "@google/genai";
+
+export interface SyllabusLessonBlueprint {
+  lesson_order: number;
+  lesson_title: string;
+  unit_title?: string;
+  character_start?: number;
+  character_end?: number;
+  page_estimate?: string;
+  sub_topics: string[];
+  key_terms?: { term: string; definition: string }[];
+  raw_text_snippet: string;
+  status: "completed" | "pending";
+}
+
+export interface DocumentSyllabusBlueprint {
+  book_title: string;
+  total_lessons: number;
+  detected_units: string[];
+  lessons: SyllabusLessonBlueprint[];
+  raw_full_text?: string;
+  createdAt: string;
+}
+
+/**
+ * Fast LLM Blueprint Extraction Schema
+ */
+const blueprintResponseSchema = {
+  type: Type.OBJECT,
+  properties: {
+    book_title: {
+      type: Type.STRING,
+      description: "Accurate course or booklet title inferred from source text."
+    },
+    detected_units: {
+      type: Type.ARRAY,
+      items: { type: Type.STRING },
+      description: "List of unit/module titles in the exact order they appear in the booklet."
+    },
+    lessons: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          lesson_order: { type: Type.INTEGER, description: "Strict sequential 1-based index from page 1 to the end" },
+          lesson_title: { type: Type.STRING, description: "Exact authentic title of the lesson as written in the booklet" },
+          unit_title: { type: Type.STRING, description: "Parent unit title if available" },
+          sub_topics: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
+            description: "3 to 6 distinct internal sub-topics, themes, or sections in this lesson"
+          },
+          key_terms: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                term: { type: Type.STRING },
+                definition: { type: Type.STRING }
+              },
+              required: ["term", "definition"]
+            },
+            description: "Core vocabulary, laws, or rules mentioned in this lesson"
+          },
+          starting_text_anchor: {
+            type: Type.STRING,
+            description: "First 8-15 exact words starting this lesson in the document text"
+          },
+          ending_text_anchor: {
+            type: Type.STRING,
+            description: "Last 8-15 exact words ending this lesson before the next one starts"
+          }
+        },
+        required: ["lesson_order", "lesson_title", "sub_topics"]
+      },
+      description: "Exhaustive list of all lessons detected, strictly in document appearance order."
+    }
+  },
+  required: ["book_title", "lessons"]
+};
+
+/**
+ * Normalize Arabic text for robust fuzzy substring location
+ */
+function normalizeForSearch(text: string): string {
+  if (!text) return "";
+  return text
+    .replace(/[\u064B-\u065F\u0670]/g, "") // remove tashkeel
+    .replace(/[أإآ]/g, "ا")
+    .replace(/ة/g, "ه")
+    .replace(/ى/g, "ي")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+/**
+ * Finds the starting character position of a lesson in the document text
+ */
+function findLessonStartPosition(
+  lesson: any,
+  extractedText: string,
+  normalizedDoc: string,
+  searchOffset: number
+): number {
+  // 1. Try starting_text_anchor (Exact)
+  if (lesson.starting_text_anchor && lesson.starting_text_anchor.trim().length >= 6) {
+    const anchor = lesson.starting_text_anchor.trim();
+    const exactIdx = extractedText.indexOf(anchor, searchOffset);
+    if (exactIdx !== -1) return exactIdx;
+
+    // Try first 25 chars of anchor
+    const shortAnchor = anchor.substring(0, 25);
+    const shortIdx = extractedText.indexOf(shortAnchor, searchOffset);
+    if (shortIdx !== -1) return shortIdx;
+
+    // Try normalized anchor
+    const normAnchor = normalizeForSearch(anchor);
+    if (normAnchor.length >= 6) {
+      const normIdx = normalizedDoc.indexOf(normAnchor, searchOffset);
+      if (normIdx !== -1) return normIdx;
+    }
+  }
+
+  // 2. Try lesson_title (Exact or Normalized)
+  if (lesson.lesson_title && lesson.lesson_title.trim().length >= 4) {
+    const title = lesson.lesson_title.trim();
+    const cleanTitle = title.replace(/^(الدرس|المفهوم|الوحدة|الفصل|نص|قصة|موضوع)\s+([الأول|الثاني|الثالث|الرابع|الخامس|السادس|\d]+)?[:：\-–\s]*/i, '').trim();
+    
+    // Exact title
+    const titleIdx = extractedText.indexOf(title, searchOffset);
+    if (titleIdx !== -1) return titleIdx;
+
+    // Cleaned title (without "الدرس الأول:")
+    if (cleanTitle.length >= 4) {
+      const cleanIdx = extractedText.indexOf(cleanTitle, searchOffset);
+      if (cleanIdx !== -1) return cleanIdx;
+
+      const normClean = normalizeForSearch(cleanTitle);
+      const normCleanIdx = normalizedDoc.indexOf(normClean, searchOffset);
+      if (normCleanIdx !== -1) return normCleanIdx;
+    }
+  }
+
+  // 3. Try first sub-topic or key term
+  if (Array.isArray(lesson.sub_topics) && lesson.sub_topics.length > 0) {
+    for (const sub of lesson.sub_topics) {
+      if (sub && sub.length >= 6) {
+        const subIdx = extractedText.indexOf(sub.trim(), searchOffset);
+        if (subIdx !== -1) return subIdx;
+      }
+    }
+  }
+
+  return -1;
+}
+
+/**
+ * Scans the entire extracted document text and builds an exact Curriculum Blueprint
+ */
+export async function extractDocumentBlueprint(
+  extractedText: string,
+  metadata: {
+    fileName?: string;
+    category?: string;
+    grade_level?: string;
+    semester?: string;
+  },
+  generateFn: (params: any) => Promise<any>
+): Promise<DocumentSyllabusBlueprint> {
+  if (!extractedText || extractedText.length < 50) {
+    return {
+      book_title: metadata.fileName || "المقرر التعليمي",
+      total_lessons: 1,
+      detected_units: ["الوحدة الأولى"],
+      lessons: [
+        {
+          lesson_order: 1,
+          lesson_title: metadata.fileName || "الدرس الأول",
+          sub_topics: ["المفاهيم الأساسية", "الشرح والتطبيقات"],
+          raw_text_snippet: extractedText || "",
+          status: "pending"
+        }
+      ],
+      raw_full_text: extractedText,
+      createdAt: new Date().toISOString()
+    };
+  }
+
+  // Scan full text (up to 300,000 characters for complete syllabus discovery)
+  const previewText = extractedText.substring(0, 300000);
+
+  const blueprintPrompt = `
+You are the Master Educational Document Architect.
+Your mission is to perform a COMPLETE, EXHAUSTIVE, STRICTLY CHRONOLOGICAL DISCOVERY SCAN of the entire uploaded teacher booklet / textbook text below.
+
+DOCUMENT METADATA:
+- File Name: "${metadata.fileName || 'Document'}"
+- Category: "${metadata.category || 'Curriculum'}"
+- Grade / Level: "${metadata.grade_level || 'General'}"
+- Semester: "${metadata.semester || 'Term 1'}"
+
+DOCUMENT TEXT TO SCAN:
+"""
+${previewText}
+"""
+
+🚨 CRITICAL MANDATORY DISCOVERY & ORDERING RULES (P0):
+1. STRICT SEQUENTIAL DOCUMENT ORDER (PAGE 1 TO END):
+   - You MUST extract units and lessons in the EXACT ORDER they appear in the booklet from top to bottom.
+   - 🚫 NEVER jump across the booklet.
+   - 🚫 NEVER re-order lessons by topic, difficulty, or personal preference.
+   - Lesson 1 MUST be the very first lesson appearing on the opening pages of the booklet, followed in exact order by Lesson 2, Lesson 3, etc.
+
+2. EXHAUSTIVE COVERAGE (NO SKIPPING):
+   - Identify EVERY single unit and EVERY distinct lesson/topic in the document.
+   - 🚫 DO NOT skip any lessons.
+
+3. AUTHENTIC LESSON TITLES:
+   - Extract the EXACT authentic title written by the teacher or ministry (e.g. "الدرس الأول: النماذج الشريطية", "نص استماع: كل منا له حلم", "التركيب الضوئي").
+   - 🚫 DO NOT invent artificial blended titles.
+
+4. ANCHOR MAPPING:
+   - Provide the starting and ending text anchors (8-15 exact words) for each lesson to guarantee precise text slicing.
+
+5. SUB-TOPICS & CONCEPTS:
+   - List the 3-6 internal sub-topics and extracted key terms directly from the text.
+`;
+
+  try {
+    const response = await generateFn({
+      contents: [blueprintPrompt],
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: blueprintResponseSchema,
+        temperature: 0.1
+      }
+    });
+
+    const parsed = JSON.parse(response.text || "{}");
+    const rawLessons: any[] = Array.isArray(parsed.lessons) && parsed.lessons.length > 0 ? parsed.lessons : [];
+
+    const normalizedDoc = normalizeForSearch(extractedText);
+
+    // Step 1: Find start position for each detected lesson
+    const locatedLessons: Array<{
+      raw: any;
+      startOffset: number;
+    }> = [];
+
+    let currentOffset = 0;
+    for (let i = 0; i < rawLessons.length; i++) {
+      const l = rawLessons[i];
+      let pos = findLessonStartPosition(l, extractedText, normalizedDoc, currentOffset);
+      
+      // If not found after current offset, search from beginning
+      if (pos === -1 && currentOffset > 0) {
+        pos = findLessonStartPosition(l, extractedText, normalizedDoc, 0);
+      }
+
+      // If still not found, estimate proportionally
+      if (pos === -1) {
+        pos = Math.floor((i / rawLessons.length) * extractedText.length);
+      }
+
+      locatedLessons.push({
+        raw: l,
+        startOffset: pos
+      });
+
+      if (pos > currentOffset) {
+        currentOffset = pos;
+      }
+    }
+
+    // Step 2: STRICTLY SORT all lessons by their actual appearance offset in the document
+    locatedLessons.sort((a, b) => a.startOffset - b.startOffset);
+
+    // Step 3: Slice contiguous, complete raw text slices for each lesson
+    const mappedLessons: SyllabusLessonBlueprint[] = locatedLessons.map((item, idx) => {
+      const l = item.raw;
+      const startPos = Math.max(0, item.startOffset);
+      const nextItem = locatedLessons[idx + 1];
+      const endPos = nextItem ? Math.max(startPos + 100, nextItem.startOffset) : extractedText.length;
+
+      let lessonRawText = extractedText.substring(startPos, endPos).trim();
+
+      // Ensure snippet is sufficiently comprehensive (at least 150 chars or proportional slice)
+      if (lessonRawText.length < 150) {
+        const sliceSize = Math.floor(extractedText.length / Math.max(1, locatedLessons.length));
+        const pStart = idx * sliceSize;
+        const pEnd = idx === locatedLessons.length - 1 ? extractedText.length : (idx + 1) * sliceSize;
+        lessonRawText = extractedText.substring(pStart, pEnd).trim();
+      }
+
+      return {
+        lesson_order: idx + 1, // Re-assign strict 1, 2, 3... order
+        lesson_title: (l.lesson_title || `الدرس ${idx + 1}`).trim(),
+        unit_title: l.unit_title || undefined,
+        character_start: startPos,
+        character_end: endPos,
+        sub_topics: Array.isArray(l.sub_topics) && l.sub_topics.length > 0 ? l.sub_topics : ["الشرح والمفاهيم", "التطبيقات والتدريبات"],
+        key_terms: Array.isArray(l.key_terms) ? l.key_terms : [],
+        raw_text_snippet: lessonRawText,
+        status: "pending"
+      };
+    });
+
+    console.log(`[Document Blueprint] Successfully discovered and sequentially ordered ${mappedLessons.length} lessons from page 1 to end.`);
+
+    return {
+      book_title: (parsed.book_title || metadata.fileName || "المقرر التعليمي المعتمد").trim(),
+      total_lessons: mappedLessons.length,
+      detected_units: Array.isArray(parsed.detected_units) ? parsed.detected_units : [],
+      lessons: mappedLessons,
+      raw_full_text: extractedText,
+      createdAt: new Date().toISOString()
+    };
+  } catch (err) {
+    console.warn("[Document Blueprint] Extraction error, generating heuristic sequential blueprint:", err);
+
+    // Heuristic Fallback based on text size (e.g. 1 lesson per ~4,500 chars)
+    const chunkSize = 4500;
+    const totalCount = Math.max(1, Math.min(15, Math.ceil(extractedText.length / chunkSize)));
+    const heuristicLessons: SyllabusLessonBlueprint[] = [];
+
+    for (let i = 0; i < totalCount; i++) {
+      const start = i * chunkSize;
+      const end = Math.min(extractedText.length, (i + 1) * chunkSize);
+      const textSlice = extractedText.substring(start, end).trim();
+      
+      heuristicLessons.push({
+        lesson_order: i + 1,
+        lesson_title: `الدرس ${i + 1}: ${metadata.fileName || 'الموضوع التعليمي'} (الجزء ${i + 1})`,
+        character_start: start,
+        character_end: end,
+        sub_topics: ["المفاهيم والنصوص الأساسية", "المفردات والشروحات", "التمارين والتقويم"],
+        raw_text_snippet: textSlice,
+        status: "pending"
+      });
+    }
+
+    return {
+      book_title: metadata.fileName || "المقرر التعليمي المعتمد",
+      total_lessons: heuristicLessons.length,
+      detected_units: ["الوحدة الأولى"],
+      lessons: heuristicLessons,
+      raw_full_text: extractedText,
+      createdAt: new Date().toISOString()
+    };
+  }
+}
+
+/**
+ * Returns the next batch of pending lessons to generate
+ */
+export function getPendingLessons(
+  blueprint: DocumentSyllabusBlueprint,
+  batchSize: number = 4
+): SyllabusLessonBlueprint[] {
+  if (!blueprint || !Array.isArray(blueprint.lessons)) return [];
+  return blueprint.lessons
+    .filter(l => l.status === "pending")
+    .slice(0, batchSize);
+}
+
+/**
+ * Marks given lesson orders as completed in the blueprint
+ */
+export function markLessonsCompleted(
+  blueprint: DocumentSyllabusBlueprint,
+  completedOrders: number[]
+): DocumentSyllabusBlueprint {
+  const completedSet = new Set(completedOrders);
+  return {
+    ...blueprint,
+    lessons: blueprint.lessons.map(l =>
+      completedSet.has(l.lesson_order) ? { ...l, status: "completed" } : l
+    )
+  };
+}

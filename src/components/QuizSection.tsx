@@ -70,6 +70,7 @@ export default function QuizSection({
   const [isAnswered, setIsAnswered] = useState(false);
   const [score, setScore] = useState(0);
   const [answersMap, setAnswersMap] = useState<Record<number, number>>({});
+  const [flaggedQuestions, setFlaggedQuestions] = useState<Record<number, boolean>>({});
   const [isExamSubmitted, setIsExamSubmitted] = useState(false);
 
   // Question editing/adding state
@@ -109,12 +110,20 @@ export default function QuizSection({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const toggleFlagQuestion = (idx: number) => {
+    setFlaggedQuestions(prev => ({
+      ...prev,
+      [idx]: !prev[idx]
+    }));
+  };
+
   const startExamMode = () => {
     setExamMode('exam');
     setTimeLeft(Math.max(5, questions.length * 2) * 60); // 2 mins per question
     setIsTimerRunning(true);
     setCurrentQuestionIndex(0);
     setAnswersMap({});
+    setFlaggedQuestions({});
     setIsExamSubmitted(false);
   };
 
@@ -179,6 +188,7 @@ export default function QuizSection({
     setIsAnswered(false);
     setScore(0);
     setAnswersMap({});
+    setFlaggedQuestions({});
     setIsExamSubmitted(false);
     setTimeLeft(15 * 60);
     setIsTimerRunning(false);
@@ -615,14 +625,29 @@ export default function QuizSection({
 
                 {/* Educational Explanation for MCQ */}
                 {isAnswered && (
-                  <div className="p-4 bg-indigo-50/80 border border-indigo-200 rounded-2xl text-xs leading-relaxed space-y-1.5 animate-fade-in">
-                    <div className="flex items-center gap-1.5 text-indigo-900 font-black">
-                      <Sparkles className="w-4 h-4 text-indigo-600" />
-                      <span>الإيضاح التعليمي والتغذية الراجعة:</span>
+                  <div className="space-y-2.5 pt-2 animate-fade-in">
+                    <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-2xl text-xs leading-relaxed space-y-1.5">
+                      <div className="flex items-center gap-1.5 text-indigo-900 font-black">
+                        <Sparkles className="w-4 h-4 text-indigo-600" />
+                        <span>التعليل المعرفي وسلم التقييم:</span>
+                      </div>
+                      <p className="text-indigo-950 font-medium leading-relaxed">
+                        {currentQuestion.explanation || 'الإجابة المحددة هي الخيار الأكثر دقة وفقاً لما ورد في محتوى هذا الفصل.'}
+                      </p>
                     </div>
-                    <p className="text-indigo-950 font-medium leading-relaxed">
-                      {currentQuestion.explanation || 'الإجابة المحددة هي الخيار الأكثر دقة وفقاً لما ورد في محتوى هذا الفصل.'}
-                    </p>
+
+                    {/* Misconception Trap Alert */}
+                    {selectedOption !== null && selectedOption !== currentQuestion.correctOptionIndex && (
+                      <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs leading-relaxed space-y-1 text-amber-950">
+                        <div className="flex items-center gap-1.5 text-amber-900 font-black">
+                          <ShieldAlert className="w-4 h-4 text-amber-600" />
+                          <span>تحليل الفخ الشائع (Misconception Diagnosis):</span>
+                        </div>
+                        <p className="text-amber-900/90 font-medium">
+                          يقع العديد من الطلاب في هذا الخيار بسبب الخلط بين المفاهيم المتشابهة. تذكر دائماً قراءة المعطيات بدقة والتركيز على الكلمات المفتاحية في رأس السؤال!
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -667,36 +692,64 @@ export default function QuizSection({
             </div>
           </div>
 
-          {/* QUESTION GRID NAVIGATION */}
-          <div className="flex flex-wrap gap-2 bg-white p-3 rounded-2xl border border-gray-200">
-            {questions.map((_, idx) => {
-              const isAnsweredThis = answersMap[idx] !== undefined;
-              const isCurrent = currentQuestionIndex === idx;
-              return (
-                <button
-                  key={idx}
-                  onClick={() => setCurrentQuestionIndex(idx)}
-                  className={`w-8 h-8 rounded-xl text-xs font-black transition ${
-                    isCurrent
-                      ? 'bg-indigo-600 text-white shadow-md ring-2 ring-indigo-300'
-                      : isAnsweredThis
-                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {idx + 1}
-                </button>
-              );
-            })}
+          {/* QUESTION GRID NAVIGATION WITH STATUS LEGEND */}
+          <div className="bg-white p-4 rounded-2xl border border-gray-200 space-y-3">
+            <div className="flex items-center justify-between text-xs font-bold text-gray-500">
+              <span>خريطة أسئلة الامتحان:</span>
+              <div className="flex items-center gap-3 text-[11px]">
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> مجاب</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-amber-400" /> معلّم للمراجعة 🚩</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-gray-300" /> لم يجب</span>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {questions.map((_, idx) => {
+                const isAnsweredThis = answersMap[idx] !== undefined;
+                const isFlaggedThis = flaggedQuestions[idx];
+                const isCurrent = currentQuestionIndex === idx;
+
+                let btnBg = 'bg-gray-100 text-gray-700 hover:bg-gray-200';
+                if (isFlaggedThis) {
+                  btnBg = 'bg-amber-100 text-amber-900 border-2 border-amber-400 font-black';
+                } else if (isAnsweredThis) {
+                  btnBg = 'bg-emerald-100 text-emerald-800 border border-emerald-300';
+                }
+
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentQuestionIndex(idx)}
+                    className={`w-9 h-9 rounded-xl text-xs font-black transition relative ${btnBg} ${
+                      isCurrent ? 'ring-2 ring-indigo-600 shadow-md scale-105' : ''
+                    }`}
+                  >
+                    <span>{idx + 1}</span>
+                    {isFlaggedThis && <span className="absolute -top-1 -right-1 text-[9px]">🚩</span>}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* ACTIVE EXAM QUESTION */}
           <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm">
             <div className="flex items-center justify-between border-b border-gray-100 pb-3">
               <span className="text-xs font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">
-                السؤال رقم {currentQuestionIndex + 1}
+                السؤال رقم {currentQuestionIndex + 1} من {questions.length}
               </span>
-              <span className="text-xs font-bold text-gray-400">درجة واحدة</span>
+
+              <button
+                onClick={() => toggleFlagQuestion(currentQuestionIndex)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border ${
+                  flaggedQuestions[currentQuestionIndex]
+                    ? 'bg-amber-100 text-amber-900 border-amber-300 shadow-sm'
+                    : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                }`}
+              >
+                <span>🚩</span>
+                <span>{flaggedQuestions[currentQuestionIndex] ? 'معلّم للمراجعة لاحقاً' : 'تعليم السؤال للمراجعة'}</span>
+              </button>
             </div>
 
             <h4 className="text-lg font-black text-gray-900 leading-snug font-sans">
@@ -790,6 +843,30 @@ export default function QuizSection({
                 <span className="text-lg font-black text-indigo-950">
                   {score / questions.length >= 0.9 ? 'ممتاز (A+)' : score / questions.length >= 0.75 ? 'جيد جداً (B)' : 'يحتاج مراجعة (C)'}
                 </span>
+              </div>
+            </div>
+
+            {/* BLOOM TAXONOMY COGNITIVE BREAKDOWN */}
+            <div className="text-right p-4 bg-gray-50 border border-gray-200 rounded-2xl space-y-2">
+              <span className="text-xs font-black text-gray-800 block">📊 التحليل المعرفي وفق مستويات بلوم (Bloom's Taxonomy):</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                {['تذكر وحفظ المفاهيم', 'فهم واستيعاب', 'تطبيق ومسائل حسابية', 'تحليل واستنتاج'].map(level => {
+                  const matchingQuestions = questions.filter(q => (q.cognitiveLevel || 'فهم واستيعاب').includes(level) || level.includes(q.cognitiveLevel || ''));
+                  if (matchingQuestions.length === 0) return null;
+                  const correctCount = matchingQuestions.filter((q) => {
+                    const idx = questions.indexOf(q);
+                    const chosen = examMode === 'exam' ? answersMap[idx] : undefined;
+                    return chosen !== undefined && chosen === q.correctOptionIndex;
+                  }).length;
+                  return (
+                    <div key={level} className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-gray-200 text-xs">
+                      <span className="font-bold text-gray-700">{level}</span>
+                      <span className="font-black text-indigo-600">
+                        {examMode === 'exam' ? `${correctCount} / ${matchingQuestions.length}` : `${matchingQuestions.length} أسئلة`}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 

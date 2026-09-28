@@ -1,5 +1,25 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Plus, Trash2, Edit2, Info, Check, X, Mic, MicOff, Sparkles, RefreshCw, Languages, Brain, GitBranch } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import {
+  Plus,
+  Trash2,
+  Edit2,
+  Info,
+  Check,
+  X,
+  Mic,
+  MicOff,
+  Sparkles,
+  RefreshCw,
+  Languages,
+  Brain,
+  GitBranch,
+  Download,
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
+  Minimize2,
+  RotateCcw
+} from 'lucide-react';
 import { MindMapNode } from '../types';
 
 interface MindMapProps {
@@ -17,6 +37,9 @@ export default function MindMap({ nodes = [], onUpdateNodes, ebookId, chapterId,
   const [hoveredNode, setHoveredNode] = useState<MindMapNode | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState<number>(1);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const svgRef = useRef<SVGSVGElement>(null);
 
   // Sync internalNodes with incoming props
   useEffect(() => {
@@ -275,86 +298,207 @@ export default function MindMap({ nodes = [], onUpdateNodes, ebookId, chapterId,
     setIsEditing(false);
   };
 
+  const handleExportMindMap = () => {
+    if (!svgRef.current) return;
+    try {
+      const svgElement = svgRef.current;
+      const svgData = new XMLSerializer().serializeToString(svgElement);
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+      const URL = window.URL || window.webkitURL || window;
+      const blobURL = URL.createObjectURL(svgBlob);
+      
+      const image = new Image();
+      image.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = (svgWidth + 100) * 2;
+        canvas.height = (svgHeight + 100) * 2;
+        const context = canvas.getContext('2d');
+        if (context) {
+          context.scale(2, 2);
+          context.fillStyle = '#ffffff';
+          context.fillRect(0, 0, canvas.width, canvas.height);
+          context.drawImage(image, 50, 50);
+          const png = canvas.toDataURL('image/png');
+          const downloadLink = document.createElement('a');
+          downloadLink.download = `mindmap-${chapterId || 'concept'}.png`;
+          downloadLink.href = png;
+          downloadLink.click();
+        }
+      };
+      image.src = blobURL;
+    } catch (e) {
+      console.warn("Export MindMap error:", e);
+    }
+  };
+
   return (
-    <div id="mindmap-container" className="grid grid-cols-1 lg:grid-cols-3 gap-6 bg-white p-5 rounded-2xl border border-gray-200 shadow-sm" dir="rtl">
+    <div id="mindmap-container" className={`grid grid-cols-1 lg:grid-cols-3 gap-6 bg-white p-5 rounded-2xl border border-gray-200 shadow-sm ${isFullscreen ? 'fixed inset-4 z-50 overflow-auto bg-white' : ''}`} dir="rtl">
       
       {/* Interactive Canvas */}
-      <div className="lg:col-span-2 relative overflow-auto border border-gray-200 rounded-2xl bg-gradient-to-b from-gray-50/80 to-white p-4 min-h-[480px] max-h-[580px] flex items-center justify-center">
-        <svg width={svgWidth} height={svgHeight} className="mx-auto overflow-visible select-none">
-          {/* Connecting curves */}
-          {normalizedNodes.map((node) => {
-            if (!node.parentId) return null;
-            const parentCoord = layout[node.parentId];
-            const nodeCoord = layout[node.id];
-            if (!parentCoord || !nodeCoord) return null;
+      <div className="lg:col-span-2 relative overflow-auto border border-gray-200 rounded-2xl bg-gradient-to-b from-gray-50/80 to-white p-4 min-h-[500px] max-h-[620px] flex flex-col items-center justify-between">
+        
+        {/* CANVAS TOOLBAR (ZOOM & EXPORT) */}
+        <div className="w-full flex items-center justify-between pb-2 border-b border-gray-100 z-10">
+          <div className="flex items-center gap-1.5 bg-white/90 backdrop-blur-sm border border-gray-200 p-1 rounded-xl shadow-xs">
+            <button
+              onClick={() => setZoomLevel(prev => Math.min(1.8, prev + 0.15))}
+              className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-700 transition"
+              title="تكبير"
+            >
+              <ZoomIn className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setZoomLevel(prev => Math.max(0.6, prev - 0.15))}
+              className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-700 transition"
+              title="تصغير"
+            >
+              <ZoomOut className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setZoomLevel(1)}
+              className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-700 transition text-[11px] font-bold px-2"
+              title="إعادة ضبط الحجم"
+            >
+              <RotateCcw className="w-3.5 h-3.5 inline mr-1" />
+              <span>{Math.round(zoomLevel * 100)}%</span>
+            </button>
+          </div>
 
-            const midX = (parentCoord.x + nodeCoord.x) / 2;
-            const pathData = `M ${parentCoord.x} ${parentCoord.y} C ${midX} ${parentCoord.y}, ${midX} ${nodeCoord.y}, ${nodeCoord.x} ${nodeCoord.y}`;
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleExportMindMap}
+              className="px-3 py-1.5 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
+              title="تصدير كصورة عالية الدقة"
+            >
+              <Download className="w-3.5 h-3.5 text-indigo-600" />
+              <span>تصدير الصورة (HD PNG)</span>
+            </button>
 
-            const isHighlighted = selectedNodeId === node.id || selectedNodeId === node.parentId;
+            <button
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="p-1.5 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 rounded-xl transition shadow-xs"
+              title={isFullscreen ? "تصغير الشاشة" : "ملء الشاشة"}
+            >
+              {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
 
-            return (
-              <path
-                key={`link-${node.id}`}
-                d={pathData}
-                fill="none"
-                stroke={isHighlighted ? '#6366f1' : '#cbd5e1'}
-                strokeWidth={isHighlighted ? 2.5 : 1.5}
-                strokeDasharray={isHighlighted ? 'none' : '4 2'}
-                className="transition-all duration-300 ease-in-out"
-              />
-            );
-          })}
+        {/* SVG MINDMAP GRAPH */}
+        <div className="w-full flex-1 flex items-center justify-center overflow-auto py-4">
+          <svg
+            ref={svgRef}
+            width={svgWidth * zoomLevel}
+            height={svgHeight * zoomLevel}
+            viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+            className="mx-auto overflow-visible select-none transition-all duration-200"
+          >
+            {/* Connecting curves */}
+            {normalizedNodes.map((node) => {
+              if (!node.parentId) return null;
+              const parentCoord = layout[node.parentId];
+              const nodeCoord = layout[node.id];
+              if (!parentCoord || !nodeCoord) return null;
 
-          {/* Nodes */}
-          {normalizedNodes.map((node) => {
-            const coord = layout[node.id];
-            if (!coord) return null;
+              const midX = (parentCoord.x + nodeCoord.x) / 2;
+              const pathData = `M ${parentCoord.x} ${parentCoord.y} C ${midX} ${parentCoord.y}, ${midX} ${nodeCoord.y}, ${nodeCoord.x} ${nodeCoord.y}`;
 
-            const isSelected = selectedNodeId === node.id;
-            const isHovered = hoveredNode?.id === node.id;
-            const isRoot = !node.parentId;
+              const isHighlighted = selectedNodeId === node.id || selectedNodeId === node.parentId;
 
-            return (
-              <g
-                key={`node-${node.id}`}
-                transform={`translate(${coord.x}, ${coord.y})`}
-                className="cursor-pointer group"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedNodeId(node.id);
-                }}
-                onMouseEnter={() => setHoveredNode(node)}
-                onMouseLeave={() => setHoveredNode(null)}
-              >
-                {/* Node Pill Background */}
-                <rect
-                  x={-85}
-                  y={-20}
-                  width={170}
-                  height={40}
-                  rx={20}
-                  fill={isSelected ? '#4f46e5' : isRoot ? '#f8fafc' : '#ffffff'}
-                  stroke={isSelected ? '#4338ca' : isRoot ? '#6366f1' : '#e2e8f0'}
-                  strokeWidth={isSelected || isRoot ? 2 : 1.5}
-                  className="shadow-sm hover:shadow-md transition-all duration-200"
+              return (
+                <path
+                  key={`link-${node.id}`}
+                  d={pathData}
+                  fill="none"
+                  stroke={isHighlighted ? '#4f46e5' : '#cbd5e1'}
+                  strokeWidth={isHighlighted ? 2.5 : 1.5}
+                  strokeDasharray={isHighlighted ? 'none' : '4 2'}
+                  className="transition-all duration-300 ease-in-out"
                 />
+              );
+            })}
 
-                {/* Node Label Text */}
-                <text
-                  textAnchor="middle"
-                  dy=".35em"
-                  fontSize="12"
-                  fontWeight={isSelected || isRoot ? '700' : '600'}
-                  fill={isSelected ? '#ffffff' : isRoot ? '#1e1b4b' : '#334155'}
-                  className="pointer-events-none select-none font-sans"
+            {/* Nodes with Semantic Depth Colors */}
+            {normalizedNodes.map((node) => {
+              const coord = layout[node.id];
+              if (!coord) return null;
+
+              const isSelected = selectedNodeId === node.id;
+              const isHovered = hoveredNode?.id === node.id;
+              const level = coord.level || 0;
+
+              // Semantic depth color scheme
+              let nodeFill = '#ffffff';
+              let nodeStroke = '#e2e8f0';
+              let nodeText = '#334155';
+
+              if (isSelected) {
+                nodeFill = '#4f46e5';
+                nodeStroke = '#3730a3';
+                nodeText = '#ffffff';
+              } else if (level === 0) {
+                // Root: Royal Indigo
+                nodeFill = '#312e81';
+                nodeStroke = '#4338ca';
+                nodeText = '#ffffff';
+              } else if (level === 1) {
+                // Level 1: Emerald Insight
+                nodeFill = '#ecfdf5';
+                nodeStroke = '#10b981';
+                nodeText = '#065f46';
+              } else if (level === 2) {
+                // Level 2: Warm Amber
+                nodeFill = '#fffbeb';
+                nodeStroke = '#f59e0b';
+                nodeText = '#92400e';
+              } else {
+                // Level 3+: Clean Slate
+                nodeFill = '#f8fafc';
+                nodeStroke = '#cbd5e1';
+                nodeText = '#475569';
+              }
+
+              return (
+                <g
+                  key={`node-${node.id}`}
+                  transform={`translate(${coord.x}, ${coord.y})`}
+                  className="cursor-pointer group"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedNodeId(node.id);
+                  }}
+                  onMouseEnter={() => setHoveredNode(node)}
+                  onMouseLeave={() => setHoveredNode(null)}
                 >
-                  {node.label.length > 20 ? `${node.label.substring(0, 18)}...` : node.label}
-                </text>
-              </g>
-            );
-          })}
-        </svg>
+                  {/* Node Pill Background */}
+                  <rect
+                    x={-85}
+                    y={-20}
+                    width={170}
+                    height={40}
+                    rx={20}
+                    fill={nodeFill}
+                    stroke={nodeStroke}
+                    strokeWidth={isSelected || level === 0 ? 2.5 : 1.5}
+                    className="shadow-sm hover:shadow-md transition-all duration-200"
+                  />
+
+                  {/* Node Label Text */}
+                  <text
+                    textAnchor="middle"
+                    dy=".35em"
+                    fontSize="12"
+                    fontWeight={isSelected || level === 0 ? '800' : '600'}
+                    fill={nodeText}
+                    className="pointer-events-none select-none font-sans"
+                  >
+                    {node.label.length > 20 ? `${node.label.substring(0, 18)}...` : node.label}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
+        </div>
 
         {/* Hovered Concept Tooltip */}
         {hoveredNode && (

@@ -429,6 +429,7 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
         )}
       </div>
 
+
       {/* 🔥 QUICK FILTER & DISCOVERY BAR */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
         {[
@@ -920,6 +921,22 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
                           )}
                         </div>
                       )}
+
+                      {/* 🌟 FEATURE READINESS BADGES */}
+                      <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                        <span className="px-2 py-0.5 bg-indigo-50 border border-indigo-100 text-indigo-700 text-[9px] font-black rounded-md flex items-center gap-0.5">
+                          🎙️ بودكاست
+                        </span>
+                        <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-100 text-emerald-700 text-[9px] font-black rounded-md flex items-center gap-0.5">
+                          🧪 معمل تفاعلي
+                        </span>
+                        <span className="px-2 py-0.5 bg-rose-50 border border-rose-100 text-rose-700 text-[9px] font-black rounded-md flex items-center gap-0.5">
+                          📱 ريلز
+                        </span>
+                        <span className="px-2 py-0.5 bg-amber-50 border border-amber-100 text-amber-800 text-[9px] font-black rounded-md flex items-center gap-0.5">
+                          🏆 تقييم بلوم
+                        </span>
+                      </div>
 
                       {/* TAGS */}
                       <div className="flex flex-wrap gap-1">

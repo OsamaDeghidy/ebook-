@@ -683,52 +683,75 @@ export default function PodcastLounge({
             </div>
           )}
 
-          {/* VIEW 2: FULL TRANSCRIPT */}
+          {/* VIEW 2: FULL TRANSCRIPT WITH DYNAMIC DIALOGUE BUBBLES */}
           {viewMode === 'transcript' && (
             <div>
               {podcast?.transcript && podcast.transcript.length > 0 ? (
-                <div className="space-y-3.5 max-h-[480px] overflow-y-auto pr-2 custom-scrollbar">
+                <div className="space-y-4 max-h-[480px] overflow-y-auto pr-2 custom-scrollbar">
                   {podcast.transcript.map((item, idx) => {
                     const lineId = `podcast-line-${chapterId}-${idx}`;
                     const isHost1 = item.speaker.includes('كريم') || item.speaker.toLowerCase().includes('alex');
                     const isPlayingLine = isItemPlaying(lineId);
                     const isLoadingLine = isItemLoading(lineId);
+                    const speakerAvatar = isHost1 ? '👨‍🏫' : '👩‍💼';
 
                     return (
                       <div
                         key={idx}
                         onClick={() => playAudioSnippet(item.text, undefined, undefined, item.speaker, lineId)}
-                        className={`p-3.5 rounded-xl border transition cursor-pointer relative group ${
+                        className={`p-4 rounded-2xl border-2 transition-all duration-300 cursor-pointer relative group ${
                           isPlayingLine
-                            ? 'bg-indigo-50/90 border-indigo-400 shadow-sm'
+                            ? 'bg-gradient-to-r from-indigo-50 via-purple-50/50 to-indigo-50 border-indigo-500 shadow-md ring-2 ring-indigo-500/20 scale-[1.01]'
                             : isHost1
-                            ? 'bg-amber-50/30 border-amber-100 hover:border-amber-200'
-                            : 'bg-rose-50/30 border-rose-100 hover:border-rose-200'
+                            ? 'bg-amber-50/30 border-amber-100 hover:border-amber-300 hover:shadow-xs'
+                            : 'bg-rose-50/30 border-rose-100 hover:border-rose-300 hover:shadow-xs'
                         }`}
                       >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className={`text-[11px] font-extrabold px-2 py-0.5 rounded ${
-                            isHost1 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'
-                          }`}>
-                            {item.speaker}
-                          </span>
-                          <button
-                            className={`p-1 rounded transition ${
-                              isPlayingLine ? 'text-indigo-600' : 'text-gray-400 group-hover:text-indigo-600'
-                            }`}
-                            title="Play dialogue line voice"
-                          >
-                            {isLoadingLine ? (
-                              <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-600" />
-                            ) : isPlayingLine ? (
-                              <Square className="w-3.5 h-3.5 fill-current text-rose-600 animate-pulse" />
-                            ) : (
-                              <Volume2 className="w-3.5 h-3.5" />
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base p-1 bg-white rounded-lg shadow-xs border border-gray-100 shrink-0">
+                              {speakerAvatar}
+                            </span>
+                            <span className={`text-[11px] font-black px-2.5 py-0.5 rounded-full ${
+                              isHost1 ? 'bg-amber-100 text-amber-900' : 'bg-rose-100 text-rose-900'
+                            }`}>
+                              {item.speaker}
+                            </span>
+
+                            {/* Live Sound Equalizer Wave when playing */}
+                            {isPlayingLine && (
+                              <div className="flex items-center gap-0.5 px-2 py-0.5 bg-indigo-600 text-white rounded-full text-[10px] font-bold animate-pulse">
+                                <span className="w-1 h-2.5 bg-white rounded-full animate-bounce [animation-delay:-0.3s]" />
+                                <span className="w-1 h-3.5 bg-white rounded-full animate-bounce [animation-delay:-0.15s]" />
+                                <span className="w-1 h-2 bg-white rounded-full animate-bounce [animation-delay:-0.45s]" />
+                                <span className="mr-1">يتحدث الآن 🎙️</span>
+                              </div>
                             )}
-                          </button>
+                          </div>
+
+                          <div className="flex items-center gap-1">
+                            <button
+                              className={`p-1.5 rounded-xl transition ${
+                                isPlayingLine 
+                                  ? 'bg-indigo-600 text-white shadow-xs' 
+                                  : 'text-gray-400 group-hover:text-indigo-600 hover:bg-gray-100'
+                              }`}
+                              title="استمع إلى هذا المقطع الصوتي"
+                            >
+                              {isLoadingLine ? (
+                                <RefreshCw className="w-4 h-4 animate-spin text-indigo-600" />
+                              ) : isPlayingLine ? (
+                                <Square className="w-4 h-4 fill-current text-white" />
+                              ) : (
+                                <Volume2 className="w-4 h-4" />
+                              )}
+                            </button>
+                          </div>
                         </div>
 
-                        <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-sans">
+                        <p className={`text-xs sm:text-sm leading-relaxed font-medium transition-colors ${
+                          isPlayingLine ? 'text-indigo-950 font-bold' : 'text-slate-700'
+                        }`}>
                           {item.text}
                         </p>
                       </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { 
@@ -6,7 +6,8 @@ import {
   RefreshCw, Sigma, ShieldAlert, 
   Target, GraduationCap, LayoutGrid, Table2, 
   ChevronDown, ChevronUp, Sparkles, CheckCircle2,
-  ZoomIn, ZoomOut, Check
+  ZoomIn, ZoomOut, Check, Clock, Maximize2, Minimize2,
+  Headphones, X, Compass, FlaskConical, Scale
 } from 'lucide-react';
 import { Chapter } from '../types';
 import { useGlobalAudio } from '../hooks/useGlobalAudio';
@@ -896,14 +897,39 @@ function ChapterWorkedExampleAndComparison({ chapter }: { chapter: Chapter }) {
  * 🌟 Interactive Master Reader (Option 1)
  * High-value, zero-clutter, unified learning dashboard with pure Arabic localization
  */
-export function ReadSection({ chapter }: { chapter: Chapter }) {
+interface ReadSectionProps {
+  chapter: Chapter;
+}
+
+export function ReadSection({ chapter }: ReadSectionProps) {
   const { isItemPlaying, isItemLoading, play, stop } = useGlobalAudio();
   const [fontSizeLevel, setFontSizeLevel] = useState<'normal' | 'large' | 'xlarge'>('normal');
   const [showOriginalSource, setShowOriginalSource] = useState(false);
+  const [isZenMode, setIsZenMode] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [selectedConcept, setSelectedConcept] = useState<{ title: string; desc: string } | null>(null);
+
+  const scrollToSection = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   const normalizedSummary = sanitizeEducationalMarkdown(chapter.summary);
   const normalizedContent = sanitizeEducationalMarkdown(chapter.content);
-  const normalizedOriginal = sanitizeEducationalMarkdown(chapter.originalContent);
+
+  // Derive original text with fallback to passage blocks or chapter content if blank
+  let rawOriginal = chapter.originalContent || '';
+  if (!rawOriginal && chapter.content) {
+    const originalBlockMatch = chapter.content.match(/(?:###?\s*(?:📜\s*)?(?:النص القرائي|المصدر الأصلي|النص الأصلي|الفقرة القرائية|نص الدرس)[\s\S]*?)(?=\n###?|\n##|$)/i);
+    if (originalBlockMatch && originalBlockMatch[0].length > 40) {
+      rawOriginal = originalBlockMatch[0].replace(/^###?.*?\n/, '').trim();
+    } else {
+      rawOriginal = chapter.content;
+    }
+  }
+  const normalizedOriginal = sanitizeEducationalMarkdown(rawOriginal);
 
   const conceptsArr = Array.isArray(chapter.concepts) ? chapter.concepts : [];
 
@@ -913,13 +939,91 @@ export function ReadSection({ chapter }: { chapter: Chapter }) {
   const isMasterPlaying = isItemPlaying(masterAudioId);
   const isMasterLoading = isItemLoading(masterAudioId);
 
+  // Track Reading Scroll Progress
+  useEffect(() => {
+    const handleScroll = () => {
+      const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
+      if (totalHeight > 0) {
+        const progress = Math.min(100, Math.max(0, Math.round((window.scrollY / totalHeight) * 100)));
+        setScrollProgress(progress);
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Estimated reading time
+  const wordCount = fullNarrationText.split(/\s+/).filter(Boolean).length;
+  const estimatedReadingMinutes = Math.max(3, Math.round(wordCount / 140));
+
+  // Domain Subject Theme
+  const combinedMeta = `${chapter.title} ${normalizedSummary} ${normalizedContent}`.toLowerCase();
+  const isArabicHistory = combinedMeta.includes('عربي') || combinedMeta.includes('نحو') || combinedMeta.includes('تاريخ') || combinedMeta.includes('دراسات') || combinedMeta.includes('قصة') || combinedMeta.includes('بلاغة');
+  const isStem = combinedMeta.includes('كيمياء') || combinedMeta.includes('فيزياء') || combinedMeta.includes('علوم') || combinedMeta.includes('chemistry') || combinedMeta.includes('physics');
+  const isBio = combinedMeta.includes('أحياء') || combinedMeta.includes('biology') || combinedMeta.includes('جيولوجيا') || combinedMeta.includes('خلية');
+  const isMath = combinedMeta.includes('رياضيات') || combinedMeta.includes('math') || combinedMeta.includes('جبر') || combinedMeta.includes('هندسة') || combinedMeta.includes('مالية') || combinedMeta.includes('حساب');
+  const isLanguage = combinedMeta.includes('english') || combinedMeta.includes('إنجليزي') || combinedMeta.includes('grammar') || combinedMeta.includes('french');
+
+  const theme = isArabicHistory
+    ? {
+        gradient: 'from-amber-950 via-amber-900 to-stone-950',
+        border: 'border-amber-800/60',
+        badgeBg: 'bg-amber-400/20 text-amber-300 border-amber-400/30',
+        badgeText: '📜 لغة عربية وتأصيل لغوي',
+        accentBtn: 'bg-amber-400 text-slate-950 hover:bg-amber-300 shadow-amber-400/20',
+        progressColor: 'from-amber-500 to-amber-300'
+      }
+    : isStem
+    ? {
+        gradient: 'from-slate-950 via-indigo-950 to-cyan-950',
+        border: 'border-cyan-800/60',
+        badgeBg: 'bg-cyan-400/20 text-cyan-300 border-cyan-400/30',
+        badgeText: '🧪 فيزياء وكيمياء تجريبية',
+        accentBtn: 'bg-cyan-400 text-slate-950 hover:bg-cyan-300 shadow-cyan-400/20',
+        progressColor: 'from-cyan-500 to-blue-400'
+      }
+    : isBio
+    ? {
+        gradient: 'from-emerald-950 via-teal-950 to-slate-950',
+        border: 'border-emerald-800/60',
+        badgeBg: 'bg-emerald-400/20 text-emerald-300 border-emerald-400/30',
+        badgeText: '🔬 علوم بيولوجية وحيوية',
+        accentBtn: 'bg-emerald-400 text-slate-950 hover:bg-emerald-300 shadow-emerald-400/20',
+        progressColor: 'from-emerald-500 to-teal-300'
+      }
+    : isMath
+    ? {
+        gradient: 'from-indigo-950 via-blue-950 to-slate-950',
+        border: 'border-indigo-800/60',
+        badgeBg: 'bg-blue-400/20 text-blue-300 border-blue-400/30',
+        badgeText: '🔢 رياضيات ونمذجة كمية',
+        accentBtn: 'bg-amber-400 text-slate-950 hover:bg-amber-300 shadow-amber-400/20',
+        progressColor: 'from-indigo-500 to-blue-400'
+      }
+    : isLanguage
+    ? {
+        gradient: 'from-purple-950 via-indigo-950 to-slate-950',
+        border: 'border-purple-800/60',
+        badgeBg: 'bg-purple-400/20 text-purple-300 border-purple-400/30',
+        badgeText: '🎧 لغات واستماع تفاعلي',
+        accentBtn: 'bg-purple-400 text-slate-950 hover:bg-purple-300 shadow-purple-400/20',
+        progressColor: 'from-purple-500 to-indigo-400'
+      }
+    : {
+        gradient: 'from-indigo-950 via-indigo-900 to-slate-950',
+        border: 'border-indigo-800/60',
+        badgeBg: 'bg-amber-400/20 text-amber-300 border-amber-400/30',
+        badgeText: '🎓 القارئ الأكاديمي الذكي',
+        accentBtn: 'bg-amber-400 text-slate-950 hover:bg-amber-300 shadow-amber-400/20',
+        progressColor: 'from-indigo-500 to-purple-400'
+      };
+
   const handleToggleMasterAudio = () => {
     if (isMasterPlaying || isMasterLoading) {
       stop();
       return;
     }
 
-    // Strip all emojis, symbols, brackets, and markdown formatting so TTS narrator never pronounces emoji names
     const cleanText = fullNarrationText
       .replace(/[\uD83C-\uDBFF\uDC00-\uDFFF]+/g, ' ')
       .replace(/[\u2600-\u27BF\u2300-\u23FF\u2B50\u200D\uFE0F\u20E3\u2190-\u21FF]/g, ' ')
@@ -946,27 +1050,58 @@ export function ReadSection({ chapter }: { chapter: Chapter }) {
   };
 
   const getFontSizeClass = () => {
-    if (fontSizeLevel === 'large') return 'text-base sm:text-lg';
-    if (fontSizeLevel === 'xlarge') return 'text-lg sm:text-xl';
-    return 'text-xs sm:text-sm';
+    if (fontSizeLevel === 'large') return 'text-base sm:text-lg leading-relaxed';
+    if (fontSizeLevel === 'xlarge') return 'text-lg sm:text-xl leading-loose';
+    return 'text-xs sm:text-sm leading-relaxed';
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-12">
+    <div className={`space-y-6 max-w-5xl mx-auto pb-12 transition-all ${isZenMode ? 'fixed inset-0 z-50 bg-slate-950/95 overflow-y-auto p-4 sm:p-10 max-w-none' : ''}`}>
       
-      {/* 🧭 1. UNIFIED CHAPTER HEADER & MASTER AUDIO BAR */}
-      <div className="bg-gradient-to-r from-indigo-950 via-indigo-900 to-slate-950 text-white p-6 sm:p-7 rounded-3xl shadow-xl border border-indigo-800/60 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
-        <div className="space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/20 text-amber-300 text-xs font-black border border-amber-400/30">
-            <GraduationCap className="w-3.5 h-3.5" />
-            <span>القارئ التفاعلي الموحد والشرح الذكي</span>
+      {/* 📊 SCROLL PROGRESS BAR */}
+      <div className="fixed top-0 left-0 right-0 h-1.5 bg-gray-200/50 z-50 overflow-hidden">
+        <div 
+          className={`h-full bg-gradient-to-r ${theme.progressColor} transition-all duration-150 shadow-sm`}
+          style={{ width: `${scrollProgress}%` }}
+        />
+      </div>
+
+      {/* 🧭 1. UNIFIED DOMAIN THEMED CHAPTER HERO BANNER */}
+      <div className={`bg-gradient-to-r ${theme.gradient} text-white p-6 sm:p-8 rounded-3xl shadow-xl border ${theme.border} flex flex-col md:flex-row items-start md:items-center justify-between gap-5 relative overflow-hidden`}>
+        
+        {/* Glow decoration */}
+        <div className="absolute -right-10 -bottom-10 w-48 h-48 bg-white/5 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="space-y-2.5 z-10">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black border shadow-xs ${theme.badgeBg}`}>
+              <span>{theme.badgeText}</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/10 text-gray-300 text-[11px] font-mono font-bold border border-white/10">
+              <Clock className="w-3 h-3 text-amber-400" />
+              <span>~{estimatedReadingMinutes} دقيقة قراءة</span>
+            </span>
           </div>
-          <h3 className="text-xl sm:text-2xl font-black text-white">{chapter.title}</h3>
+          <h3 className="text-xl sm:text-2xl font-black text-white leading-snug">{chapter.title}</h3>
         </div>
 
         {/* MASTER AUDIO & TOOLBAR BUTTONS */}
-        <div className="flex flex-wrap items-center gap-3 shrink-0">
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0 z-10">
           
+          {/* ZEN FOCUS MODE TOGGLE */}
+          <button
+            onClick={() => setIsZenMode(!isZenMode)}
+            className={`p-2.5 rounded-2xl border transition flex items-center gap-1.5 text-xs font-bold ${
+              isZenMode 
+                ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-md' 
+                : 'bg-white/10 text-gray-200 border-white/10 hover:bg-white/20 hover:text-white'
+            }`}
+            title={isZenMode ? "الخروج من وضع التركيز" : "تفعيل وضع التركيز الهادئ (Zen Mode)"}
+          >
+            {isZenMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            <span className="hidden sm:inline">{isZenMode ? 'إنهاء التركيز' : 'وضع التركيز 🧘'}</span>
+          </button>
+
           {/* FONT SIZER */}
           <div className="flex items-center bg-white/10 p-1 rounded-2xl border border-white/10">
             <button
@@ -995,37 +1130,89 @@ export function ReadSection({ chapter }: { chapter: Chapter }) {
           {/* MASTER AUDIO TRIGGER BUTTON */}
           <button
             onClick={handleToggleMasterAudio}
-            className={`flex items-center gap-2.5 px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition-all shadow-md cursor-pointer ${
+            className={`flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition-all shadow-md cursor-pointer ${
               isMasterPlaying
                 ? 'bg-rose-500 text-white hover:bg-rose-600 shadow-rose-500/30 animate-pulse'
                 : isMasterLoading
                 ? 'bg-amber-400 text-slate-950 opacity-90'
-                : 'bg-amber-400 text-slate-950 hover:bg-amber-300 shadow-amber-400/20 hover:scale-[1.02]'
+                : theme.accentBtn
             }`}
           >
             {isMasterLoading ? (
               <>
                 <RefreshCw className="w-4 h-4 animate-spin" />
-                <span>جاري تحضير الصوت...</span>
+                <span>جاري المعالجة...</span>
               </>
             ) : isMasterPlaying ? (
               <>
                 <Square className="w-4 h-4 fill-current" />
-                <span>إيقاف القراءة الصوتية</span>
+                <span>إيقاف الصوت</span>
               </>
             ) : (
               <>
                 <Volume2 className="w-4 h-4" />
-                <span>🎙️ استمع للشرح الصوتي كاملاً</span>
+                <span>🎙️ استمع للشرح الصوتي</span>
               </>
             )}
           </button>
         </div>
       </div>
 
+
+
+      {/* 🧭 LESSON PILLARS QUICK JUMP ANCHORS BAR */}
+      <div className="sticky top-2 z-40 bg-white/95 backdrop-blur-md p-2 rounded-2xl border border-indigo-100 shadow-sm flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+        <button
+          onClick={() => scrollToSection('learning-objectives')}
+          className="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-xs font-black shrink-0 transition flex items-center gap-1.5"
+        >
+          <Target className="w-3.5 h-3.5 text-indigo-600" />
+          <span>🎯 نواتج التعلّم</span>
+        </button>
+
+        {conceptsArr.length > 0 && (
+          <button
+            onClick={() => scrollToSection('core-concepts')}
+            className="px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-black shrink-0 transition flex items-center gap-1.5"
+          >
+            <Lightbulb className="w-3.5 h-3.5 text-amber-600" />
+            <span>💡 المفاهيم والقواعد</span>
+          </button>
+        )}
+
+        <button
+          onClick={() => scrollToSection('worked-examples')}
+          className="px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-900 text-xs font-black shrink-0 transition flex items-center gap-1.5"
+        >
+          <Sigma className="w-3.5 h-3.5 text-purple-600" />
+          <span>📐 الأمثلة والتطبيق</span>
+        </button>
+
+        <button
+          onClick={() => scrollToSection('detailed-content')}
+          className="px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 text-xs font-black shrink-0 transition flex items-center gap-1.5"
+        >
+          <BookOpen className="w-3.5 h-3.5 text-blue-600" />
+          <span>📖 الشرح التفصيلي</span>
+        </button>
+
+        {normalizedOriginal && (
+          <button
+            onClick={() => {
+              setShowOriginalSource(true);
+              setTimeout(() => scrollToSection('original-source'), 100);
+            }}
+            className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-black shrink-0 transition flex items-center gap-1.5"
+          >
+            <FileText className="w-3.5 h-3.5 text-slate-600" />
+            <span>📜 النص الأصلي للمذكرة</span>
+          </button>
+        )}
+      </div>
+
       {/* 🎯 2. LEARNING OBJECTIVES & QUICK SUMMARY PILL BANNER */}
       {normalizedSummary && (
-        <div className="bg-gradient-to-br from-indigo-50/90 via-white to-indigo-50/50 border border-indigo-100 rounded-3xl p-5 sm:p-6 shadow-xs space-y-3">
+        <div id="learning-objectives" className="bg-gradient-to-br from-indigo-50/90 via-white to-indigo-50/50 border border-indigo-100 rounded-3xl p-5 sm:p-6 shadow-xs space-y-3 scroll-mt-16">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold shadow-xs">
               <Target className="w-4 h-4" />
@@ -1044,12 +1231,15 @@ export function ReadSection({ chapter }: { chapter: Chapter }) {
         </div>
       )}
 
-      {/* 💡 3. CORE CONCEPTS INTERACTIVE GRID (2x2) */}
+      {/* 💡 3. CORE CONCEPTS INTERACTIVE GRID WITH INTERACTIVE POPUP CARDS */}
       {conceptsArr.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 px-1">
-            <Lightbulb className="w-4 h-4 text-amber-500" />
-            <span className="text-xs font-black text-gray-900">المفاهيم المحورية والمصطلحات الأساسية للدرس</span>
+        <div id="core-concepts" className="space-y-3 scroll-mt-16">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2">
+              <Lightbulb className="w-4 h-4 text-amber-500" />
+              <span className="text-xs font-black text-gray-900">المفاهيم المحورية والمصطلحات الأساسية للدرس</span>
+            </div>
+            <span className="text-[11px] font-bold text-gray-400">انقر على المفهوم لعرض الشرح المفصل 👆</span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
@@ -1057,21 +1247,26 @@ export function ReadSection({ chapter }: { chapter: Chapter }) {
               const rawName = typeof concept === 'string' ? concept : (concept.concept || concept.title || `مفهوم ${idx+1}`);
               const rawDesc = typeof concept === 'string' ? '' : (concept.explanation || concept.description || '');
               
-              // Strip any bracketed English from title and desc
               const cName = rawName.replace(/\s*\([a-zA-Z\s\-_0-9\/\.\:]+\)/g, '').trim();
               const cDesc = sanitizeEducationalMarkdown(rawDesc).replace(/\s*\([a-zA-Z\s\-_0-9\/\.\:]+\)/g, '').trim();
 
               return (
                 <div 
                   key={idx} 
-                  className="bg-white p-5 rounded-2xl border-2 border-indigo-50 hover:border-indigo-200 hover:shadow-xs transition-all space-y-2 flex flex-col justify-between"
+                  onClick={() => setSelectedConcept({ title: cName, desc: cDesc || 'شرح المفهوم وتطبيقه في هذا الدرس.' })}
+                  className="group bg-white p-5 rounded-2xl border-2 border-indigo-50 hover:border-indigo-300 hover:shadow-md transition-all space-y-2 flex flex-col justify-between cursor-pointer"
                 >
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0"></span>
-                    <h5 className="font-black text-gray-900 text-sm sm:text-base">{cName}</h5>
+                  <div className="flex items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500 group-hover:scale-125 transition-transform shrink-0" />
+                      <h5 className="font-black text-gray-900 text-sm sm:text-base group-hover:text-indigo-700 transition-colors">{cName}</h5>
+                    </div>
+                    <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                      تفاصيل 📇
+                    </span>
                   </div>
                   {cDesc && (
-                    <p className="text-gray-600 text-xs sm:text-sm leading-relaxed font-medium bg-gray-50/70 p-3 rounded-xl border border-gray-100">
+                    <p className="text-gray-600 text-xs sm:text-sm leading-relaxed font-medium bg-gray-50/70 p-3 rounded-xl border border-gray-100 line-clamp-2">
                       {cDesc}
                     </p>
                   )}
@@ -1082,12 +1277,47 @@ export function ReadSection({ chapter }: { chapter: Chapter }) {
         </div>
       )}
 
+      {/* 📇 CONCEPT POPUP MODAL */}
+      {selectedConcept && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4" dir="rtl">
+          <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-indigo-100 space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
+                  <Lightbulb className="w-4 h-4" />
+                </div>
+                <h4 className="font-black text-base text-gray-900">{selectedConcept.title}</h4>
+              </div>
+              <button
+                onClick={() => setSelectedConcept(null)}
+                className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 bg-indigo-50/60 rounded-2xl border border-indigo-100 text-sm text-gray-800 leading-relaxed font-medium">
+              {selectedConcept.desc}
+            </div>
+
+            <button
+              onClick={() => setSelectedConcept(null)}
+              className="w-full py-2.5 bg-slate-900 text-white text-xs font-black rounded-xl hover:bg-slate-800 transition"
+            >
+              إغلاق البطاقة
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 🚀 4. WORKED EXAMPLE, VISUAL COMPARISON & EXAM TIPS HUB */}
-      <ChapterWorkedExampleAndComparison chapter={chapter} />
+      <div id="worked-examples" className="scroll-mt-16">
+        <ChapterWorkedExampleAndComparison chapter={chapter} />
+      </div>
 
       {/* 📖 5. UNIFIED DEEP LESSON CONTENT (THE CORE READER) */}
       {normalizedContent && (
-        <div className="bg-white border border-gray-100 shadow-sm rounded-3xl p-6 sm:p-8 space-y-5">
+        <div id="detailed-content" className="bg-white border border-gray-100 shadow-sm rounded-3xl p-6 sm:p-8 space-y-5 scroll-mt-16">
           <div className="flex items-center justify-between pb-4 border-b border-gray-100">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
@@ -1110,7 +1340,7 @@ export function ReadSection({ chapter }: { chapter: Chapter }) {
 
       {/* 📑 6. COLLAPSIBLE ORIGINAL SOURCE MATERIAL */}
       {normalizedOriginal && (
-        <div className="bg-gray-50/80 border border-gray-200/80 rounded-3xl overflow-hidden transition-all">
+        <div id="original-source" className="bg-gray-50/80 border border-gray-200/80 rounded-3xl overflow-hidden transition-all scroll-mt-16">
           <button
             onClick={() => setShowOriginalSource(!showOriginalSource)}
             className="w-full p-5 flex items-center justify-between text-right font-black text-xs sm:text-sm text-gray-700 hover:bg-gray-100/60 transition cursor-pointer"
