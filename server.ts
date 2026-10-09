@@ -114,22 +114,25 @@ function cleanScientificTextForSpeech(input: string): string {
   // 1. Strip markdown bracketed callout tags like [!IMPORTANT], [!WARNING], [!TIP], [!NOTE]
   cleaned = cleaned.replace(/\[\!(IMPORTANT|WARNING|TIP|NOTE)\]/gi, " ");
 
-  // 2. Strip bracketed emotions/notes like [متحمس], [مبتسمة بدفء]
+  // 2. Strip bracketed director notes like [متحمس], [توقف للتنفس], [سكتة درامية]
   cleaned = cleaned.replace(/\[.*?\]/g, " ");
 
-  // 3. Strip ALL Unicode Emojis and Symbols so TTS engines (Edge-TTS) never speak emoji names!
-  // e.g. 🎒 -> "حقيبة ظهر", 🔍 -> "عدسة بحث", 💡 -> "مصباح", 🎮 -> "ألعاب", 📖 -> "كتاب", ⭐ -> "نجمة"
+  // 3. Strip ALL Unicode Emojis and Symbols so TTS engines never speak raw emoji codes
   cleaned = cleaned.replace(/[\uD83C-\uDBFF\uDC00-\uDFFF]+/g, " ");
   cleaned = cleaned.replace(/[\u2600-\u27BF\u2300-\u23FF\u2B50\u200D\uFE0F\u20E3\u2190-\u21FF]/g, " ");
-  cleaned = cleaned.replace(/[🔴🔵🟢🟣🟠🟡⚪⚫🔺🔻⭐✨💡📌🧭📏🗺️⚠️🚨🎉🎙️🎒🔍🎮📖📐🎯🧠💡]/gu, " ");
+  cleaned = cleaned.replace(/[🔴🔵🟢🟣🟠🟡⚪⚫🔺🔻⭐✨💡📌🧭📏🗺️⚠️🚨🎉🎙️🎒🔍🎮📖📐🎯🧠💡🎬🚀📐⚡🏆🔥]/gu, " ");
 
-  // 4. Expand common Arabic scientific terms & chemical formulas e.g. H2O -> ماء
-  cleaned = cleaned.replace(/\bH2O\b/gi, "ماء");
-  cleaned = cleaned.replace(/\bCO2\b/gi, "ثاني أكسيد الكربون");
-  cleaned = cleaned.replace(/\bO2\b/gi, "أكسجين");
+  // 4. Expand common scientific terms & chemical formulas e.g. H2O -> ماء
+  cleaned = cleaned.replace(/\bH2O\b/gi, "مَاء");
+  cleaned = cleaned.replace(/\bCO2\b/gi, "ثَانِي أُكْسِيدِ الْكَرْبُون");
+  cleaned = cleaned.replace(/\bO2\b/gi, "أُكْسِجِين");
 
-  // 5. Strip code symbols, table pipes, brackets, and markdown formatting
+  // 5. Strip code symbols, table pipes, brackets, and markdown formatting while strictly preserving Arabic diacritics and emotional punctuation (. , ! ? ... ، ؟)
   cleaned = cleaned.replace(/[\*\_\#\`\~\[\]\(\)\{\}\$\|\\]/g, " ");
+
+  // 6. Normalize dramatic punctuation & breathing pauses
+  cleaned = cleaned.replace(/\.{2,}/g, " ... ");
+  cleaned = cleaned.replace(/([،!؟\.])+/g, "$1 ");
   cleaned = cleaned.replace(/\s+/g, " ");
 
   return cleaned.trim();
@@ -1567,22 +1570,98 @@ app.post("/api/narrate-text", async (req, res) => {
   }
 });
 
-// 7.5 High-Quality Human Audio Engine (Arabic Neural Voices with Multi-Chunk Resilience & Stream GET/POST support)
+// 7.4 Google Cloud Text-to-Speech Engine (Google Chirp 3 HD, Wavenet, Standard)
+async function synthesizeGoogleCloudTTS(text: string, voiceName: string): Promise<Buffer | null> {
+  const apiKey = process.env.GOOGLE_TTS_API_KEY || process.env.GOOGLE_CLOUD_API_KEY || "";
+  if (!apiKey) return null;
+
+  try {
+    // Map voice name to supported Google Cloud Arabic TTS voices
+    let validVoice = voiceName || "ar-XA-Chirp3-HD-Fenrir";
+    if (validVoice.includes("Journey-D") || validVoice.includes("Neural2-B") || validVoice.includes("Fenrir")) {
+      validVoice = "ar-XA-Chirp3-HD-Fenrir";
+    } else if (validVoice.includes("Journey-F") || validVoice.includes("Neural2-A") || validVoice.includes("Aoede")) {
+      validVoice = "ar-XA-Chirp3-HD-Aoede";
+    } else if (validVoice.includes("Puck")) {
+      validVoice = "ar-XA-Chirp3-HD-Puck";
+    } else if (validVoice.includes("Kore")) {
+      validVoice = "ar-XA-Chirp3-HD-Kore";
+    } else if (validVoice.includes("Charon")) {
+      validVoice = "ar-XA-Chirp3-HD-Charon";
+    } else if (validVoice.includes("Wavenet-B")) {
+      validVoice = "ar-XA-Wavenet-B";
+    } else if (validVoice.includes("Wavenet-A")) {
+      validVoice = "ar-XA-Wavenet-A";
+    } else if (!validVoice.startsWith("ar-XA")) {
+      validVoice = "ar-XA-Chirp3-HD-Fenrir";
+    }
+
+    const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        input: { text },
+        voice: {
+          languageCode: "ar-XA",
+          name: validVoice
+        },
+        audioConfig: {
+          audioEncoding: "MP3",
+          speakingRate: 1.0,
+          pitch: 0.0
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      console.warn(`[Google Cloud TTS] API warning for ${validVoice}:`, err);
+      return null;
+    }
+
+    const data = await response.json();
+    if (data.audioContent) {
+      return Buffer.from(data.audioContent, "base64");
+    }
+  } catch (e: any) {
+    console.warn(`[Google Cloud TTS] Synthesis network error:`, e.message);
+  }
+  return null;
+}
+
+// 7.5 High-Quality Human Audio Engine (Google Cloud Journey/Neural2 + Arabic Neural Voices with Multi-Chunk Resilience & Stream GET/POST support)
 app.all("/api/tts/stream", async (req, res) => {
   try {
     const rawText = (req.method === "GET" ? req.query.text : req.body?.text) as string;
     const speaker = ((req.method === "GET" ? req.query.speaker : req.body?.speaker) as string) || "female";
+    const requestedVoice = ((req.method === "GET" ? req.query.voice : req.body?.voice) as string) || "";
     if (!rawText) return res.status(400).json({ error: "Text is required" });
 
     const cleanedText = cleanScientificTextForSpeech(rawText);
     if (!cleanedText) return res.status(400).json({ error: "Cleaned text is empty" });
 
-    const isMale = speaker === "male" || speaker === "كريم" || speaker === "Alex";
+    const isMale = speaker === "male" || speaker === "كريم" || speaker === "Alex" || requestedVoice.includes("Journey-D") || requestedVoice.includes("Neural2-B");
+    
+    // Map requested voice to Google Cloud Chirp3-HD / Wavenet
+    let googleVoice = isMale ? "ar-XA-Chirp3-HD-Fenrir" : "ar-XA-Chirp3-HD-Aoede";
+    if (requestedVoice.includes("Puck") || requestedVoice === "puck") {
+      googleVoice = "ar-XA-Chirp3-HD-Puck";
+    } else if (requestedVoice.includes("Charon") || requestedVoice === "charon") {
+      googleVoice = "ar-XA-Chirp3-HD-Charon";
+    } else if (requestedVoice.includes("Kore") || requestedVoice === "kore") {
+      googleVoice = "ar-XA-Chirp3-HD-Kore";
+    } else if (requestedVoice.includes("Wavenet-B") || requestedVoice === "wavenet-b") {
+      googleVoice = "ar-XA-Wavenet-B";
+    } else if (requestedVoice.includes("Wavenet-A") || requestedVoice === "wavenet-a") {
+      googleVoice = "ar-XA-Wavenet-A";
+    }
+
     const primaryVoice = isMale ? "ar-EG-ShakirNeural" : "ar-EG-SalmaNeural";
     const fallbackVoice = isMale ? "ar-SA-HamedNeural" : "ar-SA-ZariyahNeural";
 
     // Hash entire text for caching
-    const textHash = crypto.createHash("md5").update(`${primaryVoice}_${cleanedText}`).digest("hex");
+    const textHash = crypto.createHash("md5").update(`${googleVoice}_${primaryVoice}_${cleanedText}`).digest("hex");
     const cachedFilePath = path.join(AUDIO_CACHE_DIR, `${textHash}.mp3`);
 
     // Check if audio already exists in local cache
@@ -1592,7 +1671,19 @@ app.all("/api/tts/stream", async (req, res) => {
       return fs.createReadStream(cachedFilePath).pipe(res);
     }
 
-    // Split long text into smart sentence chunks of up to 550 characters to prevent EdgeTTS timeouts
+    // Attempt 1: Google Cloud TTS (Journey-D / Neural2-B) if API Key is present
+    if (process.env.GOOGLE_TTS_API_KEY || process.env.GOOGLE_CLOUD_API_KEY) {
+      const googleAudioBuffer = await synthesizeGoogleCloudTTS(cleanedText, googleVoice);
+      if (googleAudioBuffer) {
+        fs.writeFileSync(cachedFilePath, googleAudioBuffer);
+        res.setHeader("Content-Type", "audio/mpeg");
+        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        uploadAudioFileToSupabase(cachedFilePath, `${textHash}.mp3`).catch(() => {});
+        return fs.createReadStream(cachedFilePath).pipe(res);
+      }
+    }
+
+    // Attempt 2: Studio Arabic Neural Engine with Multi-Chunk Fallback
     const chunks: string[] = [];
     if (cleanedText.length <= 600) {
       chunks.push(cleanedText);
@@ -1647,7 +1738,7 @@ app.all("/api/tts/stream", async (req, res) => {
 
     fs.createReadStream(cachedFilePath).pipe(res);
   } catch (err: any) {
-    console.error("EdgeTTS Synthesis Error:", err);
+    console.error("Audio Synthesis Error:", err);
     res.status(500).json({ error: "Audio synthesis failed: " + err.message });
   }
 });
@@ -3844,7 +3935,7 @@ app.post("/api/reels/generate-for-book", async (req, res) => {
       const chapterContent = (chapter.content || "").substring(0, 3500);
       const prompt = `
 أنت كبير مخرجي المحتوى التعليمي والريلز التفاعلية (EduReels 100% Studio) لمنصة Osera AI LMS.
-المطلوب تحويل محتوى هذا الفصل بدقة وأمانة علمية كاملة إلى ريل تعليمي احترافي سينمائي متكامل (مدته 40 - 45 ثانية).
+المطلوب تحويل محتوى هذا الفصل بدقة علمية كاملة وبأعلى معايير الإخراج الصوتي والدرامي إلى ريل تفاعلي سينمائي مبهر (40 - 45 ثانية).
 
 المقرر: "${book?.title || 'مقرر دراسي'}"
 الفصل: "${chapter.title}"
@@ -3853,20 +3944,32 @@ app.post("/api/reels/generate-for-book", async (req, res) => {
 ${chapterContent}
 """
 
-قواعد الإخراج السينمائي الإلزامية:
-1. "narration_script": سكريبت صوتي فخم وممتع باللغة العربية الفصحى البليغة (60 - 80 كلمة) يشرح بدقة **المفاهيم الحقيقية للفصل كما وردت بالنص أعلاه دون أي تحريف أو خروج عن الموضوع**. يبدأ بهوك خاطف يشد الانتباه، ثم شرح جوهر الفكرة، ثم الخلاصة.
-2. "scenes": مصفوفة من 3 مشاهد إخراجية متتابعة:
+المعايير الذهبية للصياغة الصوتية والإخراجية ("narration_script"):
+1. **المشاعر الإنسانية والنبرة الحوارية الحية (Emotive & Conversational Delivery)**:
+   - يجب ألا يبدو السكريبت كنص آلي أو مقال جامد! اكتبه بنبرة معلم عبقري ومتحمس يتحدث مباشرة إلى وجدان وعقل الطالب.
+   - ابدأ بـ Hook خاطف ومثير للفضول. استخدم تراكيب حية وملهمة (مثل: "تخيّلْ مَعِي..."، "وَالسِّرُّ هُنَا!"، "هَلْ سَأَلْتَ نَفْسَكَ يَوْماً؟"، "لَحْظَةً... كَيْفَ يَتِمُّ ذلِك؟").
+2. **السكتات والوقفات الدرامية والتنفس (Dramatic Pauses & Breath Cadence)**:
+   - استخدم علامات الترقيم الدرامية لتوجيه محرك الصوت الذكي لإخراج التنفس الطبيعي والوقفات المعبرة:
+     - الفواصل (،) للوقفات التنفسية الطبيعية بين الجمل.
+     - النقاط الثلاث (...) للسكتات التشويقية والتنهدات التأملية قبل كشف المعلومة الجوهرية.
+     - علامات الاستفهام (؟) لرفع نبرة الصوت وتجسيد التساؤل المثير.
+     - علامات التعجب (!) لإبراز الحماس والدهشة والتوكيد القوي.
+3. **التشكيل الدقيق ومنع الأخطاء الإملائية والنحوية (100% Zero-Error Tashkeel & Grammar)**:
+   - اضبط الكلمات الرئيسية، الأفعال المبنية للمجهول، والكلمات التي تحتمل أكثر من قراءة بالحركات والتشكيل الكامل (فتحة، ضمة، كسرة، شدّة، تنوين، سكون) مثل: (يُعَدُّ، يُؤَدِّي، تُعْتَبَرُ، إِذَا، أَنَّ، لِأَنَّ، تَأَمَّلْ).
+   - الالتزام التام بقواعد الإملاء العربي (همزة الوصل والقطع: إنتاج / استنتاج، التاء المربوطة والمفتوحة: مهارة / مهارات، الياء والألف المقصورة: في / إلى).
+   - طول السكريبت: بين 65 إلى 85 كلمة فصيحة ومؤثرة تغطي صميم النص أعلاه دون أي حشو.
+4. "scenes": مصفوفة من 3 مشاهد إخراجية متتابعة:
    - المشهد 1 ("hook" من 0 إلى 10 ثوانٍ): شارة الهوك، عنوان جذاب، الاقتباس أو السؤال الافتتاحي.
    - المشهد 2 ("concept" من 10 إلى 30 ثانية): الشرح العميق مع 3 نقاط رئيسية، أو معادلة رياضية/كود برمجي إن وجد، ووصف دقيق لصورة توضيحية.
    - المشهد 3 ("takeaway" من 30 إلى 45 ثانية): الخلاصة الذهبية والتطبيق العملي.
-3. "interactive_quiz": سؤال تحدي سريع من 3 خيارات يختبر استيعاب الطالب للنقطة المركزية مع شرح الإجابة الصحيحة.
-4. "visual_cards": كروت مقتبسة من الفصل.
+5. "interactive_quiz": سؤال تحدي سريع من 3 خيارات يختبر استيعاب الطالب للنقطة المركزية مع شرح الإجابة الصحيحة.
+6. "visual_cards": كروت مقتبسة من الفصل.
 
 أرجع الناتج بصيغة JSON فقط بهذا الهيكل:
 {
   "style_type": "${effectiveStyle}",
   "duration_seconds": 45,
-  "narration_script": "نص الشرح الفصيح المباشر المستخلص من الفصل...",
+  "narration_script": "نص الشرح الفصيح المشكّل والمليء بالمشاعر والسكتات...",
   "scenes": [
     {
       "id": "scene-1",
@@ -3951,18 +4054,53 @@ ${chapterContent}
           endMs: Math.round(((i + 1) / Math.max(1, words.length)) * 40000)
         }));
 
-        // Synthesize real expressive Arabic audio narration via EdgeTTS
+        // Synthesize real expressive Arabic audio narration (Google Cloud Chirp 3 HD or EdgeTTS)
         let reelAudioUrl: string | undefined = undefined;
         try {
-          const tts = new EdgeTTS({
-            voice: selectedVoice,
-            lang: selectedVoice.startsWith("ar-EG") ? "ar-EG" : (selectedVoice.startsWith("ar-SA") ? "ar-SA" : "ar-JO"),
-            outputFormat: "audio-24khz-48kbitrate-mono-mp3"
-          });
           const safeText = cleanScientificTextForSpeech(data.narration_script || `شرح درس ${chapter.title}`);
           const audioFileName = `reel_${bookId}_${chapter.id}_${Date.now()}.mp3`;
           const audioFilePath = path.join(AUDIO_CACHE_DIR, audioFileName);
-          await tts.ttsPromise(safeText, audioFilePath);
+
+          let audioSynthesized = false;
+          const isGoogleVoice = selectedVoice.startsWith("ar-XA") || selectedVoice.includes("Chirp3") || selectedVoice.includes("Wavenet");
+
+          // Option A: User requested Google Cloud Voice
+          if (isGoogleVoice && (process.env.GOOGLE_TTS_API_KEY || process.env.GOOGLE_CLOUD_API_KEY)) {
+            const googleBuffer = await synthesizeGoogleCloudTTS(safeText, selectedVoice);
+            if (googleBuffer) {
+              fs.writeFileSync(audioFilePath, googleBuffer);
+              audioSynthesized = true;
+            }
+          }
+
+          // Option B: User requested Edge Neural Voice (or Google Cloud fallback)
+          if (!audioSynthesized) {
+            const edgeVoice = selectedVoice.startsWith("ar-XA") ? "ar-SA-HamedNeural" : selectedVoice;
+            try {
+              const tts = new EdgeTTS({
+                voice: edgeVoice,
+                lang: edgeVoice.startsWith("ar-EG") ? "ar-EG" : (edgeVoice.startsWith("ar-SA") ? "ar-SA" : "ar-JO"),
+                outputFormat: "audio-24khz-48kbitrate-mono-mp3",
+                timeout: 20000
+              });
+              await tts.ttsPromise(safeText, audioFilePath);
+              if (fs.existsSync(audioFilePath) && fs.statSync(audioFilePath).size > 0) {
+                audioSynthesized = true;
+              }
+            } catch (edgeErr) {
+              console.warn(`[Reel TTS] Edge TTS fallback failed:`, edgeErr);
+            }
+          }
+
+          // Fallback to Google Cloud if Edge failed and Google key exists
+          if (!audioSynthesized && (process.env.GOOGLE_TTS_API_KEY || process.env.GOOGLE_CLOUD_API_KEY)) {
+            const fallbackGoogle = selectedVoice.includes("Salma") || selectedVoice.includes("Zariyah") ? "ar-XA-Chirp3-HD-Aoede" : "ar-XA-Chirp3-HD-Fenrir";
+            const googleBuffer = await synthesizeGoogleCloudTTS(safeText, fallbackGoogle);
+            if (googleBuffer) {
+              fs.writeFileSync(audioFilePath, googleBuffer);
+              audioSynthesized = true;
+            }
+          }
 
           const supabaseUrl = await uploadAudioFileToSupabase(audioFilePath, audioFileName);
           reelAudioUrl = supabaseUrl || `/api/audio/${audioFileName}`;
@@ -4061,17 +4199,32 @@ app.post("/api/reels/generate-single-chapter", async (req, res) => {
 ${(chapter.content || clientContent || "").substring(0, 3500)}
 """
 
-المطلوب بدقة وأمانة علمية:
-1. صياغة سكريبت صوتي فخم وممتع باللغة العربية الفصحى البليغة (60 - 80 كلمة) يشرح **الفكرة الجوهرية والرسالة الحقيقية للفصل كما هي في النص أعلاه دون أي تحريف**.
-2. تقسيم الإخراج إلى 3 مشاهد سينمائية متتابعة ("hook", "concept", "takeaway").
-3. استخراج كروت تلخيصية مقتبسة مباشرة من محتوى الفصل.
-4. سؤال تفاعلي ذكي وسريع من 3 خيارات مع شرح الإجابة الصحيحة.
+المعايير الذهبية للصياغة الصوتية والإخراجية ("narration_script"):
+1. **المشاعر الإنسانية والنبرة الحوارية الحية (Emotive & Conversational Delivery)**:
+   - يجب ألا يبدو السكريبت كنص آلي أو مقال جامد! اكتبه بنبرة معلم عبقري ومتحمس يتحدث مباشرة إلى وجدان وعقل الطالب.
+   - ابدأ بـ Hook خاطف ومثير للفضول. استخدم تراكيب حية وملهمة (مثل: "تخيّلْ مَعِي..."، "وَالسِّرُّ هُنَا!"، "هَلْ سَأَلْتَ نَفْسَكَ يَوْماً؟"، "لَحْظَةً... كَيْفَ يَتِمُّ ذلِك؟").
+2. **السكتات والوقفات الدرامية والتنفس (Dramatic Pauses & Breath Cadence)**:
+   - استخدم علامات الترقيم الدرامية لتوجيه محرك الصوت الذكي لإخراج التنفس الطبيعي والوقفات المعبرة:
+     - الفواصل (،) للوقفات التنفسية الطبيعية بين الجمل.
+     - النقاط الثلاث (...) للسكتات التشويقية والتنهدات التأملية قبل كشف المعلومة الجوهرية.
+     - علامات الاستفهام (؟) لرفع نبرة الصوت وتجسيد التساؤل المثير.
+     - علامات التعجب (!) لإبراز الحماس والدهشة والتوكيد القوي.
+3. **التشكيل الدقيق ومنع الأخطاء الإملائية والنحوية (100% Zero-Error Tashkeel & Grammar)**:
+   - اضبط الكلمات الرئيسية، الأفعال المبنية للمجهول، والكلمات التي تحتمل أكثر من قراءة بالحركات والتشكيل الكامل (فتحة، ضمة، كسرة، شدّة، تنوين، سكون) مثل: (يُعَدُّ، يُؤَدِّي، تُعْتَبَرُ، إِذَا، أَنَّ، لِأَنَّ، تَأَمَّلْ).
+   - الالتزام التام بقواعد الإملاء العربي (همزة الوصل والقطع: إنتاج / استنتاج، التاء المربوطة والمفتوحة: مهارة / مهارات، الياء والألف المقصورة: في / إلى).
+   - طول السكريبت: بين 65 إلى 85 كلمة فصيحة ومؤثرة تغطي صميم النص أعلاه دون أي حشو.
+4. "scenes": مصفوفة من 3 مشاهد إخراجية متتابعة:
+   - المشهد 1 ("hook" من 0 إلى 10 ثوانٍ): شارة الهوك، عنوان جذاب، الاقتباس أو السؤال الافتتاحي.
+   - المشهد 2 ("concept" من 10 إلى 30 ثانية): الشرح العميق مع 3 نقاط رئيسية، أو معادلة رياضية/كود برمجي إن وجد، ووصف دقيق لصورة توضيحية.
+   - المشهد 3 ("takeaway" من 30 إلى 45 ثانية): الخلاصة الذهبية والتطبيق العملي.
+5. "interactive_quiz": سؤال تحدي سريع من 3 خيارات يختبر استيعاب الطالب للنقطة المركزية مع شرح الإجابة الصحيحة.
+6. "visual_cards": كروت مقتبسة من الفصل.
 
 أرجع JSON فقط بهذا الهيكل:
 {
   "style_type": "${effectiveStyle}",
   "duration_seconds": 45,
-  "narration_script": "نص الشرح الفصيح المباشر المستخلص من محتوى الفصل...",
+  "narration_script": "نص الشرح الفصيح المشكّل والمليء بالمشاعر والسكتات...",
   "scenes": [
     {
       "id": "scene-1",
@@ -4155,18 +4308,53 @@ ${(chapter.content || clientContent || "").substring(0, 3500)}
       endMs: Math.round(((i + 1) / Math.max(1, words.length)) * 40000)
     }));
 
-    // Synthesize real expressive Arabic audio narration via EdgeTTS
+    // Synthesize real expressive Arabic audio narration (Google Cloud Chirp 3 HD or EdgeTTS)
     let singleAudioUrl: string | undefined = undefined;
     try {
-      const tts = new EdgeTTS({
-        voice: selectedVoice,
-        lang: selectedVoice.startsWith("ar-EG") ? "ar-EG" : (selectedVoice.startsWith("ar-SA") ? "ar-SA" : "ar-JO"),
-        outputFormat: "audio-24khz-48kbitrate-mono-mp3"
-      });
       const safeText = cleanScientificTextForSpeech(data.narration_script || `شرح درس ${chapter.title}`);
       const audioFileName = `reel_${bookId}_${chapter.id}_${Date.now()}.mp3`;
       const audioFilePath = path.join(AUDIO_CACHE_DIR, audioFileName);
-      await tts.ttsPromise(safeText, audioFilePath);
+
+      let audioSynthesized = false;
+      const isGoogleVoice = selectedVoice.startsWith("ar-XA") || selectedVoice.includes("Chirp3") || selectedVoice.includes("Wavenet");
+
+      // Option A: User requested Google Cloud Voice
+      if (isGoogleVoice && (process.env.GOOGLE_TTS_API_KEY || process.env.GOOGLE_CLOUD_API_KEY)) {
+        const googleBuffer = await synthesizeGoogleCloudTTS(safeText, selectedVoice);
+        if (googleBuffer) {
+          fs.writeFileSync(audioFilePath, googleBuffer);
+          audioSynthesized = true;
+        }
+      }
+
+      // Option B: User requested Edge Neural Voice (or Google Cloud fallback)
+      if (!audioSynthesized) {
+        const edgeVoice = selectedVoice.startsWith("ar-XA") ? "ar-SA-HamedNeural" : selectedVoice;
+        try {
+          const tts = new EdgeTTS({
+            voice: edgeVoice,
+            lang: edgeVoice.startsWith("ar-EG") ? "ar-EG" : (edgeVoice.startsWith("ar-SA") ? "ar-SA" : "ar-JO"),
+            outputFormat: "audio-24khz-48kbitrate-mono-mp3",
+            timeout: 20000
+          });
+          await tts.ttsPromise(safeText, audioFilePath);
+          if (fs.existsSync(audioFilePath) && fs.statSync(audioFilePath).size > 0) {
+            audioSynthesized = true;
+          }
+        } catch (edgeErr) {
+          console.warn(`[Reel TTS] Edge TTS fallback failed:`, edgeErr);
+        }
+      }
+
+      // Fallback to Google Cloud if Edge failed and Google key exists
+      if (!audioSynthesized && (process.env.GOOGLE_TTS_API_KEY || process.env.GOOGLE_CLOUD_API_KEY)) {
+        const fallbackGoogle = selectedVoice.includes("Salma") || selectedVoice.includes("Zariyah") ? "ar-XA-Chirp3-HD-Aoede" : "ar-XA-Chirp3-HD-Fenrir";
+        const googleBuffer = await synthesizeGoogleCloudTTS(safeText, fallbackGoogle);
+        if (googleBuffer) {
+          fs.writeFileSync(audioFilePath, googleBuffer);
+          audioSynthesized = true;
+        }
+      }
 
       const supabaseUrl = await uploadAudioFileToSupabase(audioFilePath, audioFileName);
       singleAudioUrl = supabaseUrl || `/api/audio/${audioFileName}`;

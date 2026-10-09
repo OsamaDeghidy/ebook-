@@ -59,7 +59,7 @@ export default function BookDetailsRoute({
   const [isLoadingBookReels, setIsLoadingBookReels] = useState(false);
   const [isGeneratingReel, setIsGeneratingReel] = useState(false);
   const [selectedReelStyle, setSelectedReelStyle] = useState<EduReelStyle>('chalkboard');
-  const [selectedVoice, setSelectedVoice] = useState<string>('ar-SA-HamedNeural');
+  const [selectedVoice, setSelectedVoice] = useState<string>('ar-XA-Chirp3-HD-Fenrir');
   const [reelStatusMsg, setReelStatusMsg] = useState<string | null>(null);
 
   // Batch pre-generation states
@@ -1041,6 +1041,11 @@ export default function BookDetailsRoute({
                         className="px-3 py-2 bg-indigo-50/80 border border-indigo-200 rounded-xl text-xs font-black text-indigo-900 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                         title="اختيار صوت المعلق الصوتي بالذكاء الاصطناعي"
                       >
+                        <option value="ar-XA-Chirp3-HD-Fenrir">🌟 فينرير (Google Chirp 3 HD - سينمائي فخم)</option>
+                        <option value="ar-XA-Chirp3-HD-Aoede">🌟 أويدي (Google Chirp 3 HD - نسائي دافئ)</option>
+                        <option value="ar-XA-Chirp3-HD-Puck">🌟 بوك (Google Chirp 3 HD - حماسي وتفاعلي)</option>
+                        <option value="ar-XA-Chirp3-HD-Kore">🌟 كوري (Google Chirp 3 HD - معلمة واضحة)</option>
+                        <option value="ar-XA-Chirp3-HD-Charon">🌟 شارون (Google Chirp 3 HD - أستاذ رزين)</option>
                         <option value="ar-SA-HamedNeural">🎙️ 🇸🇦 حامد (سعودي فخم)</option>
                         <option value="ar-EG-ShakirNeural">🎙️ 🇪🇬 شاكر (مصري دافئ)</option>
                         <option value="ar-JO-TaimNeural">🎙️ 🇯🇴 تيم (أردني شبابي)</option>
@@ -1144,7 +1149,12 @@ export default function BookDetailsRoute({
                         onChange={(e) => setSelectedVoice(e.target.value)}
                         className="w-full p-3 bg-white/10 border border-white/20 rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-400 cursor-pointer"
                       >
-                        <option value="ar-SA-HamedNeural" className="bg-slate-900 text-white">🇸🇦 حامد (سعودي فخم ووقور - الأفضل)</option>
+                        <option value="ar-XA-Chirp3-HD-Fenrir" className="bg-slate-900 text-white">🌟 فينرير (Google Chirp 3 HD - سينمائي فخم)</option>
+                        <option value="ar-XA-Chirp3-HD-Aoede" className="bg-slate-900 text-white">🌟 أويدي (Google Chirp 3 HD - نسائي دافئ)</option>
+                        <option value="ar-XA-Chirp3-HD-Puck" className="bg-slate-900 text-white">🌟 بوك (Google Chirp 3 HD - حماسي وتفاعلي)</option>
+                        <option value="ar-XA-Chirp3-HD-Kore" className="bg-slate-900 text-white">🌟 كوري (Google Chirp 3 HD - معلمة واضحة)</option>
+                        <option value="ar-XA-Chirp3-HD-Charon" className="bg-slate-900 text-white">🌟 شارون (Google Chirp 3 HD - أستاذ رزين)</option>
+                        <option value="ar-SA-HamedNeural" className="bg-slate-900 text-white">🇸🇦 حامد (سعودي فخم ووقور)</option>
                         <option value="ar-EG-ShakirNeural" className="bg-slate-900 text-white">🇪🇬 شاكر (مصري دافئ ومفصل)</option>
                         <option value="ar-JO-TaimNeural" className="bg-slate-900 text-white">🇯🇴 تيم (أردني شبابي وحماسي)</option>
                         <option value="ar-EG-SalmaNeural" className="bg-slate-900 text-white">🇪🇬 سلمى (مصرية شابة وحيوية)</option>

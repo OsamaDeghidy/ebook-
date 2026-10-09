@@ -13,6 +13,7 @@ import { EduReelPlayer } from '../reels/EduReelPlayer';
 import { PlatformSettingsTab } from './PlatformSettingsTab';
 import { UsersManagementTab } from './UsersManagementTab';
 import { SupportTicketsTab } from './SupportTicketsTab';
+import { exportReelToVideo, downloadReelBlob } from '../../utils/reelVideoExporter';
 
 interface AdminInstructorHubProps {
   books: MarketplaceBook[];
@@ -534,9 +535,11 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
   const [isGeneratingAllReels, setIsGeneratingAllReels] = useState<boolean>(false);
   const [generatingChapterId, setGeneratingChapterId] = useState<string | null>(null);
   const [chapterStyles, setChapterStyles] = useState<Record<string, EduReelStyle>>({});
-  const [reelsVoice, setReelsVoice] = useState<string>('ar-SA-HamedNeural');
+  const [chapterVoices, setChapterVoices] = useState<Record<string, string>>({});
+  const [reelsVoice, setReelsVoice] = useState<string>('ar-XA-Chirp3-HD-Fenrir');
   const [reelsGlobalStyle, setReelsGlobalStyle] = useState<EduReelStyle>('chalkboard');
   const [previewReel, setPreviewReel] = useState<EduReel | null>(null);
+  const [exportingReelId, setExportingReelId] = useState<string | null>(null);
 
   useEffect(() => {
     if (visibleBooks.length > 0 && (!reelsBookId || !visibleBooks.some(b => b.id === reelsBookId))) {
@@ -606,6 +609,7 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
     if (!reelsBookId) return;
     setGeneratingChapterId(chapter.id);
     const style = chapterStyles[chapter.id] || reelsGlobalStyle;
+    const voice = chapterVoices[chapter.id] || reelsVoice;
     try {
       const res = await fetch('/api/reels/generate-single-chapter', {
         method: 'POST',
@@ -616,7 +620,7 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
           chapterTitle: chapter.title,
           chapterContent: chapter.content,
           style: style,
-          voice: reelsVoice
+          voice: voice
         })
       });
 
@@ -649,6 +653,33 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
       }
     } catch (e) {
       alert('حدث خطأ أثناء حذف الريل');
+    }
+  };
+
+  const handleDownloadReelVideo = async (reel: EduReel, chapterTitle?: string) => {
+    if (exportingReelId) return;
+    setExportingReelId(reel.id);
+    setStatusMsg(`جاري تصيير وتوليد فيديو ريل "${chapterTitle || 'الفصل'}" بدقة 1080p عمودية... 🎬`);
+
+    try {
+      const style = chapterStyles[reel.chapter_id] || reel.style_type || reel.style || 'chalkboard';
+      const blob = await exportReelToVideo(reel, style, (percent, status) => {
+        setStatusMsg(`${status} (${percent}%)`);
+      });
+
+      const cleanBook = (reel.book_title || 'مقرر').replace(/[\\/:*?"<>|]/g, '_');
+      const cleanChapter = (chapterTitle || reel.chapter_title || 'فصل').replace(/[\\/:*?"<>|]/g, '_');
+      const ext = blob.type.includes('mp4') ? 'mp4' : 'webm';
+      const fileName = `${cleanBook}_${cleanChapter}_Reel.${ext}`;
+
+      downloadReelBlob(blob, fileName);
+      setStatusMsg(`تم تنزيل فيديو ريل "${cleanChapter}" بنجاح! 🎉`);
+      setTimeout(() => setStatusMsg(null), 4000);
+    } catch (err: any) {
+      console.error('Reel video export error:', err);
+      alert('حدث خطأ أثناء تصيير الفيديو: ' + (err.message || 'يرجى المحاولة مجدداً'));
+    } finally {
+      setExportingReelId(null);
     }
   };
 
@@ -2522,7 +2553,12 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
                   onChange={(e) => setReelsVoice(e.target.value)}
                   className="w-full px-3 py-2 bg-indigo-50/70 border border-indigo-200 rounded-xl text-xs font-bold text-indigo-950 focus:bg-white outline-none cursor-pointer"
                 >
-                  <option value="ar-SA-HamedNeural">🇸🇦 حامد (فخم ووقور - الأفضل)</option>
+                  <option value="ar-XA-Chirp3-HD-Fenrir">🌟 فينرير (Google Chirp 3 HD - سينمائي فخم)</option>
+                  <option value="ar-XA-Chirp3-HD-Aoede">🌟 أويدي (Google Chirp 3 HD - نسائي دافئ)</option>
+                  <option value="ar-XA-Chirp3-HD-Puck">🌟 بوك (Google Chirp 3 HD - حماسي وتفاعلي)</option>
+                  <option value="ar-XA-Chirp3-HD-Kore">🌟 كوري (Google Chirp 3 HD - معلمة واضحة)</option>
+                  <option value="ar-XA-Chirp3-HD-Charon">🌟 شارون (Google Chirp 3 HD - أستاذ رزين)</option>
+                  <option value="ar-SA-HamedNeural">🇸🇦 حامد (فخم ووقور)</option>
                   <option value="ar-EG-ShakirNeural">🇪🇬 شاكر (مصري دافئ ومفصل)</option>
                   <option value="ar-JO-TaimNeural">🇯🇴 تيم (أردني شبابي)</option>
                   <option value="ar-EG-SalmaNeural">🇪🇬 سلمى (مصرية حيوية)</option>
@@ -2601,6 +2637,7 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
                   const reel = bookReels.find(r => r.chapter_id === ch.id || r.chapter_id === `ch-${ch.id}` || r.chapter_id === String(ch.id));
                   const isGeneratingThis = generatingChapterId === ch.id;
                   const currentStyle = chapterStyles[ch.id] || reel?.style || 'cyberpunk';
+                  const currentVoice = chapterVoices[ch.id] || reel?.voice || reelsVoice;
 
                   return (
                     <div key={ch.id || idx} className="py-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 hover:bg-slate-50/70 p-3 rounded-2xl transition">
@@ -2630,18 +2667,45 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
 
                       {/* CONTROLS */}
                       <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end">
+                        {/* VOICE PICKER */}
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[11px] font-bold text-slate-500">🎙️ الصوت:</span>
+                          <select
+                            value={currentVoice}
+                            onChange={(e) => setChapterVoices(prev => ({ ...prev, [ch.id]: e.target.value }))}
+                            className="px-2.5 py-1.5 bg-indigo-50/80 border border-indigo-200 rounded-lg text-xs font-bold text-indigo-950 focus:bg-white outline-none cursor-pointer max-w-[160px] sm:max-w-none"
+                            title="اختيار المعلق الصوتي لهذا الفصل"
+                          >
+                            <optgroup label="🌟 أصوات Google Cloud Chirp 3 HD">
+                              <option value="ar-XA-Chirp3-HD-Fenrir">🌟 فينرير (فخم وقوي)</option>
+                              <option value="ar-XA-Chirp3-HD-Aoede">🌟 أويدي (نسائي دافئ)</option>
+                              <option value="ar-XA-Chirp3-HD-Puck">🌟 بوك (حماسي وتفاعلي)</option>
+                              <option value="ar-XA-Chirp3-HD-Kore">🌟 كوري (معلمة واضحة)</option>
+                              <option value="ar-XA-Chirp3-HD-Charon">🌟 شارون (أستاذ رزين)</option>
+                            </optgroup>
+                            <optgroup label="🎙️ أصوات طبيعية (Edge Neural)">
+                              <option value="ar-SA-HamedNeural">🇸🇦 حامد (سعودي فخم)</option>
+                              <option value="ar-EG-ShakirNeural">🇪🇬 شاكر (مصري دافئ)</option>
+                              <option value="ar-JO-TaimNeural">🇯🇴 تيم (أردني شبابي)</option>
+                              <option value="ar-EG-SalmaNeural">🇪🇬 سلمى (مصرية حيوية)</option>
+                              <option value="ar-SA-ZariyahNeural">🇸🇦 زارية (سعودية هادئة)</option>
+                              <option value="ar-AE-HamdanNeural">🇦🇪 حمدان (إماراتي متزن)</option>
+                            </optgroup>
+                          </select>
+                        </div>
+
                         {/* STYLE PICKER */}
                         <div className="flex items-center gap-1.5">
                           <span className="text-[11px] font-bold text-slate-500">الستايل:</span>
                           <select
                             value={currentStyle}
                             onChange={(e) => setChapterStyles(prev => ({ ...prev, [ch.id]: e.target.value as EduReelStyle }))}
-                            className="px-2.5 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:bg-white outline-none"
+                            className="px-2.5 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:bg-white outline-none cursor-pointer"
                           >
-                            <option value="cyberpunk">⚡ سايبربانك (برمجة وتكنولوجيا)</option>
-                            <option value="chalkboard">📐 سبورة (رياضيات وفيزياء)</option>
-                            <option value="cinematic">🎬 سينمائي (روايات وتاريخ)</option>
-                            <option value="gamified">🎮 ألعاب (كويز وتحدي)</option>
+                            <option value="cyberpunk">⚡ سايبربانك (تكنولوجيا)</option>
+                            <option value="chalkboard">📐 سبورة (أكاديمي)</option>
+                            <option value="cinematic">🎬 سينمائي (وثائقي)</option>
+                            <option value="gamified">🎮 تفاعلي (جيمينج)</option>
                           </select>
                         </div>
 
@@ -2653,6 +2717,28 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
                           >
                             <Play className="w-3.5 h-3.5 fill-purple-600 text-purple-600" />
                             <span>معاينة</span>
+                          </button>
+                        )}
+
+                        {/* DOWNLOAD VIDEO BUTTON */}
+                        {reel && (
+                          <button
+                            onClick={() => handleDownloadReelVideo(reel, ch.title)}
+                            disabled={exportingReelId === reel.id}
+                            className="px-3 py-1.5 bg-gradient-to-r from-teal-50 to-emerald-50 hover:from-teal-100 hover:to-emerald-100 text-teal-800 border border-teal-200 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-sm disabled:opacity-50"
+                            title="تنزيل فيديو الريل كاملاً بجودة عالية 1080p MP4"
+                          >
+                            {exportingReelId === reel.id ? (
+                              <>
+                                <RefreshCw className="w-3.5 h-3.5 animate-spin text-teal-600" />
+                                <span>جاري التصيير...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Download className="w-3.5 h-3.5 text-teal-600" />
+                                <span>تنزيل MP4</span>
+                              </>
+                            )}
                           </button>
                         )}
 

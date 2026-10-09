@@ -5,11 +5,12 @@ import {
   ChevronUp, ChevronDown, Check, Copy, MessageCircle, Radio,
   Tv, Compass, GraduationCap, Trophy, Shield, Music, Bookmark,
   Gauge, RefreshCw, Layers, Sliders, ExternalLink, X, Lightbulb,
-  HelpCircle, Eye, Rocket, CheckCircle, ArrowRight
+  HelpCircle, Eye, Rocket, CheckCircle, ArrowRight, Download, Film
 } from 'lucide-react';
 import { EduReel, EduReelStyle, EduReelScene } from '../../types';
 import { fireConfetti } from '../../utils/confetti';
 import { EduAvatarHost } from './avatar/EduAvatarHost';
+import { exportReelToVideo, downloadReelBlob } from '../../utils/reelVideoExporter';
 import ReactMarkdown from 'react-markdown';
 
 interface EduReelPlayerProps {
@@ -46,6 +47,13 @@ export const EduReelPlayer: React.FC<EduReelPlayerProps> = ({
   const [likesCount, setLikesCount] = useState(reel.likes_count || 42);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [isExportingVideo, setIsExportingVideo] = useState(false);
+  const [exportProgress, setExportProgress] = useState<{ percent: number; status: string } | null>(null);
+  const [isLiveRecording, setIsLiveRecording] = useState(false);
+  const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedStreamRef = useRef<MediaStream | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
   
   // Hovered word for interactive dictionary lookup
   const [hoveredWord, setHoveredWord] = useState<string | null>(null);
@@ -167,19 +175,18 @@ export const EduReelPlayer: React.FC<EduReelPlayerProps> = ({
     }
   }, [isMuted]);
 
-  // Main Timer / Progress Controller (Continuous smooth video playback without auto-interruptions)
+  // ⏱️ Ultra-Smooth 60FPS High-Precision Audio Clock & Synchronizer (Zero Lag)
   useEffect(() => {
     if (!isActive || !isPlaying) return;
 
-    const timer = setInterval(() => {
-      setCurrentTimeSec((prev) => {
-        let next = prev + (0.15 * playbackSpeed);
+    let animFrameId: number;
 
-        if (audioRef.current && !audioRef.current.paused && audioRef.current.currentTime > 0) {
-          next = audioRef.current.currentTime;
-        }
+    const syncClock = () => {
+      if (audioRef.current && !audioRef.current.paused) {
+        const exactTime = audioRef.current.currentTime;
+        setCurrentTimeSec(exactTime);
 
-        if (next >= totalDuration) {
+        if (exactTime >= totalDuration && totalDuration > 0) {
           if (audioRef.current) {
             audioRef.current.currentTime = 0;
             audioRef.current.play().catch(() => {});
@@ -191,14 +198,15 @@ export const EduReelPlayer: React.FC<EduReelPlayerProps> = ({
             body: JSON.stringify({ userId: currentUser?.id, type: 'complete' })
           }).catch(() => {});
 
-          return 0;
+          setCurrentTimeSec(0);
         }
-        return next;
-      });
-    }, 150);
+      }
+      animFrameId = requestAnimationFrame(syncClock);
+    };
 
-    return () => clearInterval(timer);
-  }, [isActive, isPlaying, totalDuration, reel, currentUser, playbackSpeed]);
+    animFrameId = requestAnimationFrame(syncClock);
+    return () => cancelAnimationFrame(animFrameId);
+  }, [isActive, isPlaying, totalDuration, reel.id, currentUser]);
 
   // Reset when becoming active or changing reel
   useEffect(() => {
@@ -322,9 +330,183 @@ export const EduReelPlayer: React.FC<EduReelPlayerProps> = ({
     setIsPlaying(!isPlaying);
   };
 
-  // 🎯 PRECISE SPEECH-SYNCHRONIZED WORD HIGHLIGHT
-  const speechProgress = Math.min(1, Math.max(0, (currentTimeSec + 0.1) / Math.max(1, totalDuration)));
-  const currentWordIndex = Math.min(words.length - 1, Math.floor(speechProgress * words.length));
+  // 🚀 1. 1-CLICK DIRECT 60FPS VIDEO EXPORT (3D Robot Avatar, Synchronized Subtitles, Voice Audio)
+  const handleDirectVideoExport = async () => {
+    if (isExportingVideo) return;
+    setIsDownloadModalOpen(false);
+    setIsExportingVideo(true);
+    setExportProgress({ percent: 5, status: 'جاري تهيئة استوديو التصدير والروبوت الذكي...' });
+
+    try {
+      const blob = await exportReelToVideo(reel, activeStyle, (percent, status) => {
+        setExportProgress({ percent, status });
+      });
+
+      const cleanBook = (reel.book_title || 'مقرر').replace(/[\\/:*?"<>|]/g, '_');
+      const cleanChapter = (reel.chapter_title || 'فصل').replace(/[\\/:*?"<>|]/g, '_');
+      const ext = blob.type.includes('mp4') ? 'mp4' : 'webm';
+      const fileName = `${cleanBook}_${cleanChapter}_Reel.${ext}`;
+
+      downloadReelBlob(blob, fileName);
+      fireConfetti();
+    } catch (err: any) {
+      console.error('Reel video export error:', err);
+      alert('حدث خطأ أثناء تصدير الفيديو: ' + (err.message || 'يرجى المحاولة مجدداً'));
+    } finally {
+      setIsExportingVideo(false);
+      setExportProgress(null);
+    }
+  };
+
+  // 🚀 2. OPTIONAL SCREEN/TAB CAPTURE RECORDER
+  const startLiveRecording = async () => {
+    setIsDownloadModalOpen(false);
+    try {
+      // Prompt user to select current tab/window for 60fps recording
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          displaySurface: 'browser',
+          frameRate: { ideal: 60, max: 60 }
+        },
+        audio: true
+      });
+
+      recordedStreamRef.current = stream;
+      recordedChunksRef.current = [];
+
+      const mimeTypes = [
+        'video/mp4;codecs=avc1,mp4a.40.2',
+        'video/mp4',
+        'video/webm;codecs=vp9,opus',
+        'video/webm;codecs=vp8,opus',
+        'video/webm'
+      ];
+      const selectedMime = mimeTypes.find(t => MediaRecorder.isTypeSupported(t)) || 'video/webm';
+
+      const recorder = new MediaRecorder(stream, {
+        mimeType: selectedMime,
+        videoBitsPerSecond: 8000000 // 8 Mbps high-bitrate studio quality
+      });
+
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          recordedChunksRef.current.push(e.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(recordedChunksRef.current, { type: selectedMime });
+        
+        const cleanBook = (reel.book_title || 'مقرر').replace(/[\\/:*?"<>|]/g, '_');
+        const cleanChapter = (reel.chapter_title || 'فصل').replace(/[\\/:*?"<>|]/g, '_');
+        const ext = selectedMime.includes('mp4') ? 'mp4' : 'webm';
+        const fileName = `${cleanBook}_${cleanChapter}_Reel_Live60FPS.${ext}`;
+
+        downloadReelBlob(blob, fileName);
+        setIsLiveRecording(false);
+        fireConfetti();
+      };
+
+      mediaRecorderRef.current = recorder;
+      recorder.start(250);
+      setIsLiveRecording(true);
+
+      // Rewind to start and play cleanly
+      setCurrentTimeSec(0);
+      setIsPlaying(true);
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().catch(() => {});
+      }
+
+      // Automatically finalize when playback finishes
+      const interval = setInterval(() => {
+        if (audioRef.current && (audioRef.current.currentTime >= totalDuration - 0.5 || audioRef.current.ended)) {
+          clearInterval(interval);
+          if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+            mediaRecorderRef.current.stop();
+          }
+        }
+      }, 300);
+
+      stream.getVideoTracks()[0].onended = () => {
+        clearInterval(interval);
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+          mediaRecorderRef.current.stop();
+        }
+      };
+
+    } catch (err: any) {
+      console.warn('Live recording cancelled or error:', err);
+      setIsLiveRecording(false);
+    }
+  };
+
+  const stopLiveRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
+    }
+    if (recordedStreamRef.current) {
+      recordedStreamRef.current.getTracks().forEach(t => t.stop());
+    }
+    setIsLiveRecording(false);
+  };
+
+  // 🎵 2. DIRECT NARRATION AUDIO DOWNLOAD (MP3)
+  const downloadAudioDirectly = () => {
+    setIsDownloadModalOpen(false);
+    const audioUrl = reel.audio_url || `/api/tts/stream?text=${encodeURIComponent(reel.narration_script || '')}&voice=${encodeURIComponent(reel.voice || 'ar-XA-Chirp3-HD-Fenrir')}`;
+    const a = document.createElement('a');
+    a.href = audioUrl;
+    a.target = '_blank';
+    const cleanBook = (reel.book_title || 'مقرر').replace(/[\\/:*?"<>|]/g, '_');
+    const cleanChapter = (reel.chapter_title || 'فصل').replace(/[\\/:*?"<>|]/g, '_');
+    a.download = `${cleanBook}_${cleanChapter}_Audio.mp3`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  // 🎯 SMART PHONETIC WORD ALIGNMENT (Precise Zero-Lag Word-by-Word Lip/Karaoke Sync)
+  const wordTimeRanges = useMemo(() => {
+    const rawWords = (reel.narration_script || '').split(/\s+/).filter(Boolean);
+    if (rawWords.length === 0) return [];
+
+    // Calculate weight for each word based on character count and punctuation pauses
+    const weights = rawWords.map((w) => {
+      let weight = Math.max(2, w.length); // Base duration by character count
+      if (w.includes('...') || w.includes('…')) weight += 10; // Dramatic ellipsis pause
+      else if (w.includes('،') || w.includes(',')) weight += 6; // Natural breath comma pause
+      else if (w.includes('؟') || w.includes('?') || w.includes('!') || w.includes('.')) weight += 7;
+      return weight;
+    });
+
+    const totalWeight = weights.reduce((acc, curr) => acc + curr, 0);
+    const effectiveTotalSec = totalDuration > 0 ? totalDuration : 45;
+
+    let currentSec = 0;
+    return rawWords.map((word, idx) => {
+      const duration = (weights[idx] / totalWeight) * effectiveTotalSec;
+      const start = currentSec;
+      const end = currentSec + duration;
+      currentSec = end;
+      return { word, start, end };
+    });
+  }, [reel.narration_script, totalDuration]);
+
+  // Current active word index derived in real-time from high-resolution audio clock
+  const currentWordIndex = useMemo(() => {
+    if (wordTimeRanges.length === 0) return 0;
+    const foundIndex = wordTimeRanges.findIndex(
+      (range) => currentTimeSec >= range.start && currentTimeSec < range.end
+    );
+    if (foundIndex !== -1) return foundIndex;
+    if (currentTimeSec >= totalDuration - 0.5) return wordTimeRanges.length - 1;
+    return 0;
+  }, [wordTimeRanges, currentTimeSec, totalDuration]);
+
+  const speechProgress = Math.min(1, Math.max(0, currentTimeSec / Math.max(1, totalDuration)));
 
   // Subtitle Chunking (TikTok 5-Word Phrase Window)
   const chunkSize = 5;
@@ -374,10 +556,10 @@ export const EduReelPlayer: React.FC<EduReelPlayerProps> = ({
       dir="rtl"
     >
       {/* 🌟 AUDIO ELEMENT (PRIMARY NARRATOR VOICE) */}
-      {reel.audio_url && (
+      {(reel.audio_url || reel.narration_script) && (
         <audio
           ref={audioRef}
-          src={reel.audio_url}
+          src={reel.audio_url || `/api/tts/stream?text=${encodeURIComponent(reel.narration_script || `شرح ${reel.chapter_title || 'الدرس'}`)}&voice=${encodeURIComponent(reel.voice || 'ar-XA-Chirp3-HD-Fenrir')}`}
           preload="auto"
           onLoadedMetadata={(e) => {
             const dur = e.currentTarget.duration;
@@ -923,6 +1105,28 @@ export const EduReelPlayer: React.FC<EduReelPlayerProps> = ({
           <span className="text-[10px] font-black text-cyan-300">ستايل</span>
         </button>
 
+        {/* DOWNLOAD VIDEO BUTTON */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsDownloadModalOpen(true);
+          }}
+          disabled={isLiveRecording}
+          className="flex flex-col items-center gap-1 group cursor-pointer"
+          title="تحميل فيديو الريل كاملاً بجودة استوديو 60FPS"
+        >
+          <div className={`p-2 rounded-full border transition active:scale-75 ${
+            isLiveRecording
+              ? 'bg-rose-600 border-rose-400 text-white animate-pulse shadow-lg shadow-rose-600/50'
+              : 'bg-gradient-to-tr from-purple-600 to-indigo-600 border-purple-300/40 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg shadow-purple-500/30 backdrop-blur-md'
+          }`}>
+            {isLiveRecording ? <RefreshCw className="w-4 h-4 animate-spin text-white" /> : <Download className="w-4 h-4" />}
+          </div>
+          <span className={`text-[10px] font-black ${isLiveRecording ? 'text-rose-400' : 'text-purple-300'}`}>
+            {isLiveRecording ? 'يسجل...' : 'تحميل'}
+          </span>
+        </button>
+
         {/* SHARE BUTTON */}
         <button
           onClick={handleShare}
@@ -935,6 +1139,135 @@ export const EduReelPlayer: React.FC<EduReelPlayerProps> = ({
           <span className="text-[10px] font-black">{copiedLink ? 'تم!' : 'مشاركة'}</span>
         </button>
       </div>
+
+      {/* 🔴 LIVE RECORDING STATUS BAR (ACTIVE RECORDING) */}
+      {isLiveRecording && (
+        <div className="absolute top-4 inset-x-4 z-50 p-3 bg-slate-950/95 border-2 border-rose-500 rounded-2xl shadow-2xl backdrop-blur-md flex items-center justify-between text-white animate-fade-in" dir="rtl">
+          <div className="flex items-center gap-2.5 truncate">
+            <span className="w-3 h-3 rounded-full bg-rose-500 animate-ping shrink-0" />
+            <div className="truncate">
+              <div className="text-xs font-black text-rose-300 flex items-center gap-1.5">
+                <span>جاري تسجيل الريل بجودة استوديو 60fps...</span>
+              </div>
+              <div className="text-[10px] text-slate-300 truncate">
+                المتبقي: {Math.max(0, Math.round(totalDuration - currentTimeSec))} ثانية (سيتوقف تلقائياً)
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              stopLiveRecording();
+            }}
+            className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black transition active:scale-95 flex items-center gap-1 cursor-pointer shrink-0 shadow-lg"
+          >
+            <span>⏹️ إنهاء وتنزيل</span>
+          </button>
+        </div>
+      )}
+
+      {/* 🎬 BACKGROUND VIDEO EXPORT PROGRESS OVERLAY */}
+      {isExportingVideo && exportProgress && (
+        <div className="absolute inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-white text-center animate-fade-in" dir="rtl">
+          <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-purple-600 via-cyan-500 to-indigo-600 flex items-center justify-center p-1 shadow-2xl shadow-cyan-500/30 mb-4 animate-pulse">
+            <div className="w-full h-full rounded-full bg-slate-950 flex flex-col items-center justify-center">
+              <span className="text-sm font-black text-cyan-300">{exportProgress.percent}%</span>
+            </div>
+          </div>
+
+          <h3 className="font-black text-base text-white mb-1">جاري تصدير وتجهيز فيديو الريل 🎬</h3>
+          <p className="text-xs text-cyan-200 mb-4 max-w-xs">{exportProgress.status}</p>
+
+          {/* Progress bar */}
+          <div className="w-full max-w-xs h-2 bg-white/10 rounded-full overflow-hidden mb-2">
+            <div 
+              className="h-full bg-gradient-to-r from-cyan-400 via-indigo-400 to-purple-500 transition-all duration-300 rounded-full"
+              style={{ width: `${exportProgress.percent}%` }}
+            />
+          </div>
+
+          <span className="text-[10px] text-slate-400">
+            يتم رسم الروبوت بحركاته، الكاريوكي، والدمج الصوتي بدقة 1080p عالية النقاء...
+          </span>
+        </div>
+      )}
+
+      {/* 🎬 STUDIO DOWNLOAD MODAL */}
+      {isDownloadModalOpen && (
+        <div 
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsDownloadModalOpen(false);
+          }}
+          className="absolute inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in text-white" 
+          dir="rtl"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()} 
+            className="w-full max-w-sm bg-slate-900/95 border border-indigo-500/30 rounded-3xl p-5 shadow-2xl space-y-4 text-right relative"
+          >
+            <button
+              onClick={() => setIsDownloadModalOpen(false)}
+              className="absolute top-3 left-3 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm font-bold transition cursor-pointer"
+            >
+              ✕
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/30 shrink-0">
+                <Film className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="font-black text-sm text-white">تنزيل وتصدير الريل 🎬</h3>
+                <p className="text-[11px] text-indigo-200">اختر طريقة تصدير محتوى الفصل</p>
+              </div>
+            </div>
+
+            <div className="space-y-2.5 pt-1">
+              {/* OPTION 1: 1-CLICK DIRECT 60FPS HD EXPORT (RECOMMENDED) */}
+              <button
+                onClick={handleDirectVideoExport}
+                className="w-full p-3.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-teal-500 hover:from-purple-500 hover:to-teal-400 text-white rounded-2xl font-black text-xs transition active:scale-95 flex items-center justify-between cursor-pointer shadow-lg shadow-indigo-500/25 border border-white/10 group text-right"
+              >
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-yellow-300 font-bold">⚡ (الموصى به)</span>
+                    <span className="text-white font-black text-xs">تنزيل فيديو الريل مباشرة بنقرة واحدة (60FPS HD)</span>
+                  </div>
+                  <p className="text-[10px] text-indigo-100 font-normal">
+                    يشمل الروبوت ثلاثي الأبعاد بحركاته، الكاريوكي المتزامن، والصوت النقي بدون أي نافذة مشاركة
+                  </p>
+                </div>
+                <Download className="w-4 h-4 shrink-0 text-yellow-300 group-hover:translate-x-[-2px] transition" />
+              </button>
+
+              {/* OPTION 2: AUDIO ONLY */}
+              <button
+                onClick={downloadAudioDirectly}
+                className="w-full p-3 bg-white/10 hover:bg-white/15 border border-white/10 rounded-2xl font-bold text-xs transition active:scale-95 flex items-center justify-between cursor-pointer text-right"
+              >
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-1.5 text-white font-black text-xs">
+                    <span>🎙️</span>
+                    <span>تنزيل الملف الصوتي فقط (MP3 استوديو)</span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 font-normal">
+                    الصوت البشري الطبيعي الفخم عالي النقاء
+                  </p>
+                </div>
+                <Download className="w-4 h-4 shrink-0 text-teal-400" />
+              </button>
+            </div>
+
+            <div className="pt-1 text-center">
+              <span className="text-[10px] text-slate-400">
+                💡 يتم إنشاء الفيديو تلقائياً وحفظه في مجلد التنزيلات بجودة 1080p عمودية.
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
