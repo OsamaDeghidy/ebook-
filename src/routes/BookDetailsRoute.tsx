@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { BookOpen, ArrowLeft, Brain, HelpCircle, Youtube, Edit, Radio, Sparkles, RefreshCw, Layers, Terminal, Volume2, Eye, EyeOff, Check, Flame, Lock, ShoppingCart, CheckCircle2, ExternalLink, X, Maximize2, Minimize2, ShieldCheck, Shield, Play, Film, Smartphone } from 'lucide-react';
+import { BookOpen, ArrowLeft, Brain, HelpCircle, Youtube, Edit, Radio, Sparkles, RefreshCw, Layers, Terminal, Volume2, Eye, EyeOff, Check, Flame, Lock, ShoppingCart, CheckCircle2, ExternalLink, X, Maximize2, Minimize2, ShieldCheck, Shield, Play, Film, Smartphone, QrCode } from 'lucide-react';
 import { MarketplaceBook, MindMapNode, Flashcard, Chapter, UserRole, EduReel, EduReelStyle } from '../types';
 import MindMap from '../components/MindMap';
 import QuizSection from '../components/QuizSection';
@@ -21,6 +21,7 @@ import { ScreenShieldGuard } from '../components/security/ScreenShieldGuard';
 import { SeoStructuredData } from '../components/seo/SeoStructuredData';
 import { InteractiveLessonExplanation } from '../components/interactive/InteractiveLessonExplanation';
 import { FullCurriculumExplanation } from '../components/interactive/FullCurriculumExplanation';
+import { BookQrCodeModal } from '../components/common/BookQrCodeModal';
 
 interface BookDetailsRouteProps {
   books: MarketplaceBook[];
@@ -55,6 +56,7 @@ export default function BookDetailsRoute({
   const [isExpandingChapters, setIsExpandingChapters] = useState(false);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [isMobileChaptersOpen, setIsMobileChaptersOpen] = useState(false);
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
 
   // Reels Studio in-book states
   const [bookReels, setBookReels] = useState<EduReel[]>([]);
@@ -734,6 +736,16 @@ export default function BookDetailsRoute({
             </span>
           </button>
 
+          {/* QR CODE GENERATOR BUTTON */}
+          <button
+            onClick={() => setIsQrModalOpen(true)}
+            className="px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-black flex items-center gap-1.5 transition shadow-sm bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-700 border border-indigo-200 hover:from-indigo-100 hover:to-purple-100 cursor-pointer"
+            title="عرض وتحميل كود QR الذكي للكتاب"
+          >
+            <QrCode className="w-3.5 h-3.5 text-indigo-600" />
+            <span>كود QR للكتاب 📲</span>
+          </button>
+
           {/* PUBLISH / DRAFT TOGGLE BADGE */}
           <button
             onClick={handleTogglePublish}
@@ -766,11 +778,9 @@ export default function BookDetailsRoute({
           { id: 'interactive_lesson', label: '✨ [جديد] شرح الدرس تفاعلي', icon: Brain, enabled: true, isNew: true },
           { id: 'interactive_curriculum', label: '🚀 [جديد] شرح المنهج كامل', icon: Sparkles, enabled: true, isNew: true },
           { id: 'reels', label: 'ريلز وتيك توك الفصل 🎬', icon: Film, enabled: true },
-          { id: 'podcast', label: 'استوديو البودكاست', icon: Radio, enabled: book.feature_toggles?.show_podcast !== false },
           { id: 'flashcards', label: 'بطاقات المراجعة', icon: Layers, enabled: book.feature_toggles?.show_flashcards !== false },
           { id: 'sandbox', label: 'المختبر والتطبيق', icon: Terminal, enabled: book.feature_toggles?.show_sandbox !== false },
           { id: 'quiz', label: 'بنك الأسئلة', icon: HelpCircle, enabled: book.feature_toggles?.show_quiz !== false },
-          { id: 'mindmap', label: 'الخريطة الذهنية', icon: Brain, enabled: book.feature_toggles?.show_mindmap !== false },
           { id: 'videos', label: 'المقاطع المرئية', icon: Youtube, enabled: book.feature_toggles?.show_videos !== false },
           { id: 'editor', label: 'محرر النصوص', icon: Edit, enabled: true }
         ].filter(tab => tab.enabled).map(tab => {
@@ -1450,6 +1460,14 @@ export default function BookDetailsRoute({
         currentChapterTitle={activeChapter?.title || 'الفصل الحالي'}
         chapterContent={activeChapter?.content || ''}
         bookCategory={book.category || ''}
+      />
+
+      {/* 📲 BOOK SMART QR CODE MODAL */}
+      <BookQrCodeModal
+        isOpen={isQrModalOpen}
+        onClose={() => setIsQrModalOpen(false)}
+        book={book}
+        isOwned={isBookUnlocked}
       />
     </div>
   );

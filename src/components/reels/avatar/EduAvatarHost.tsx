@@ -138,7 +138,12 @@ export const EduAvatarHost: React.FC<EduAvatarHostProps> = ({
     return () => clearTimeout(blinkTimer);
   }, []);
 
-  // 🗣️ Real-time Audio Lip-Sync, Thruster Pulse & Floating Physics
+  const audioCurrentTimeRef = useRef(audioCurrentTime);
+  useEffect(() => {
+    audioCurrentTimeRef.current = audioCurrentTime;
+  }, [audioCurrentTime]);
+
+  // 🗣️ Real-time Audio Lip-Sync, Thruster Pulse & Floating Physics (60fps continuous loop)
   useEffect(() => {
     if (!isPlaying) {
       setMouthWaveHeight(0);
@@ -147,27 +152,42 @@ export const EduAvatarHost: React.FC<EduAvatarHostProps> = ({
       return;
     }
 
-    const interval = setInterval(() => {
+    let animationFrameId: number;
+    let localClock = 0;
+    let lastTime = performance.now();
+
+    const animate = (now: number) => {
+      const dt = (now - lastTime) / 1000;
+      lastTime = now;
+      localClock += dt;
+
+      // Use audio timestamp if playing, fallback to localClock
+      const t = audioCurrentTimeRef.current > 0 ? audioCurrentTimeRef.current : localClock;
+
       // Audio speech cadence wave
-      const timeFactor = audioCurrentTime * 16;
+      const timeFactor = t * 16;
       const wave1 = Math.sin(timeFactor);
       const wave2 = Math.cos(timeFactor * 1.5);
-      const intensity = Math.abs(wave1 * wave2);
+      const wave3 = Math.sin(timeFactor * 3.1);
+      const intensity = Math.abs(wave1 * wave2 * 0.7 + wave3 * 0.3);
 
-      const isSpeaking = intensity > 0.15;
-      setMouthWaveHeight(isSpeaking ? Math.min(1, intensity * 1.6) : 0.08);
+      const isSpeaking = intensity > 0.12;
+      setMouthWaveHeight(isSpeaking ? Math.min(1, Math.max(0.18, intensity * 1.8)) : 0.08);
 
       // Smooth floating physics
-      setHoverY(Math.sin(audioCurrentTime * 3.2) * 4);
+      setHoverY(Math.sin(t * 3.2) * 4);
       setHeadTilt({
-        x: Math.sin(audioCurrentTime * 1.8) * 2.5,
-        y: Math.cos(audioCurrentTime * 2.2) * 1.8,
-        rot: Math.sin(audioCurrentTime * 1.4) * 2
+        x: Math.sin(t * 1.8) * 2.5,
+        y: Math.cos(t * 2.2) * 1.8,
+        rot: Math.sin(t * 1.4) * 2
       });
-    }, 45);
 
-    return () => clearInterval(interval);
-  }, [isPlaying, audioCurrentTime]);
+      animationFrameId = requestAnimationFrame(animate);
+    };
+
+    animationFrameId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [isPlaying]);
 
   const handleRobotTap = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -472,9 +492,6 @@ export const EduAvatarHost: React.FC<EduAvatarHostProps> = ({
             ) : gesture === 'triumph' ? (
               // Happy Arc Eye ^_^
               <path d="M 82 98 Q 92 84 102 98" stroke="#22d3ee" strokeWidth="4.5" fill="none" strokeLinecap="round" />
-            ) : gesture === 'thinking' ? (
-              // Questioning / Curious Eye
-              <ellipse cx="92" cy="94" rx="10" ry="12" fill="#22d3ee" />
             ) : (
               // Standard Expressive Capsule Eye
               <g>
@@ -491,13 +508,6 @@ export const EduAvatarHost: React.FC<EduAvatarHostProps> = ({
               <line x1="138" y1="95" x2="158" y2="95" stroke="#22d3ee" strokeWidth="4" strokeLinecap="round" />
             ) : gesture === 'triumph' ? (
               <path d="M 138 98 Q 148 84 158 98" stroke="#22d3ee" strokeWidth="4.5" fill="none" strokeLinecap="round" />
-            ) : gesture === 'pointing' ? (
-              // Star Eye when focused / pointing
-              <g>
-                <rect x="138" y="82" width="20" height="26" rx="10" fill="#22d3ee" />
-                <circle cx="145" cy="88" r="4.5" fill="#ffffff" />
-                <circle cx="151" cy="98" r="2" fill="#ffffff" />
-              </g>
             ) : (
               <g>
                 <rect x="138" y="82" width="20" height="26" rx="10" fill="#22d3ee" />

@@ -58,6 +58,9 @@ export const EduReelPlayer: React.FC<EduReelPlayerProps> = ({
   // Hovered word for interactive dictionary lookup
   const [hoveredWord, setHoveredWord] = useState<string | null>(null);
 
+  // Privileged check: only teachers, instructors, or admins can download video
+  const isPrivileged = currentUser?.role === 'admin' || currentUser?.role === 'instructor' || currentUser?.role === 'teacher';
+
   // Audio element ref (Primary Narrator Voice)
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -1105,27 +1108,29 @@ export const EduReelPlayer: React.FC<EduReelPlayerProps> = ({
           <span className="text-[10px] font-black text-cyan-300">ستايل</span>
         </button>
 
-        {/* DOWNLOAD VIDEO BUTTON */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsDownloadModalOpen(true);
-          }}
-          disabled={isLiveRecording}
-          className="flex flex-col items-center gap-1 group cursor-pointer"
-          title="تحميل فيديو الريل كاملاً بجودة استوديو 60FPS"
-        >
-          <div className={`p-2 rounded-full border transition active:scale-75 ${
-            isLiveRecording
-              ? 'bg-rose-600 border-rose-400 text-white animate-pulse shadow-lg shadow-rose-600/50'
-              : 'bg-gradient-to-tr from-purple-600 to-indigo-600 border-purple-300/40 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg shadow-purple-500/30 backdrop-blur-md'
-          }`}>
-            {isLiveRecording ? <RefreshCw className="w-4 h-4 animate-spin text-white" /> : <Download className="w-4 h-4" />}
-          </div>
-          <span className={`text-[10px] font-black ${isLiveRecording ? 'text-rose-400' : 'text-purple-300'}`}>
-            {isLiveRecording ? 'يسجل...' : 'تحميل'}
-          </span>
-        </button>
+        {/* DOWNLOAD VIDEO BUTTON (Only visible to Admin & Instructor/Teacher) */}
+        {isPrivileged && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsDownloadModalOpen(true);
+            }}
+            disabled={isLiveRecording}
+            className="flex flex-col items-center gap-1 group cursor-pointer"
+            title="تحميل فيديو الريل كاملاً بجودة استوديو 60FPS"
+          >
+            <div className={`p-2 rounded-full border transition active:scale-75 ${
+              isLiveRecording
+                ? 'bg-rose-600 border-rose-400 text-white animate-pulse shadow-lg shadow-rose-600/50'
+                : 'bg-gradient-to-tr from-purple-600 to-indigo-600 border-purple-300/40 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg shadow-purple-500/30 backdrop-blur-md'
+            }`}>
+              {isLiveRecording ? <RefreshCw className="w-4 h-4 animate-spin text-white" /> : <Download className="w-4 h-4" />}
+            </div>
+            <span className={`text-[10px] font-black ${isLiveRecording ? 'text-rose-400' : 'text-purple-300'}`}>
+              {isLiveRecording ? 'يسجل...' : 'تحميل'}
+            </span>
+          </button>
+        )}
 
         {/* SHARE BUTTON */}
         <button
@@ -1193,8 +1198,8 @@ export const EduReelPlayer: React.FC<EduReelPlayerProps> = ({
         </div>
       )}
 
-      {/* 🎬 STUDIO DOWNLOAD MODAL */}
-      {isDownloadModalOpen && (
+      {/* 🎬 STUDIO DOWNLOAD MODAL (Privileged only) */}
+      {isDownloadModalOpen && isPrivileged && (
         <div 
           onClick={(e) => {
             e.stopPropagation();

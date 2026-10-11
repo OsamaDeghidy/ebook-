@@ -529,12 +529,16 @@ async function syncBookToSupabase(book: any) {
     };
     if (book.approval_status) basePayload.approval_status = book.approval_status;
     if (book.created_at || book.createdAt) basePayload.created_at = book.created_at || book.createdAt;
+    if (book.curriculum_explanation) basePayload.curriculum_explanation = book.curriculum_explanation;
+    if (book.curriculum_mindmap) basePayload.curriculum_mindmap = book.curriculum_mindmap;
 
     let { error } = await supabase.from('books').upsert(basePayload, { onConflict: 'id' });
-    if (error && error.message.includes('academic_system')) {
-      // If column academic_system is not yet created in Supabase, retry without it
+    if (error && (error.message.includes('academic_system') || error.message.includes('curriculum_') || error.message.includes('column'))) {
+      // If columns are not yet created in Supabase, retry with core fields
       const fallbackPayload = { ...basePayload };
       delete fallbackPayload.academic_system;
+      delete fallbackPayload.curriculum_explanation;
+      delete fallbackPayload.curriculum_mindmap;
       const retryResult = await supabase.from('books').upsert(fallbackPayload, { onConflict: 'id' });
       error = retryResult.error;
     }
@@ -2666,10 +2670,16 @@ app.post("/api/v2/generate-interactive-explanation", async (req, res) => {
       saveEbooks(ebooks);
 
       try {
-        await supabase.from('books').update({
-          chapters: book.chapters,
-          curriculum_explanation: book.curriculum_explanation || null
-        }).eq('id', book.id);
+        const updateData: any = { chapters: book.chapters };
+        if (book.curriculum_explanation) {
+          updateData.curriculum_explanation = book.curriculum_explanation;
+        }
+        const { error: supErr } = await supabase.from('books').update(updateData).eq('id', book.id);
+        if (supErr) {
+          console.warn("[Interactive Explanation V2] Primary Supabase update notice:", supErr.message);
+          // Fallback: save chapters only (chapters column always exists in books)
+          await supabase.from('books').update({ chapters: book.chapters }).eq('id', book.id);
+        }
       } catch (dbErr) {
         console.warn("[Interactive Explanation V2] Supabase update notice:", dbErr);
       }
