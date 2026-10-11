@@ -36,6 +36,8 @@ import { buildEducationalReelPrompt } from "./server/services/educationalReels";
 import { buildEducationalPodcastPrompt } from "./server/services/educationalPodcast";
 import { buildEducationalQuizPrompt } from "./server/services/quizEngine";
 import { detectTeacherPersona } from "./server/services/teacherPersonas";
+import { buildInteractiveExplanationPrompt } from "./server/services/interactiveExplanationV2";
+import { buildCurriculumMindMapPrompt } from "./server/services/curriculumMindMap";
 
 dotenv.config();
 
@@ -2542,6 +2544,276 @@ app.get("/api/ebooks/:id/pregenerate-status", (req, res) => {
   const bookId = req.params.id;
   const job = pregenJobs[bookId] || { status: "idle", progressPercent: 0, currentStep: "" };
   res.json(job);
+});
+
+// ========================================================
+// 🌟 V2 SYNCHRONIZED INTERACTIVE EXPLANATION ENGINE (Karim & Farah + Interactive Canvas)
+// ========================================================
+
+app.post("/api/v2/generate-interactive-explanation", async (req, res) => {
+  try {
+    const {
+      content,
+      title,
+      mode = "lesson_explanation",
+      bookId,
+      chapterId,
+      grade_level,
+      category,
+      voiceKarim = "ar-XA-Chirp3-HD-Fenrir",
+      voiceFarah = "ar-XA-Chirp3-HD-Aoede"
+    } = req.body;
+
+    let resolvedContent = content || "";
+    let resolvedTitle = title || "";
+    let book = bookId ? ebooks.find(b => b.id === bookId) : null;
+
+    if (book) {
+      if (mode === "full_curriculum_explanation") {
+        if (!resolvedContent) {
+          resolvedContent = (book.chapters || []).map((c: any, i: number) => `الفصل ${i + 1}: ${c.title}\n${c.content || c.summary || ""}`).join("\n\n---\n\n");
+        }
+        if (!resolvedTitle) resolvedTitle = book.title;
+      } else if (chapterId) {
+        const ch = (book.chapters || []).find((c: any) => c.id === chapterId);
+        if (ch) {
+          if (!resolvedContent) resolvedContent = ch.content || ch.summary || "";
+          if (!resolvedTitle) resolvedTitle = ch.title;
+        }
+      }
+    }
+
+    if (!resolvedContent && !resolvedTitle) {
+      return res.status(400).json({ error: "يجب تقديم محتوى الدرس أو المنهج لتوليد الشرح التفاعلي المتزامن." });
+    }
+
+    const ai = getGenAIClient();
+    if (!ai) {
+      return res.status(400).json({ error: "Gemini API Key is not configured." });
+    }
+
+    const systemPrompt = buildInteractiveExplanationPrompt({
+      content: resolvedContent,
+      title: resolvedTitle,
+      mode,
+      bookTitle: book?.title,
+      grade_level: grade_level || book?.grade_level,
+      category: category || book?.category
+    });
+
+    console.log(`[Interactive Explanation V2] Generating ${mode} for "${resolvedTitle}"...`);
+
+    const response = await generateContentWithRetry(ai, {
+      contents: [{ parts: [{ text: systemPrompt }] }],
+      config: {
+        responseMimeType: "application/json"
+      }
+    });
+
+    let rawText = response.text || "";
+    rawText = rawText.replace(/```json/gi, "").replace(/```/g, "").trim();
+
+    let payload: any;
+    try {
+      payload = JSON.parse(rawText);
+    } catch (parseErr) {
+      console.error("[Interactive Explanation V2] JSON parse error:", parseErr, rawText.substring(0, 300));
+      return res.status(500).json({ error: "فشل معالجة استجابة الذكاء الاصطناعي كـ JSON صالح." });
+    }
+
+    // Enhance timeline with voice audio URLs and sequential trigger_time_seconds calculation
+    if (payload && Array.isArray(payload.timeline)) {
+      let cumulativeTime = 0;
+      payload.timeline = payload.timeline.map((step: any, idx: number) => {
+        const words = (step.audio_text || "").split(/\s+/).filter(Boolean);
+        const estimatedDur = Math.max(2.5, Math.round(words.length * 0.35 * 10) / 10);
+        
+        const trigTime = typeof step.trigger_time_seconds === 'number' && step.trigger_time_seconds > 0 
+          ? step.trigger_time_seconds 
+          : cumulativeTime;
+
+        cumulativeTime = trigTime + estimatedDur;
+
+        const isKarim = step.speaker === "karim" || step.speaker === "كريم";
+        const selectedVoice = isKarim ? voiceKarim : voiceFarah;
+        const audioUrl = `/api/tts/stream?text=${encodeURIComponent(step.audio_text || "")}&speaker=${isKarim ? 'male' : 'female'}&voice=${encodeURIComponent(selectedVoice)}`;
+
+        return {
+          ...step,
+          step: idx + 1,
+          speaker: isKarim ? 'karim' : 'farah',
+          trigger_time_seconds: trigTime,
+          estimated_duration_seconds: estimatedDur,
+          audio_url: audioUrl
+        };
+      });
+
+      if (!payload.metadata.total_estimated_duration_seconds) {
+        payload.metadata.total_estimated_duration_seconds = Math.round(cumulativeTime);
+      }
+    }
+
+    // Persist permanently to book (both locally and on Supabase cloud database)
+    if (book) {
+      if (mode === "full_curriculum_explanation") {
+        book.curriculum_explanation = payload;
+      } else if (chapterId) {
+        const ch = (book.chapters || []).find((c: any) => c.id === chapterId);
+        if (ch) {
+          ch.interactive_explanation = payload;
+        }
+      }
+      saveEbooks(ebooks);
+
+      try {
+        await supabase.from('books').update({
+          chapters: book.chapters,
+          curriculum_explanation: book.curriculum_explanation || null
+        }).eq('id', book.id);
+      } catch (dbErr) {
+        console.warn("[Interactive Explanation V2] Supabase update notice:", dbErr);
+      }
+    }
+
+    res.json({ success: true, explanation: payload });
+  } catch (err: any) {
+    console.error("[Interactive Explanation V2] Error:", err);
+    res.status(500).json({ error: "فشل توليد الشرح التفاعلي: " + (err.message || String(err)) });
+  }
+});
+
+// GET saved interactive explanation
+app.get("/api/v2/interactive-explanation/:bookId/:chapterId?", (req, res) => {
+  const { bookId, chapterId } = req.params;
+  const book = ebooks.find(b => b.id === bookId);
+  if (!book) return res.status(404).json({ error: "Book not found" });
+
+  if (chapterId && chapterId !== "curriculum") {
+    const ch = (book.chapters || []).find((c: any) => c.id === chapterId);
+    if (ch && ch.interactive_explanation) {
+      return res.json({ success: true, explanation: ch.interactive_explanation });
+    }
+  } else if (book.curriculum_explanation) {
+    return res.json({ success: true, explanation: book.curriculum_explanation });
+  }
+
+  res.json({ success: false, message: "No saved explanation found." });
+});
+
+// ========================================================
+// 🗺️ MASTER CURRICULUM MIND MAP GENERATOR & UPDATER
+// ========================================================
+
+app.post("/api/v2/generate-curriculum-mindmap", async (req, res) => {
+  try {
+    const { bookId, forceRegenerate = false } = req.body;
+    if (!bookId) {
+      return res.status(400).json({ error: "معرّف الكتاب (bookId) مطلوب لتوليد الخريطة الذهنية للمنهج." });
+    }
+
+    let book = ebooks.find(b => b.id === bookId);
+    if (!book) {
+      try {
+        const { data: dbBook } = await supabase.from("books").select("*").eq("id", bookId).maybeSingle();
+        if (dbBook) book = dbBook;
+      } catch (e) {}
+    }
+
+    if (!book) {
+      return res.status(404).json({ error: "الكتاب غير موجود." });
+    }
+
+    const chapters = book.chapters || [];
+    if (chapters.length === 0) {
+      return res.status(400).json({ error: "لا توجد فصول مسجلة في هذا الكتاب لتوليد خريطة ذهنية لها." });
+    }
+
+    // Return cached if exists and not forced
+    if (book.curriculum_mindmap && !forceRegenerate) {
+      return res.json({ success: true, mindmap: book.curriculum_mindmap, cached: true });
+    }
+
+    const ai = getGenAIClient();
+    if (!ai) {
+      return res.status(400).json({ error: "Gemini API Client is not configured." });
+    }
+
+    console.log(`[Curriculum MindMap] Generating master mind map for "${book.title}" (${chapters.length} chapters)...`);
+
+    const prompt = buildCurriculumMindMapPrompt({
+      bookTitle: book.title,
+      category: book.category,
+      grade_level: book.grade_level,
+      chapters: chapters.map((c: any) => ({
+        id: c.id,
+        title: c.title,
+        summary: c.summary,
+        content: c.content,
+        concepts: c.concepts
+      }))
+    });
+
+    const response = await generateContentWithRetry(ai, {
+      contents: [{ parts: [{ text: prompt }] }],
+      config: {
+        responseMimeType: "application/json",
+        temperature: 0.2
+      }
+    });
+
+    let rawText = response.text || "";
+    rawText = rawText.replace(/```json/gi, "").replace(/```/g, "").trim();
+
+    let mindmapPayload: any;
+    try {
+      mindmapPayload = JSON.parse(rawText);
+    } catch (parseErr) {
+      console.error("[Curriculum MindMap] JSON parse error:", parseErr, rawText.substring(0, 300));
+      return res.status(500).json({ error: "فشل معالجة الخريطة الذهنية كـ JSON صالح." });
+    }
+
+    mindmapPayload.generatedAt = new Date().toISOString();
+    mindmapPayload.totalChapters = chapters.length;
+
+    // Clean mermaid syntax if needed
+    if (mindmapPayload.mermaidSyntax) {
+      mindmapPayload.mermaidSyntax = mindmapPayload.mermaidSyntax
+        .replace(/^```mermaid\s*/i, '')
+        .replace(/^```\s*/, '')
+        .replace(/```$/, '')
+        .trim();
+    }
+
+    // Persist permanently in local JSON and Supabase
+    book.curriculum_mindmap = mindmapPayload;
+    saveEbooks(ebooks);
+
+    try {
+      await supabase.from('books').update({
+        curriculum_mindmap: mindmapPayload
+      }).eq('id', book.id);
+    } catch (dbErr) {
+      console.warn("[Curriculum MindMap] Supabase save notice:", dbErr);
+    }
+
+    res.json({ success: true, mindmap: mindmapPayload });
+  } catch (err: any) {
+    console.error("[Curriculum MindMap] Error:", err);
+    res.status(500).json({ error: "فشل توليد الخريطة الذهنية: " + (err.message || String(err)) });
+  }
+});
+
+// GET saved curriculum mind map
+app.get("/api/v2/curriculum-mindmap/:bookId", (req, res) => {
+  const { bookId } = req.params;
+  const book = ebooks.find(b => b.id === bookId);
+  if (!book) return res.status(404).json({ error: "Book not found" });
+
+  if (book.curriculum_mindmap) {
+    return res.json({ success: true, mindmap: book.curriculum_mindmap });
+  }
+
+  res.json({ success: false, message: "لم يتم توليد خريطة ذهنية شاملة للمنهج بعد." });
 });
 
 // 9.8 Toggle Book Publish Status (Draft vs Published for Students)

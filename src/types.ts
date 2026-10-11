@@ -88,6 +88,37 @@ export interface MindMapNode {
   category?: string;
 }
 
+export interface CurriculumMindMapNode {
+  id: string;
+  label: string;
+  parentId: string | null;
+  chapterTitle?: string;
+  chapterIndex?: number;
+  level?: 'root' | 'chapter' | 'concept' | 'subtopic';
+  description: string;
+  keyTakeaway?: string;
+  category?: string;
+  color?: string;
+}
+
+export interface CurriculumLearningMilestone {
+  step: number;
+  title: string;
+  focus: string;
+  keyConcepts: string[];
+}
+
+export interface CurriculumMindMapPayload {
+  title: string;
+  courseTitle: string;
+  totalChapters: number;
+  summary: string;
+  mermaidSyntax: string;
+  nodes: CurriculumMindMapNode[];
+  learningPath: CurriculumLearningMilestone[];
+  generatedAt: string;
+}
+
 export interface Chapter {
   id: string;
   title: string;
@@ -153,6 +184,8 @@ export interface Ebook {
   feature_toggles?: FeatureToggles;
   pregeneration_status?: 'idle' | 'processing' | 'ready';
   pregeneration_percent?: number;
+  curriculum_explanation?: any;
+  curriculum_mindmap?: CurriculumMindMapPayload;
 }
 
 export interface MarketplaceBook extends Ebook {
@@ -186,6 +219,8 @@ export interface MarketplaceBook extends Ebook {
   feature_toggles?: FeatureToggles;
   pregeneration_status?: 'idle' | 'processing' | 'ready';
   pregeneration_percent?: number;
+  curriculum_explanation?: any;
+  curriculum_mindmap?: CurriculumMindMapPayload;
 }
 
 export interface ConversionJob {

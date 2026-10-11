@@ -19,6 +19,8 @@ import { supabase } from '../lib/supabase';
 import { ForensicWatermark } from '../components/security/ForensicWatermark';
 import { ScreenShieldGuard } from '../components/security/ScreenShieldGuard';
 import { SeoStructuredData } from '../components/seo/SeoStructuredData';
+import { InteractiveLessonExplanation } from '../components/interactive/InteractiveLessonExplanation';
+import { FullCurriculumExplanation } from '../components/interactive/FullCurriculumExplanation';
 
 interface BookDetailsRouteProps {
   books: MarketplaceBook[];
@@ -48,7 +50,7 @@ export default function BookDetailsRoute({
 
   const book = books.find(b => b.id === id);
   const [activeChapterId, setActiveChapterId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'read' | 'podcast' | 'flashcards' | 'sandbox' | 'quiz' | 'mindmap' | 'videos' | 'editor' | 'reels'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'read' | 'reels' | 'interactive_lesson' | 'interactive_curriculum' | 'podcast' | 'flashcards' | 'sandbox' | 'quiz' | 'mindmap' | 'videos' | 'editor'>(initialTab);
   const [isGeneratingAiQuestions, setIsGeneratingAiQuestions] = useState(false);
   const [isExpandingChapters, setIsExpandingChapters] = useState(false);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
@@ -761,6 +763,8 @@ export default function BookDetailsRoute({
       <div className="flex items-center gap-1.5 border-b border-gray-200 pb-2 overflow-x-auto scrollbar-none -mx-2 px-2 sm:mx-0 sm:px-0">
         {[
           { id: 'read', label: 'قراءة المقرر', icon: BookOpen, enabled: true },
+          { id: 'interactive_lesson', label: '✨ [جديد] شرح الدرس تفاعلي', icon: Brain, enabled: true, isNew: true },
+          { id: 'interactive_curriculum', label: '🚀 [جديد] شرح المنهج كامل', icon: Sparkles, enabled: true, isNew: true },
           { id: 'reels', label: 'ريلز وتيك توك الفصل 🎬', icon: Film, enabled: true },
           { id: 'podcast', label: 'استوديو البودكاست', icon: Radio, enabled: book.feature_toggles?.show_podcast !== false },
           { id: 'flashcards', label: 'بطاقات المراجعة', icon: Layers, enabled: book.feature_toggles?.show_flashcards !== false },
@@ -776,14 +780,21 @@ export default function BookDetailsRoute({
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`px-4 py-2.5 rounded-2xl text-xs font-black flex items-center gap-2 shrink-0 transition ${
+              className={`px-3.5 py-2.5 rounded-2xl text-xs font-black flex items-center gap-2 shrink-0 transition relative ${
                 isActive
-                  ? 'bg-teal-600 text-white shadow-md shadow-teal-500/20'
+                  ? tab.isNew 
+                    ? 'bg-gradient-to-r from-teal-600 to-indigo-600 text-white shadow-md shadow-indigo-500/25'
+                    : 'bg-teal-600 text-white shadow-md shadow-teal-500/20'
+                  : tab.isNew
+                  ? 'bg-gradient-to-r from-teal-50 to-indigo-50 border border-teal-200/80 text-teal-900 hover:border-teal-300'
                   : 'bg-white border border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`}
             >
-              <Icon className="w-4 h-4" />
+              <Icon className={`w-4 h-4 ${tab.isNew && !isActive ? 'text-teal-600' : ''}`} />
               <span>{tab.label}</span>
+              {tab.isNew && !isActive && (
+                <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
+              )}
             </button>
           );
         })}
@@ -991,6 +1002,23 @@ export default function BookDetailsRoute({
               <ReadSection chapter={activeChapter} />
             </div>
           </ScreenShieldGuard>
+        )}
+
+        {/* 🌟 V2 SYNCHRONIZED INTERACTIVE LESSON EXPLANATION */}
+        {activeTab === 'interactive_lesson' && activeChapter && (
+          <InteractiveLessonExplanation
+            book={book}
+            chapter={activeChapter}
+            currentUser={currentUser}
+          />
+        )}
+
+        {/* 🚀 V2 SYNCHRONIZED FULL CURRICULUM EXPLANATION */}
+        {activeTab === 'interactive_curriculum' && (
+          <FullCurriculumExplanation
+            book={book}
+            currentUser={currentUser}
+          />
         )}
 
         {activeTab === 'reels' && activeChapter && (() => {
