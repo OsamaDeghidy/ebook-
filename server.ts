@@ -844,11 +844,39 @@ app.get("/api/ebooks/:id", (req, res) => {
   res.json(ebook);
 });
 
-// 3. Delete ebook
-app.delete("/api/ebooks/:id", (req, res) => {
-  ebooks = ebooks.filter((e) => e.id !== req.params.id);
+// 3. Delete ebook and cascade delete all associated reels & assets
+app.delete("/api/ebooks/:id", async (req, res) => {
+  const bookId = req.params.id;
+  ebooks = ebooks.filter((e) => e.id !== bookId);
   saveEbooks(ebooks);
-  res.json({ success: true, message: "Ebook deleted" });
+
+  // 1. Delete associated reels from local reels.json
+  try {
+    let allReels = loadReels();
+    const prevCount = allReels.length;
+    allReels = allReels.filter((r: any) => r.book_id !== bookId);
+    if (allReels.length !== prevCount) {
+      saveReels(allReels);
+      console.log(`[Book Delete] Cascade removed ${prevCount - allReels.length} reels for book ${bookId}`);
+    }
+  } catch (err) {
+    console.warn("[Book Delete] Error cleaning local reels:", err);
+  }
+
+  // 2. Delete associated reels and book from Supabase cloud database
+  try {
+    await supabase.from("reels").delete().eq("book_id", bookId);
+  } catch (err) {
+    console.warn("[Book Delete] Error deleting reels from Supabase:", err);
+  }
+
+  try {
+    await supabase.from("books").delete().eq("id", bookId);
+  } catch (err) {
+    console.warn("[Book Delete] Error deleting book from Supabase:", err);
+  }
+
+  res.json({ success: true, message: "Ebook and all associated reels deleted successfully" });
 });
 
 // 4. Update or Upsert ebook
@@ -5194,6 +5222,10 @@ app.get("/api/reels/feed", async (req, res) => {
       reels = reels.filter((r: any) => r.style_type === style);
     }
 
+    // 🛡️ Filter out orphaned reels (reels belonging to deleted books)
+    const existingBookIds = new Set(ebooks.map((b: any) => b.id));
+    reels = reels.filter((r: any) => !r.book_id || existingBookIds.has(r.book_id));
+
     // Sort by viral engagement score: (likes * 2 + views + completions * 3)
     reels.sort((a: any, b: any) => {
       const scoreA = (a.likes_count || 0) * 2 + (a.views_count || 0) + (a.completions_count || 0) * 3;
@@ -5256,7 +5288,7 @@ app.post("/api/reels/:id/interact", async (req, res) => {
   }
 });
 
-// 6. Delete Reel
+// 6. Delete Reel (Single)
 app.delete("/api/reels/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -5267,6 +5299,36 @@ app.delete("/api/reels/:id", async (req, res) => {
       await supabase.from("reels").delete().eq("id", id);
     } catch (e) {}
     res.json({ success: true, message: "تم حذف الريل بنجاح" });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 7. Delete All Reels for a Specific Book
+app.delete("/api/reels/book/:bookId", async (req, res) => {
+  try {
+    const { bookId } = req.params;
+    let reels = loadReels();
+    const prevCount = reels.length;
+    reels = reels.filter((r: any) => r.book_id !== bookId);
+    saveReels(reels);
+    try {
+      await supabase.from("reels").delete().eq("book_id", bookId);
+    } catch (e) {}
+    res.json({ success: true, message: `تم حذف جميع ريلز الكتاب (${prevCount - reels.length} ريل) بنجاح` });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 8. Delete All Reels in System (Clean slate / purge)
+app.delete("/api/reels/all", async (req, res) => {
+  try {
+    saveReels([]);
+    try {
+      await supabase.from("reels").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    } catch (e) {}
+    res.json({ success: true, message: "تم مسح وتصفير كافة الريلز بالكامل" });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }

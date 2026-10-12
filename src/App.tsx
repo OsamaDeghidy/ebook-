@@ -347,12 +347,21 @@ function AppContent() {
   const handleDeleteBook = async (bookId: string) => {
     setEbooks(prev => prev.filter(b => b.id !== bookId));
     
+    // 1. Delete associated reels from Supabase
+    try {
+      await supabase.from('reels').delete().eq('book_id', bookId);
+    } catch (e) {
+      console.warn("Supabase reels delete error:", e);
+    }
+
+    // 2. Delete book from Supabase
     try {
       await supabase.from('books').delete().eq('id', bookId);
     } catch (e) {
       console.warn("Supabase delete error:", e);
     }
 
+    // 3. Delete from backend server (also cascade cleans local reels.json)
     try {
       await fetch(`/api/ebooks/${bookId}`, { method: 'DELETE' });
     } catch (e) {
