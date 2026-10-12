@@ -4,6 +4,7 @@ import {
   BarChart3, CheckCircle2, Download, Copy, RefreshCw, FileText, ArrowLeft, Shield, Clock, Flame
 } from 'lucide-react';
 import { MarketplaceBook } from '../../types';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface InstructorDashboardProps {
   books: MarketplaceBook[];
@@ -14,6 +15,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
   books,
   onBackToMarketplace
 }) => {
+  const { t, language, dir } = useLanguage();
   const [activeTab, setActiveTab] = useState<'analytics' | 'exams' | 'vouchers'>('analytics');
 
   // Exam Generator State
@@ -71,7 +73,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
   };
 
   return (
-    <div className="space-y-8 animate-fade-in pb-20 text-right max-w-7xl mx-auto" dir="rtl">
+    <div className="space-y-8 animate-fade-in pb-20 text-right max-w-7xl mx-auto" dir={dir}>
       
       {/* TOP HEADER */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-gray-200">

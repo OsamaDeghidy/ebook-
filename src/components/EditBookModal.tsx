@@ -72,6 +72,9 @@ export const EditBookModal: React.FC<EditBookModalProps> = ({
   const [showMindmap, setShowMindmap] = useState(book.feature_toggles?.show_mindmap !== false);
   const [showVideos, setShowVideos] = useState(book.feature_toggles?.show_videos !== false);
   const [isSaving, setIsSaving] = useState(false);
+  const [language, setLanguage] = useState<string>(book.language || 'ar');
+  const [isLanguageLearning, setIsLanguageLearning] = useState<boolean>(Boolean(book.is_language_learning));
+  const [targetLearningLanguage, setTargetLearningLanguage] = useState<string>(book.target_learning_language || 'it');
 
   const isAcademic = category === 'academic_curriculum' || book.track === 'academic';
 
@@ -128,6 +131,9 @@ export const EditBookModal: React.FC<EditBookModalProps> = ({
         external_url: book.is_external ? externalUrl.trim() : book.external_url,
         preview_video_url: previewVideoUrl.trim() || undefined,
         thumbnail_url: thumbnailUrl || book.thumbnail_url,
+        language,
+        is_language_learning: isLanguageLearning,
+        target_learning_language: isLanguageLearning ? targetLearningLanguage : undefined,
         feature_toggles: {
           show_podcast: showPodcast,
           show_flashcards: showFlashcards,
@@ -294,6 +300,79 @@ export const EditBookModal: React.FC<EditBookModalProps> = ({
                 <p className="text-[10px] text-teal-700 mt-1 font-bold">
                   🔒 يتم تشغيل هذا المحتوى للمشتركين حصرياً داخل مشغل المنصة المدمج دون توجيه أو كشف للرابط.
                 </p>
+              </div>
+            )}
+          </div>
+
+          {/* 🌐 MULTILINGUAL & LANGUAGE LEARNING SETTINGS */}
+          <div className="p-4 bg-gradient-to-r from-sky-50 to-indigo-50 border border-sky-200/80 rounded-2xl space-y-3">
+            <div className="flex items-center justify-between border-b border-sky-200/60 pb-2">
+              <span className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                <span>🌐 لغة المقرر والتخصص الدولي</span>
+              </span>
+              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800">
+                توليد AI ذكي
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">اللغة الأساسية للمقرر</label>
+                <select
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                  className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:border-sky-500 cursor-pointer"
+                >
+                  <option value="ar">🇪🇬 العربية (Arabic)</option>
+                  <option value="en">🇬🇧 English (الإنجليزية)</option>
+                  <option value="it">🇮🇹 Italiano (الإيطالية)</option>
+                  <option value="fr">🇫🇷 Français (الفرنسية)</option>
+                  <option value="de">🇩🇪 Deutsch (الألمانية)</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col justify-end">
+                <label className="flex items-center gap-2 p-2.5 bg-white border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition select-none">
+                  <input
+                    type="checkbox"
+                    checked={isLanguageLearning}
+                    onChange={(e) => setIsLanguageLearning(e.target.checked)}
+                    className="w-4 h-4 text-sky-600 rounded-md focus:ring-sky-500 cursor-pointer"
+                  />
+                  <div className="flex flex-col">
+                    <span className="text-xs font-black text-slate-800">دورة لتعليم اللغات 🎓</span>
+                    <span className="text-[10px] text-slate-500 font-bold">شرح ثنائي اللغة مع نطق سليم</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {isLanguageLearning && (
+              <div className="pt-2 border-t border-sky-200/60 animate-in fade-in duration-150">
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  ما هي اللغة الأجنبية المستهدفة بالتعليم؟
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    { code: 'it', label: '🇮🇹 الإيطالية' },
+                    { code: 'en', label: '🇬🇧 الإنجليزية' },
+                    { code: 'fr', label: '🇫🇷 الفرنسية' },
+                    { code: 'de', label: '🇩🇪 الألمانية' }
+                  ].map((item) => (
+                    <button
+                      key={item.code}
+                      type="button"
+                      onClick={() => setTargetLearningLanguage(item.code)}
+                      className={`p-2 rounded-xl text-xs font-extrabold transition border cursor-pointer ${
+                        targetLearningLanguage === item.code
+                          ? 'bg-sky-600 text-white border-sky-600 shadow-xs'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>

@@ -24481,5 +24481,436 @@
     "completions_count": 45,
     "is_public_teaser": true,
     "created_at": "2026-10-09T13:41:22.356Z"
+  },
+  {
+    "id": "reel-1791754274656",
+    "book_id": "12d61c3b-9a43-4d84-b3e8-53e753731706",
+    "book_title": "English Language KG2 Term 1",
+    "author_name": "خبير المادة",
+    "category": "تعليمي",
+    "subcategory": "",
+    "thumbnail_url": "",
+    "chapter_id": "ch-12d61c3b-9a43-4d84-b3e8-53e753731706-1",
+    "chapter_title": "Introduction and Welcome",
+    "style_type": "chalkboard",
+    "style": "chalkboard",
+    "voice": "ar-XA-Chirp3-HD-Fenrir",
+    "duration_seconds": 45,
+    "audio_url": "https://ydlzvuutjgelpxueufgn.supabase.co/storage/v1/object/public/book-audios/reel_12d61c3b-9a43-4d84-b3e8-53e753731706_ch-12d61c3b-9a43-4d84-b3e8-53e753731706-1_1791754264831.mp3",
+    "narration_script": "تَخَيَّلْ مَعِي... كَيْفَ تَبْدَأُ يَوْمَكَ الْمَدْرَسِيَّ الأَوَّلَ بِثِقَةٍ وَابْتِسَامَةٍ سَاحِرَةٍ؟ السِّرُّ يَا بَطَلُ بَسِيطٌ جِدًّا! عِنْدَمَا تَدْخُلُ الصَّفَّ صَبَاحًا، حَيِّ مُعَلِّمَكَ بِحَمَاسٍ: \"Good morning, teacher!\"... تَذَكَّرْ دَائِمًا هَذِهِ الْمُعَادَلَةَ: [كَلِمَةُ التَّحِيَّةِ + الاِسْمُ]! لَحْظَةً... هَلْ سَأَلْتَ نَفْسَكَ، مَاذَا نَقُولُ فِي الْمَسَاءِ؟ إِيَّاكَ وَالْخَطَأَ الشَّائِعَ! لاَ تَقُلْ \"Good morning\" لَيْلاً، بَلِ اسْتَخْدِمْ \"Good evening\" بَعْدَ غُرُوبِ الشَّمْسِ. تَوَاصَلْ مَعَ أَصْدِقَائِكَ بِذَكَاءٍ، وَكُنْ السَّفِيرَ الأَجْمَلَ لِلأَدَبِ وَالْمَرَحِ فِي المَدْرَسَةِ!",
+    "scenes": [
+      {
+        "id": "scene-1",
+        "act": "hook",
+        "title": "كيف تبدأ يومك المدرسي بثقة؟",
+        "badgeText": "🔥 تحية الصباح",
+        "visualType": "quote",
+        "visualData": {
+          "highlightQuote": "Good morning, teacher!"
+        },
+        "startSec": 0,
+        "endSec": 10
+      },
+      {
+        "id": "scene-2",
+        "act": "concept",
+        "title": "تركيبة التحية اليومية",
+        "badgeText": "🧠 القاعدة والأسلوب",
+        "visualType": "bullet_points",
+        "visualData": {
+          "bullets": [
+            "صيغة التحية: [Greeting Word + Name/Noun]",
+            "التحية الصباحية: Good morning",
+            "تجنب الخطأ: لا تستخدم Good morning بعد غروب الشمس"
+          ],
+          "formulaLatex": "\\text{Greeting Word} + \\text{Name/Noun}",
+          "codeSnippet": "",
+          "imagePrompt": "A cheerful colorful KG2 classroom illustration with a smiling teacher and polite young students greeting each other happily in modern 2D vector style"
+        },
+        "startSec": 10,
+        "endSec": 30
+      },
+      {
+        "id": "scene-3",
+        "act": "takeaway",
+        "title": "التطبيق العملي",
+        "badgeText": "🏆 الخلاصة الذهبية",
+        "visualType": "bullet_points",
+        "visualData": {
+          "highlightQuote": "استخدم التحية المناسبة لوقت اليوم: Good morning للصباح، وGood evening للمساء!"
+        },
+        "startSec": 30,
+        "endSec": 45
+      }
+    ],
+    "word_timings": [
+      {
+        "word": "تَخَيَّلْ",
+        "startMs": 0,
+        "endMs": 597
+      },
+      {
+        "word": "مَعِي...",
+        "startMs": 597,
+        "endMs": 1194
+      },
+      {
+        "word": "كَيْفَ",
+        "startMs": 1194,
+        "endMs": 1791
+      },
+      {
+        "word": "تَبْدَأُ",
+        "startMs": 1791,
+        "endMs": 2388
+      },
+      {
+        "word": "يَوْمَكَ",
+        "startMs": 2388,
+        "endMs": 2985
+      },
+      {
+        "word": "الْمَدْرَسِيَّ",
+        "startMs": 2985,
+        "endMs": 3582
+      },
+      {
+        "word": "الأَوَّلَ",
+        "startMs": 3582,
+        "endMs": 4179
+      },
+      {
+        "word": "بِثِقَةٍ",
+        "startMs": 4179,
+        "endMs": 4776
+      },
+      {
+        "word": "وَابْتِسَامَةٍ",
+        "startMs": 4776,
+        "endMs": 5373
+      },
+      {
+        "word": "سَاحِرَةٍ؟",
+        "startMs": 5373,
+        "endMs": 5970
+      },
+      {
+        "word": "السِّرُّ",
+        "startMs": 5970,
+        "endMs": 6567
+      },
+      {
+        "word": "يَا",
+        "startMs": 6567,
+        "endMs": 7164
+      },
+      {
+        "word": "بَطَلُ",
+        "startMs": 7164,
+        "endMs": 7761
+      },
+      {
+        "word": "بَسِيطٌ",
+        "startMs": 7761,
+        "endMs": 8358
+      },
+      {
+        "word": "جِدًّا!",
+        "startMs": 8358,
+        "endMs": 8955
+      },
+      {
+        "word": "عِنْدَمَا",
+        "startMs": 8955,
+        "endMs": 9552
+      },
+      {
+        "word": "تَدْخُلُ",
+        "startMs": 9552,
+        "endMs": 10149
+      },
+      {
+        "word": "الصَّفَّ",
+        "startMs": 10149,
+        "endMs": 10746
+      },
+      {
+        "word": "صَبَاحًا،",
+        "startMs": 10746,
+        "endMs": 11343
+      },
+      {
+        "word": "حَيِّ",
+        "startMs": 11343,
+        "endMs": 11940
+      },
+      {
+        "word": "مُعَلِّمَكَ",
+        "startMs": 11940,
+        "endMs": 12537
+      },
+      {
+        "word": "بِحَمَاسٍ:",
+        "startMs": 12537,
+        "endMs": 13134
+      },
+      {
+        "word": "\"Good",
+        "startMs": 13134,
+        "endMs": 13731
+      },
+      {
+        "word": "morning,",
+        "startMs": 13731,
+        "endMs": 14328
+      },
+      {
+        "word": "teacher!\"...",
+        "startMs": 14328,
+        "endMs": 14925
+      },
+      {
+        "word": "تَذَكَّرْ",
+        "startMs": 14925,
+        "endMs": 15522
+      },
+      {
+        "word": "دَائِمًا",
+        "startMs": 15522,
+        "endMs": 16119
+      },
+      {
+        "word": "هَذِهِ",
+        "startMs": 16119,
+        "endMs": 16716
+      },
+      {
+        "word": "الْمُعَادَلَةَ:",
+        "startMs": 16716,
+        "endMs": 17313
+      },
+      {
+        "word": "[كَلِمَةُ",
+        "startMs": 17313,
+        "endMs": 17910
+      },
+      {
+        "word": "التَّحِيَّةِ",
+        "startMs": 17910,
+        "endMs": 18507
+      },
+      {
+        "word": "+",
+        "startMs": 18507,
+        "endMs": 19104
+      },
+      {
+        "word": "الاِسْمُ]!",
+        "startMs": 19104,
+        "endMs": 19701
+      },
+      {
+        "word": "لَحْظَةً...",
+        "startMs": 19701,
+        "endMs": 20299
+      },
+      {
+        "word": "هَلْ",
+        "startMs": 20299,
+        "endMs": 20896
+      },
+      {
+        "word": "سَأَلْتَ",
+        "startMs": 20896,
+        "endMs": 21493
+      },
+      {
+        "word": "نَفْسَكَ،",
+        "startMs": 21493,
+        "endMs": 22090
+      },
+      {
+        "word": "مَاذَا",
+        "startMs": 22090,
+        "endMs": 22687
+      },
+      {
+        "word": "نَقُولُ",
+        "startMs": 22687,
+        "endMs": 23284
+      },
+      {
+        "word": "فِي",
+        "startMs": 23284,
+        "endMs": 23881
+      },
+      {
+        "word": "الْمَسَاءِ؟",
+        "startMs": 23881,
+        "endMs": 24478
+      },
+      {
+        "word": "إِيَّاكَ",
+        "startMs": 24478,
+        "endMs": 25075
+      },
+      {
+        "word": "وَالْخَطَأَ",
+        "startMs": 25075,
+        "endMs": 25672
+      },
+      {
+        "word": "الشَّائِعَ!",
+        "startMs": 25672,
+        "endMs": 26269
+      },
+      {
+        "word": "لاَ",
+        "startMs": 26269,
+        "endMs": 26866
+      },
+      {
+        "word": "تَقُلْ",
+        "startMs": 26866,
+        "endMs": 27463
+      },
+      {
+        "word": "\"Good",
+        "startMs": 27463,
+        "endMs": 28060
+      },
+      {
+        "word": "morning\"",
+        "startMs": 28060,
+        "endMs": 28657
+      },
+      {
+        "word": "لَيْلاً،",
+        "startMs": 28657,
+        "endMs": 29254
+      },
+      {
+        "word": "بَلِ",
+        "startMs": 29254,
+        "endMs": 29851
+      },
+      {
+        "word": "اسْتَخْدِمْ",
+        "startMs": 29851,
+        "endMs": 30448
+      },
+      {
+        "word": "\"Good",
+        "startMs": 30448,
+        "endMs": 31045
+      },
+      {
+        "word": "evening\"",
+        "startMs": 31045,
+        "endMs": 31642
+      },
+      {
+        "word": "بَعْدَ",
+        "startMs": 31642,
+        "endMs": 32239
+      },
+      {
+        "word": "غُرُوبِ",
+        "startMs": 32239,
+        "endMs": 32836
+      },
+      {
+        "word": "الشَّمْسِ.",
+        "startMs": 32836,
+        "endMs": 33433
+      },
+      {
+        "word": "تَوَاصَلْ",
+        "startMs": 33433,
+        "endMs": 34030
+      },
+      {
+        "word": "مَعَ",
+        "startMs": 34030,
+        "endMs": 34627
+      },
+      {
+        "word": "أَصْدِقَائِكَ",
+        "startMs": 34627,
+        "endMs": 35224
+      },
+      {
+        "word": "بِذَكَاءٍ،",
+        "startMs": 35224,
+        "endMs": 35821
+      },
+      {
+        "word": "وَكُنْ",
+        "startMs": 35821,
+        "endMs": 36418
+      },
+      {
+        "word": "السَّفِيرَ",
+        "startMs": 36418,
+        "endMs": 37015
+      },
+      {
+        "word": "الأَجْمَلَ",
+        "startMs": 37015,
+        "endMs": 37612
+      },
+      {
+        "word": "لِلأَدَبِ",
+        "startMs": 37612,
+        "endMs": 38209
+      },
+      {
+        "word": "وَالْمَرَحِ",
+        "startMs": 38209,
+        "endMs": 38806
+      },
+      {
+        "word": "فِي",
+        "startMs": 38806,
+        "endMs": 39403
+      },
+      {
+        "word": "المَدْرَسَةِ!",
+        "startMs": 39403,
+        "endMs": 40000
+      }
+    ],
+    "visual_cards": [
+      {
+        "title": "قاعدة التحية",
+        "content": "Formula: [Greeting Word + Name/Noun]",
+        "type": "formula",
+        "startSec": 5,
+        "endSec": 20
+      },
+      {
+        "title": "جدول الأوقات",
+        "content": "Morning: Good morning | Evening: Good evening | Parting: Goodbye",
+        "type": "diagram",
+        "startSec": 21,
+        "endSec": 35
+      }
+    ],
+    "interactive_quiz": {
+      "question": "ما هي التحية الصحيحة التي نقولها للمعلم في الصباح؟",
+      "options": [
+        "Good morning, teacher!",
+        "Good night, teacher!",
+        "Goodbye, teacher!"
+      ],
+      "correctIndex": 0,
+      "triggerSec": 32,
+      "explanation": "نستخدم 'Good morning' في الصباح عند الذهاب للمدرسة وبداية اليوم."
+    },
+    "likes_count": 32,
+    "views_count": 182,
+    "completions_count": 45,
+    "is_public_teaser": true,
+    "created_at": "2026-10-11T21:31:14.656Z"
   }
 ]

@@ -1,4 +1,4 @@
-import { EduReel, EduReelStyle } from '../types';
+import { EduReel, EduReelStyle, EduReelScene } from '../types';
 
 /**
  * 🎬 High-Fidelity 9:16 Vertical Video Renderer & Exporter for EduReels
@@ -243,10 +243,10 @@ function drawAuthenticReelFrame(
   // ========================================================
   // 2. TOP STORY SEGMENT PROGRESS BARS
   // ========================================================
-  const scenes = reel.scenes || [
-    { id: '1', act: 'hook', title: reel.chapter_title, badgeText: '🔥 فكرة محورية', startSec: 0, endSec: 12 },
-    { id: '2', act: 'concept', title: 'جوهر الدرس', badgeText: '🧠 الشرح الجوهري', startSec: 12, endSec: 32 },
-    { id: '3', act: 'takeaway', title: 'الخلاصة', badgeText: '🏆 الخلاصة والتطبيق', startSec: 32, endSec: totalDuration }
+  const scenes: EduReelScene[] = reel.scenes || [
+    { id: '1', act: 'hook', title: reel.chapter_title, badgeText: '🔥 فكرة محورية', visualType: 'quote', startSec: 0, endSec: 12 },
+    { id: '2', act: 'concept', title: 'جوهر الدرس', badgeText: '🧠 الشرح الجوهري', visualType: 'bullet_points', startSec: 12, endSec: 32 },
+    { id: '3', act: 'takeaway', title: 'الخلاصة', badgeText: '🏆 الخلاصة والتطبيق', visualType: 'quote', startSec: 32, endSec: totalDuration }
   ];
 
   const currentScene = scenes.find(s => elapsedSec >= s.startSec && elapsedSec <= s.endSec) || scenes[0];
@@ -599,7 +599,7 @@ function drawRoundedRect(
   w: number,
   h: number,
   r: number,
-  fillColor: string,
+  fillColor: string | CanvasGradient,
   strokeColor: string
 ) {
   ctx.beginPath();

@@ -10,6 +10,7 @@ import { MarketplaceBook } from '../types';
 import { MAIN_CATEGORIES } from '../constants/taxonomy';
 import { getPlatformConfig, PlatformConfig } from '../services/platformConfigService';
 import { SeoStructuredData } from './seo/SeoStructuredData';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface LandingPageViewProps {
   books: MarketplaceBook[];
@@ -20,6 +21,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
   books,
   onOpenAuth
 }) => {
+  const { t, language, dir } = useLanguage();
   const navigate = useNavigate();
   const [platformConfig, setPlatformConfig] = useState<PlatformConfig>(getPlatformConfig());
 
@@ -53,7 +55,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
   const featuredBooks = books.slice(0, 4);
 
   return (
-    <div className="w-full text-right font-sans selection:bg-teal-500 selection:text-white overflow-x-hidden" dir="rtl">
+    <div className="w-full text-right font-sans selection:bg-teal-500 selection:text-white overflow-x-hidden" dir={dir}>
       <SeoStructuredData type="landing" platformName={platformConfig.brandName || 'Osera AI'} />
 
       {/* 🌟 TOP ANNOUNCEMENT TICKER */}

@@ -69,7 +69,7 @@ export async function parseDocumentBuffer(
         const pdfParser = new PDFParse({ data: buffer } as any);
         const parsed = await pdfParser.getText();
         extractedText = parsed.text || "";
-        pageCount = parsed.numpages || undefined;
+        pageCount = (parsed as any)?.numpages || undefined;
       } catch (pdfErr) {
         console.warn("[Document Parser] PDF text parsing fallback attempt:", pdfErr);
         // Fallback for simple ascii extraction if pdf parser meets corrupted fonts

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Save, Plus, Trash2, FileText, Check, Search, Replace, Sparkles, AlertCircle, ShieldAlert, Binary, Sigma, Table, Lightbulb, HelpCircle } from 'lucide-react';
 import { Chapter } from '../types';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface ChapterEditorProps {
   chapter: Chapter;
@@ -17,6 +18,7 @@ export default function ChapterEditor({
   onDeleteChapter,
   canDelete
 }: ChapterEditorProps) {
+  const { t, language, dir } = useLanguage();
   const [title, setTitle] = useState(chapter.title);
   const [summary, setSummary] = useState(chapter.summary || '');
   const [content, setContent] = useState(chapter.content);

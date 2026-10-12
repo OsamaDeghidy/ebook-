@@ -22,6 +22,7 @@ import { SeoStructuredData } from '../components/seo/SeoStructuredData';
 import { InteractiveLessonExplanation } from '../components/interactive/InteractiveLessonExplanation';
 import { FullCurriculumExplanation } from '../components/interactive/FullCurriculumExplanation';
 import { BookQrCodeModal } from '../components/common/BookQrCodeModal';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface BookDetailsRouteProps {
   books: MarketplaceBook[];
@@ -46,6 +47,7 @@ export default function BookDetailsRoute({
 }: BookDetailsRouteProps) {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const searchParams = new URLSearchParams(window.location.search);
   const initialTab = (searchParams.get('tab') as any) || 'read';
 
@@ -331,10 +333,26 @@ export default function BookDetailsRoute({
 
   const handleSaveChapter = async (updatedChapter: Chapter) => {
     if (!book) return;
-    const updatedChapters = book.chapters.map(ch =>
+    const updatedChapters = (book.chapters || []).map(ch =>
       ch.id === updatedChapter.id ? updatedChapter : ch
     );
+    // 0. Synchronously update book object so switching to 'read' tab immediately reflects changes
+    book.chapters = updatedChapters;
     setEbooks(prev => prev.map(b => b.id === book.id ? { ...b, chapters: updatedChapters } : b));
+
+
+    // 1. Sync immediately with backend Express & local JSON database
+    try {
+      await fetch(`/api/ebooks/${book.id}/chapters/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chapter: updatedChapter, chapters: updatedChapters })
+      });
+    } catch (apiErr) {
+      console.warn("Backend chapter sync error:", apiErr);
+    }
+
+    // 2. Sync with Supabase
     try {
       await supabase.from('books').update({ chapters: updatedChapters }).eq('id', book.id);
     } catch (e) {
@@ -702,7 +720,22 @@ export default function BookDetailsRoute({
             <span>العودة لمتجر المقررات</span>
           </button>
           <span className="text-gray-300">|</span>
-          <h2 className="text-xs sm:text-sm font-black text-gray-900 truncate max-w-[200px] sm:max-w-md">{book.title}</h2>
+          <div className="flex items-center gap-2 max-w-[200px] sm:max-w-md">
+            <h2 className="text-xs sm:text-sm font-black text-gray-900 truncate">{book.title}</h2>
+            {book.language && book.language !== 'ar' && (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-sky-50 text-sky-700 border border-sky-200 shrink-0">
+                {book.language === 'en' && '🇬🇧 EN'}
+                {book.language === 'it' && '🇮🇹 IT'}
+                {book.language === 'fr' && '🇫🇷 FR'}
+                {book.language === 'de' && '🇩🇪 DE'}
+              </span>
+            )}
+            {book.is_language_learning && (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0">
+                🎓 دورة لغات
+              </span>
+            )}
+          </div>
         </div>
 
         {/* TOP BAR ACTIONS: CHAPTERS TOGGLE & PUBLISH BADGE */}
@@ -740,10 +773,10 @@ export default function BookDetailsRoute({
           <button
             onClick={() => setIsQrModalOpen(true)}
             className="px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-black flex items-center gap-1.5 transition shadow-sm bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-700 border border-indigo-200 hover:from-indigo-100 hover:to-purple-100 cursor-pointer"
-            title="عرض وتحميل كود QR الذكي للكتاب"
+            title={t('book.qr_code', 'كود QR للكتاب 📲')}
           >
             <QrCode className="w-3.5 h-3.5 text-indigo-600" />
-            <span>كود QR للكتاب 📲</span>
+            <span>{t('book.qr_code', 'كود QR للكتاب 📲')}</span>
           </button>
 
           {/* PUBLISH / DRAFT TOGGLE BADGE */}
@@ -759,12 +792,12 @@ export default function BookDetailsRoute({
             {book.is_published ? (
               <>
                 <Eye className="w-3.5 h-3.5 text-emerald-600" />
-                <span>منشور للطلاب</span>
+                <span>{t('book.published', 'منشور للطلاب')}</span>
               </>
             ) : (
               <>
                 <EyeOff className="w-3.5 h-3.5 text-amber-600" />
-                <span>مسودة خاصة (مخفي)</span>
+                <span>{t('book.draft', 'مسودة خاصة (مخفي)')}</span>
               </>
             )}
           </button>
@@ -774,15 +807,15 @@ export default function BookDetailsRoute({
       {/* TAB NAVIGATION BAR */}
       <div className="flex items-center gap-1.5 border-b border-gray-200 pb-2 overflow-x-auto scrollbar-none -mx-2 px-2 sm:mx-0 sm:px-0">
         {[
-          { id: 'read', label: 'قراءة المقرر', icon: BookOpen, enabled: true },
-          { id: 'interactive_lesson', label: '✨ [جديد] شرح الدرس تفاعلي', icon: Brain, enabled: true, isNew: true },
-          { id: 'interactive_curriculum', label: '🚀 [جديد] شرح المنهج كامل', icon: Sparkles, enabled: true, isNew: true },
-          { id: 'reels', label: 'ريلز وتيك توك الفصل 🎬', icon: Film, enabled: true },
-          { id: 'flashcards', label: 'بطاقات المراجعة', icon: Layers, enabled: book.feature_toggles?.show_flashcards !== false },
-          { id: 'sandbox', label: 'المختبر والتطبيق', icon: Terminal, enabled: book.feature_toggles?.show_sandbox !== false },
-          { id: 'quiz', label: 'بنك الأسئلة', icon: HelpCircle, enabled: book.feature_toggles?.show_quiz !== false },
-          { id: 'videos', label: 'المقاطع المرئية', icon: Youtube, enabled: book.feature_toggles?.show_videos !== false },
-          { id: 'editor', label: 'محرر النصوص', icon: Edit, enabled: true }
+          { id: 'read', label: t('book.read', 'قراءة المقرر'), icon: BookOpen, enabled: true },
+          { id: 'interactive_lesson', label: t('book.interactive_lesson', '✨ [جديد] شرح الدرس تفاعلي'), icon: Brain, enabled: true, isNew: true },
+          { id: 'interactive_curriculum', label: t('book.interactive_curriculum', '🚀 [جديد] شرح المنهج كامل'), icon: Sparkles, enabled: true, isNew: true },
+          { id: 'reels', label: t('book.reels_tab', 'ريلز وتيك توك الفصل 🎬'), icon: Film, enabled: true },
+          { id: 'flashcards', label: t('book.flashcards', 'بطاقات المراجعة'), icon: Layers, enabled: book.feature_toggles?.show_flashcards !== false },
+          { id: 'sandbox', label: t('book.sandbox', 'المختبر والتطبيق'), icon: Terminal, enabled: book.feature_toggles?.show_sandbox !== false },
+          { id: 'quiz', label: t('book.quiz', 'بنك الأسئلة'), icon: HelpCircle, enabled: book.feature_toggles?.show_quiz !== false },
+          { id: 'videos', label: t('book.videos', 'المقاطع المرئية'), icon: Youtube, enabled: book.feature_toggles?.show_videos !== false },
+          { id: 'editor', label: t('book.editor', 'محرر النصوص'), icon: Edit, enabled: true }
         ].filter(tab => tab.enabled).map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -1357,6 +1390,8 @@ export default function BookDetailsRoute({
         {activeTab === 'quiz' && activeChapter && (
           <QuizSection
             bookId={book.id}
+            bookTitle={book.title}
+            allChapters={book.chapters}
             chapterTitle={activeChapter.title}
             questions={Array.isArray(activeChapter.quiz) ? activeChapter.quiz : []}
             onUpdateQuestions={(updatedQuestions) => {
@@ -1365,6 +1400,11 @@ export default function BookDetailsRoute({
               );
               setEbooks(prev => prev.map(b => b.id === book.id ? { ...b, chapters: updatedChapters } : b));
               try {
+                fetch(`/api/ebooks/${book.id}/chapters/save`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ chapters: updatedChapters })
+                }).catch(() => {});
                 supabase.from('books').update({ chapters: updatedChapters }).eq('id', book.id);
               } catch (e) {}
             }}
@@ -1405,6 +1445,15 @@ export default function BookDetailsRoute({
               setEbooks(prev => prev.map(b => b.id === book.id ? { ...b, chapters: updated } : b));
               setActiveChapterId(newChapter.id);
               try {
+                await fetch(`/api/ebooks/${book.id}/chapters/save`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ chapters: updated })
+                });
+              } catch (apiErr) {
+                console.warn("Backend add chapter sync error:", apiErr);
+              }
+              try {
                 await supabase.from('books').update({ chapters: updated }).eq('id', book.id);
               } catch (e) {
                 console.warn(e);
@@ -1415,6 +1464,15 @@ export default function BookDetailsRoute({
               const updated = book.chapters.filter(c => c.id !== activeChapter.id);
               setEbooks(prev => prev.map(b => b.id === book.id ? { ...b, chapters: updated } : b));
               setActiveChapterId(updated[0]?.id || null);
+              try {
+                await fetch(`/api/ebooks/${book.id}/chapters/save`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ chapters: updated })
+                });
+              } catch (apiErr) {
+                console.warn("Backend delete chapter sync error:", apiErr);
+              }
               try {
                 await supabase.from('books').update({ chapters: updated }).eq('id', book.id);
               } catch (e) {

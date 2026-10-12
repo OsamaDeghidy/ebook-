@@ -95,29 +95,53 @@ function normalizeForSearch(text: string): string {
 }
 
 /**
+ * Detects if the first few thousand characters represent a Table of Contents (الفهرس / المحتويات)
+ * and returns the offset after the TOC where body content actually starts.
+ */
+function detectTocBoundary(text: string): number {
+  if (!text) return 0;
+  const sample = text.substring(0, 6000);
+  
+  // Check for Table of Contents header keywords
+  const tocMatch = sample.match(/(?:فهرس|المحتويات|جدول الدروس|محتويات المنهج|دليل المنهج)/i);
+  if (!tocMatch) return 0;
+
+  // Find where the actual content begins
+  const tocIdx = tocMatch.index || 0;
+  const afterToc = sample.indexOf("\n\n", tocIdx + 800);
+  if (afterToc !== -1 && afterToc < 5000) {
+    return afterToc;
+  }
+  return Math.min(2500, Math.floor(sample.length / 2));
+}
+
+/**
  * Finds the starting character position of a lesson in the document text
  */
 function findLessonStartPosition(
   lesson: any,
   extractedText: string,
   normalizedDoc: string,
-  searchOffset: number
+  searchOffset: number,
+  tocBoundary: number
 ): number {
+  const effectiveOffset = Math.max(searchOffset, tocBoundary);
+
   // 1. Try starting_text_anchor (Exact)
   if (lesson.starting_text_anchor && lesson.starting_text_anchor.trim().length >= 6) {
     const anchor = lesson.starting_text_anchor.trim();
-    const exactIdx = extractedText.indexOf(anchor, searchOffset);
+    const exactIdx = extractedText.indexOf(anchor, effectiveOffset);
     if (exactIdx !== -1) return exactIdx;
 
     // Try first 25 chars of anchor
     const shortAnchor = anchor.substring(0, 25);
-    const shortIdx = extractedText.indexOf(shortAnchor, searchOffset);
+    const shortIdx = extractedText.indexOf(shortAnchor, effectiveOffset);
     if (shortIdx !== -1) return shortIdx;
 
     // Try normalized anchor
     const normAnchor = normalizeForSearch(anchor);
     if (normAnchor.length >= 6) {
-      const normIdx = normalizedDoc.indexOf(normAnchor, searchOffset);
+      const normIdx = normalizedDoc.indexOf(normAnchor, effectiveOffset);
       if (normIdx !== -1) return normIdx;
     }
   }
@@ -128,16 +152,16 @@ function findLessonStartPosition(
     const cleanTitle = title.replace(/^(الدرس|المفهوم|الوحدة|الفصل|نص|قصة|موضوع)\s+([الأول|الثاني|الثالث|الرابع|الخامس|السادس|\d]+)?[:：\-–\s]*/i, '').trim();
     
     // Exact title
-    const titleIdx = extractedText.indexOf(title, searchOffset);
+    const titleIdx = extractedText.indexOf(title, effectiveOffset);
     if (titleIdx !== -1) return titleIdx;
 
     // Cleaned title (without "الدرس الأول:")
     if (cleanTitle.length >= 4) {
-      const cleanIdx = extractedText.indexOf(cleanTitle, searchOffset);
+      const cleanIdx = extractedText.indexOf(cleanTitle, effectiveOffset);
       if (cleanIdx !== -1) return cleanIdx;
 
       const normClean = normalizeForSearch(cleanTitle);
-      const normCleanIdx = normalizedDoc.indexOf(normClean, searchOffset);
+      const normCleanIdx = normalizedDoc.indexOf(normClean, effectiveOffset);
       if (normCleanIdx !== -1) return normCleanIdx;
     }
   }
@@ -146,7 +170,7 @@ function findLessonStartPosition(
   if (Array.isArray(lesson.sub_topics) && lesson.sub_topics.length > 0) {
     for (const sub of lesson.sub_topics) {
       if (sub && sub.length >= 6) {
-        const subIdx = extractedText.indexOf(sub.trim(), searchOffset);
+        const subIdx = extractedText.indexOf(sub.trim(), effectiveOffset);
         if (subIdx !== -1) return subIdx;
       }
     }
@@ -220,10 +244,15 @@ ${previewText}
    - Extract the EXACT authentic title written by the teacher or ministry (e.g. "الدرس الأول: النماذج الشريطية", "نص استماع: كل منا له حلم", "التركيب الضوئي").
    - 🚫 DO NOT invent artificial blended titles.
 
-4. ANCHOR MAPPING:
+4. MULTI-PART LESSON NOMENCLATURE (P0):
+   - If a lesson is extensive or subdivided into parts in the document, you MUST explicitly name them:
+     e.g., "[اسم الدرس الأصلي] - (الجزء 1)", "[اسم الدرس الأصلي] - (الجزء 2)".
+   - 🚫 NEVER invent synthetic or arbitrary names for sub-phases of the same lesson!
+
+5. ANCHOR MAPPING:
    - Provide the starting and ending text anchors (8-15 exact words) for each lesson to guarantee precise text slicing.
 
-5. SUB-TOPICS & CONCEPTS:
+6. SUB-TOPICS & CONCEPTS:
    - List the 3-6 internal sub-topics and extracted key terms directly from the text.
 `;
 
@@ -241,6 +270,7 @@ ${previewText}
     const rawLessons: any[] = Array.isArray(parsed.lessons) && parsed.lessons.length > 0 ? parsed.lessons : [];
 
     const normalizedDoc = normalizeForSearch(extractedText);
+    const tocBoundary = detectTocBoundary(extractedText);
 
     // Step 1: Find start position for each detected lesson
     const locatedLessons: Array<{
@@ -248,14 +278,14 @@ ${previewText}
       startOffset: number;
     }> = [];
 
-    let currentOffset = 0;
+    let currentOffset = tocBoundary;
     for (let i = 0; i < rawLessons.length; i++) {
       const l = rawLessons[i];
-      let pos = findLessonStartPosition(l, extractedText, normalizedDoc, currentOffset);
+      let pos = findLessonStartPosition(l, extractedText, normalizedDoc, currentOffset, tocBoundary);
       
-      // If not found after current offset, search from beginning
-      if (pos === -1 && currentOffset > 0) {
-        pos = findLessonStartPosition(l, extractedText, normalizedDoc, 0);
+      // If not found after current offset, search from beginning of body
+      if (pos === -1 && currentOffset > tocBoundary) {
+        pos = findLessonStartPosition(l, extractedText, normalizedDoc, tocBoundary, tocBoundary);
       }
 
       // If still not found, estimate proportionally

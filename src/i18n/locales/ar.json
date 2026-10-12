@@ -1,0 +1,89 @@
+{
+  "nav": {
+    "home": "الرئيسية",
+    "marketplace": "متجر المقررات",
+    "reels": "🎬 ريلز المعرفة",
+    "instructor_hub": "لوحة المعلم ⚡",
+    "admin_hub": "لوحة القيادة 🛡️",
+    "sign_in": "تسجيل الدخول",
+    "sign_out": "تسجيل الخروج",
+    "my_courses": "مقرراتي",
+    "help_support": "الدعم والمساعدة",
+    "about": "عن المنصة"
+  },
+  "book": {
+    "read": "قراءة المقرر",
+    "interactive_lesson": "✨ [جديد] شرح الدرس تفاعلي",
+    "interactive_curriculum": "🚀 [جديد] شرح المنهج كامل",
+    "reels_tab": "ريلز وتيك توك الفصل 🎬",
+    "flashcards": "بطاقات المراجعة",
+    "sandbox": "المختبر والتطبيق",
+    "quiz": "بنك الأسئلة",
+    "videos": "المقاطع المرئية",
+    "editor": "محرر النصوص",
+    "qr_code": "كود QR للكتاب 📲",
+    "free": "مجاني بالكامل",
+    "currency": "ج.م",
+    "published": "منشور للطلاب",
+    "draft": "مسودة خاصة (مخفي)",
+    "chapters_index": "فهرس فصول الكتاب",
+    "hide_index": "إخفاء الفهرس (شاشة كاملة)",
+    "show_index": "فهرس الفصول",
+    "author": "المؤلف",
+    "ratings": "تقييم",
+    "language": "اللغة",
+    "language_learning_badge": "🎓 دورة تعلم لغات"
+  },
+  "languages": {
+    "ar": "العربية",
+    "en": "English",
+    "it": "Italiano",
+    "fr": "Français",
+    "de": "Deutsch"
+  },
+  "common": {
+    "download": "تحميل",
+    "share": "مشاركة",
+    "copied": "تم النسخ!",
+    "close": "إغلاق",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "generate": "توليد بالذكاء الاصطناعي",
+    "processing": "جاري المعالجة...",
+    "search": "بحث...",
+    "filter": "تصفية"
+  },
+  "qr": {
+    "title": "كود QR والبوستر التسويقي الذكي 📲",
+    "subtitle": "جاهز للعرض، الطباعة المباشرة، والمشاركة التسويقية",
+    "poster_view": "بوستر تسويقي فاخر",
+    "minimal_view": "باركود سريع",
+    "download_square": "تحميل مربع (1080×1080)",
+    "download_story": "تحميل عمودي (1080×1920)",
+    "print_poster": "طباعة البوستر (A4 ورقة بيضاء)",
+    "copy_link": "نسخ الرابط المباشر",
+    "scan_instructions": "امسح الكود بكاميرا هاتفك المحمول للبدء فوراً",
+    "secure_link": "رابط آمن وموثق 100%"
+  },
+  "editor": {
+    "title": "محرر وتصحيح محتوى الفصل",
+    "subtitle": "عدّل أي خطأ لغوي أو نصي، وحدّث الشرح والعناوين بكل سهولة دون الحاجة لإعادة توليد الكتاب.",
+    "add_chapter": "إضافة فصل جديد",
+    "delete_chapter": "حذف هذا الفصل",
+    "save_changes": "حفظ التعديلات",
+    "chapter_title": "عنوان الفصل",
+    "chapter_summary": "ملخص الأفكار الرئيسية",
+    "chapter_content": "المحتوى والشرح المفصل (Markdown)",
+    "saved_toast": "تم حفظ تعديلات الفصل بنجاح!"
+  },
+  "quiz": {
+    "start_quiz": "بدء الاختبار",
+    "next_question": "السؤال التالي",
+    "prev_question": "السؤال السابق",
+    "finish_quiz": "إنهاء وتسليم الإجابات",
+    "score": "النتيجة النهائية",
+    "explanation": "التفسير النموذجي",
+    "trap_warning": "تحذير الفخ الامتحاني",
+    "print_exam": "طباعة ورقة الاختبار (A4)"
+  }
+}

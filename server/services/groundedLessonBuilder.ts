@@ -14,6 +14,14 @@ export function buildGroundedBatchPrompt(params: {
 }): string {
   const { lessons, persona, bookTitle, grade_level, category, semester } = params;
 
+  // Auto-detect language
+  const combinedText = `${bookTitle} ${lessons.map(l => `${l.lesson_title} ${l.raw_text_snippet}`).join(' ')}`;
+  const isArabic = /[\u0600-\u06FF]/.test(combinedText);
+
+  const langMandate = isArabic
+    ? `TARGET LANGUAGE: Modern Standard Arabic. Output all titles, content, summaries, quizzes, and flashcards strictly in Arabic.`
+    : `TARGET LANGUAGE: English (or match source). Output all titles, content, summaries, quizzes, and flashcards strictly in English with ZERO Arabic text.`;
+
   const lessonsContext = lessons.map((l) => `
 ===================================================================
 📖 LESSON ${l.lesson_order}: "${l.lesson_title}"
@@ -42,11 +50,25 @@ SOURCE MATERIAL FOR THIS BATCH:
 ${lessonsContext}
 
 🚨 CRITICAL MANDATORY GENERATION RULES (P0):
-1. STRICT ANCHORING TO SOURCE TEXT (NO SUPERFICIAL HALLUCINATIONS):
+1. 🌐 LANGUAGE MANDATE:
+   ${langMandate}
+
+2. 📐 MATHEMATICAL & SCIENTIFIC NOTATION MANDATE (P0):
+   - Math expressions MUST use symbols (>, <, =, +, -, ×, ÷, ≤, ≥, ≠, ±) NOT words (NEVER write 'أكبر من' in math; use '>').
+   - Equations and formulas MUST be formatted in LaTeX: $...$ for inline, $$...$$ for block.
+   - Numbers in formulas and equations MUST be Western digits (0-9).
+
+3. 🧹 CLEAN CONTENT & ARTIFACT STRIPPING (P0):
+   - 🚫 STRIP parenthetical exam notes and year tags (e.g. "(دور أول 2022)" or "(امتحان 2021)").
+   - 🚫 STRIP OCR bullet symbols and scanning artifacts (▲, ▼, ◆, ◇, ■, ★).
+   - 🚫 STRIP standalone page numbers (e.g. "ص 15", "صفحة 24", "[12]").
+   - 🚫 STRIP redundant English translations in parentheses inside Arabic text paragraphs.
+
+4. STRICT ANCHORING TO SOURCE TEXT (NO SUPERFICIAL HALLUCINATIONS):
    - Every single chapter MUST be built directly from its dedicated source text slice above.
    - Do NOT just look at the title and invent generic web content. You MUST include the actual explanations, reading passages, poems, vocabulary tables, scientific laws, and worked examples present in the booklet slice!
 
-2. FIVE MANDATORY PEDAGOGICAL PILLARS IN CHAPTER MARKDOWN CONTENT:
+5. FIVE MANDATORY PEDAGOGICAL PILLARS IN CHAPTER MARKDOWN CONTENT:
    Each chapter's 'content' field MUST be formatted in rich GitHub Flavored Markdown with this exact canonical structure:
    - \`## [عنوان الدرس الرسمي الأصلي]\`
    - \`### 📜 النص القرائي / المصدر الأصلي الكامل\` (The complete, unedited source text/story/equations from the slice).
@@ -55,10 +77,10 @@ ${lessonsContext}
    - \`### 📐 الأمثلة التطبيقية والمسائل المحلولة\` (Step-by-step worked exercises and real-world examples).
    - \`### 💡 تنبيهات الفخاخ والتقويم التشخيصي\` (Exam traps warning: "انتبه: يقع أغلب الطلاب في خطأ كذا").
 
-3. NO DASHED MARKDOWN TABLES:
+6. NO DASHED MARKDOWN TABLES:
    - 🚫 NEVER use markdown pipe tables with dashed rows (\`| ---: |\`). Format tables as clean text cards or bulleted key-value lists.
 
-4. ACCURATE BLOOM QUIZZES & FLASHCARDS:
+7. ACCURATE BLOOM QUIZZES & FLASHCARDS:
    - Generate 4 to 6 diagnostic quiz questions per chapter directly referencing the source text.
    - For each quiz question, provide the cognitive level (تذكر، فهم، تطبيق، تحليل) and a detailed explanation of why the correct answer is true.
    - Generate 4 to 6 flashcards per chapter covering the key concepts.

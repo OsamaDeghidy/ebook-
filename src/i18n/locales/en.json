@@ -1,0 +1,89 @@
+{
+  "nav": {
+    "home": "Home",
+    "marketplace": "Course Marketplace",
+    "reels": "🎬 Knowledge Reels",
+    "instructor_hub": "Teacher Hub ⚡",
+    "admin_hub": "Admin Dashboard 🛡️",
+    "sign_in": "Sign In",
+    "sign_out": "Sign Out",
+    "my_courses": "My Courses",
+    "help_support": "Help & Support",
+    "about": "About"
+  },
+  "book": {
+    "read": "Read Course",
+    "interactive_lesson": "✨ [New] Interactive Lesson",
+    "interactive_curriculum": "🚀 [New] Full Curriculum AI",
+    "reels_tab": "Chapter Reels & TikTok 🎬",
+    "flashcards": "Flashcards",
+    "sandbox": "Lab & Sandbox",
+    "quiz": "Question Bank",
+    "videos": "Video Lectures",
+    "editor": "Text Editor",
+    "qr_code": "Smart QR Code 📲",
+    "free": "100% Free",
+    "currency": "EGP",
+    "published": "Published to Students",
+    "draft": "Private Draft (Hidden)",
+    "chapters_index": "Course Table of Contents",
+    "hide_index": "Hide Sidebar (Full Screen)",
+    "show_index": "Chapters Index",
+    "author": "Author",
+    "ratings": "Reviews",
+    "language": "Language",
+    "language_learning_badge": "🎓 Language Learning Course"
+  },
+  "languages": {
+    "ar": "العربية",
+    "en": "English",
+    "it": "Italiano",
+    "fr": "Français",
+    "de": "Deutsch"
+  },
+  "common": {
+    "download": "Download",
+    "share": "Share",
+    "copied": "Copied!",
+    "close": "Close",
+    "save": "Save",
+    "cancel": "Cancel",
+    "generate": "Generate with AI",
+    "processing": "Processing...",
+    "search": "Search...",
+    "filter": "Filter"
+  },
+  "qr": {
+    "title": "Smart QR Code & Marketing Poster 📲",
+    "subtitle": "Ready for display, instant printing, and marketing distribution",
+    "poster_view": "Luxury Marketing Poster",
+    "minimal_view": "Quick QR Barcode",
+    "download_square": "Download Square (1080×1080)",
+    "download_story": "Download Vertical (1080×1920)",
+    "print_poster": "Print Poster (A4 White Sheet)",
+    "copy_link": "Copy Direct Link",
+    "scan_instructions": "Scan with your phone camera to start immediately",
+    "secure_link": "100% Secure & Verified Link"
+  },
+  "editor": {
+    "title": "Chapter Editor & Content Corrector",
+    "subtitle": "Easily fix typos, update explanations, and refine titles without re-generating the booklet.",
+    "add_chapter": "Add New Chapter",
+    "delete_chapter": "Delete Chapter",
+    "save_changes": "Save Changes",
+    "chapter_title": "Chapter Title",
+    "chapter_summary": "Key Ideas Summary",
+    "chapter_content": "Detailed Explanation (Markdown)",
+    "saved_toast": "Chapter changes saved successfully!"
+  },
+  "quiz": {
+    "start_quiz": "Start Quiz",
+    "next_question": "Next Question",
+    "prev_question": "Previous Question",
+    "finish_quiz": "Submit Answers",
+    "score": "Final Score",
+    "explanation": "Model Explanation",
+    "trap_warning": "Exam Trap Alert",
+    "print_exam": "Print Exam Paper (A4)"
+  }
+}

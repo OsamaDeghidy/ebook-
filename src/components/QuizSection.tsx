@@ -19,13 +19,36 @@ import {
   ChevronLeft,
   Printer,
   ShieldAlert,
-  Flame
+  Flame,
+  FileText,
+  BookOpen,
+  Eye,
+  BookMarked,
+  CheckSquare
 } from 'lucide-react';
 import { QuizQuestion, QuestionType } from '../types';
 import { supabase } from '../lib/supabase';
+import { useLanguage } from '../i18n/LanguageContext';
+import { sanitizeMathText } from '../utils/sanitizeMathText';
+
+export interface StoredExam {
+  id: string;
+  book_id: string;
+  title: string;
+  scope: 'lesson' | 'unit' | 'full_curriculum';
+  target_title: string;
+  duration_minutes: number;
+  total_marks: number;
+  passing_marks: number;
+  questions: QuizQuestion[];
+  instructions: string[];
+  created_at: string;
+}
 
 interface QuizSectionProps {
   bookId?: string;
+  bookTitle?: string;
+  allChapters?: { id: string; title: string; summary?: string }[];
   chapterTitle?: string;
   questions: QuizQuestion[];
   onUpdateQuestions?: (updatedQuestions: QuizQuestion[]) => void;
@@ -36,30 +59,78 @@ interface QuizSectionProps {
 function getSanitizedOptions(q: QuizQuestion | undefined): string[] {
   if (!q) return [];
   if (q.questionType === 'true_false') {
-    return ['صواب (صح)', 'خطأ'];
+    return ['العبارة صحيحة تماماً', 'العبارة غير صحيحة وتحتاج لتصويب'];
   }
-  if (!q.options || q.options.length === 0) return [];
+  if (!q.options || q.options.length === 0) {
+    return [
+      'الاستنتاج العلمي الأول المرتبط بمحور السؤال',
+      'الاستنتاج العلمي الثاني (فخ معرفي محتمل)',
+      'الاستنتاج العلمي الثالث',
+      'الاستنتاج العلمي الرابع'
+    ];
+  }
   // Check if options are generic placeholders like "Option A", "Option 1"
-  const isGeneric = q.options.every(opt => /^option\s*[a-d1-4]/i.test(opt.trim()));
+  const isGeneric = q.options.every(opt => /^(option\s*[a-d1-4]|الخيار\s*(الأول|الثاني|الثالث|الرابع|[أ-د]))$/i.test(opt.trim()));
   if (isGeneric) {
     if (/صح|خطأ|صواب/i.test(q.question)) {
-      return ['صواب (صح)', 'خطأ'];
+      return ['العبارة صحيحة تماماً', 'العبارة غير صحيحة وتحتاج لتصويب'];
     }
-    return ['الخيار الأول (أ)', 'الخيار الثاني (ب)', 'الخيار الثالث (ج)', 'الخيار الرابع (د)'];
   }
-  return q.options.map(opt => opt.replace(/^([A-D]|[\u0623\u0628\u062C\u062F])[\.\:\-\)]\s*/, '').trim());
+
+  return q.options.map((opt, i) => {
+    let clean = (opt || '').trim();
+    // Strip leading prefix like "Option A:", "أ.", "ب)", "A."
+    clean = clean.replace(/^(option\s*[a-d1-4]|الخيار\s*(الأول|الثاني|الثالث|الرابع|[أ-د]))[\:\-\.\)]\s*/i, '');
+    const withoutPrefix = clean.replace(/^([A-D]|[\u0623\u0628\u062C\u062F])[\.\:\-\)]\s*/, '').trim();
+    if (withoutPrefix.length > 0) {
+      clean = withoutPrefix;
+    }
+    // If stripped down to empty or single letter
+    if (!clean || /^(أ|ب|ج|د|a|b|c|d)$/i.test(clean)) {
+      if (q.explanation && i === q.correctOptionIndex) {
+        return q.explanation.substring(0, 80);
+      }
+      return `الصياغة التفصيلية للاختيار (${i + 1}) في ضوء معطيات السؤال`;
+    }
+    return sanitizeMathText(clean);
+  });
 }
 
 export default function QuizSection({
   bookId,
+  bookTitle,
+  allChapters = [],
   chapterTitle,
   questions,
   onUpdateQuestions,
   onGenerateAiQuestions,
   isGeneratingAiQuestions = false
 }: QuizSectionProps) {
-  // Mode: 'practice' (instant feedback) vs 'exam' (timed mock test)
-  const [examMode, setExamMode] = useState<'practice' | 'exam'>('practice');
+  const { t, language, dir } = useLanguage();
+  // Mode: 'practice' (instant feedback) vs 'exam' (timed mock test) vs 'archive' (exams repository)
+  const [examMode, setExamMode] = useState<'practice' | 'exam' | 'archive'>('practice');
+
+
+  // Stored Exams Archive state
+  const [storedExams, setStoredExams] = useState<StoredExam[]>([]);
+  const [isLoadingExams, setIsLoadingExams] = useState(false);
+  const [activeStoredExam, setActiveStoredExam] = useState<StoredExam | null>(null);
+
+  // Exam Generation Modal State
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [examScope, setExamScope] = useState<'lesson' | 'unit' | 'full_curriculum'>('full_curriculum');
+  const [selectedTargetTitle, setSelectedTargetTitle] = useState('');
+  const [selectedChapterId, setSelectedChapterId] = useState('');
+  const [examQuestionCount, setExamQuestionCount] = useState(10);
+  const [isGeneratingCustomExam, setIsGeneratingCustomExam] = useState(false);
+
+  // Print Exam Modal State
+  const [examToPrint, setExamToPrint] = useState<StoredExam | null>(null);
+  const [includeAnswerKeyInPrint, setIncludeAnswerKeyInPrint] = useState(false);
+  const [expandedExamPreviewId, setExpandedExamPreviewId] = useState<string | null>(null);
+
+  // Active question set: uses the selected stored exam if active, otherwise chapter's questions
+  const effectiveQuestions = activeStoredExam ? activeStoredExam.questions : questions;
 
   // Exam timer states
   const [timeLeft, setTimeLeft] = useState(15 * 60); // 15 minutes in seconds
@@ -84,8 +155,33 @@ export default function QuizSection({
   const [editCognitiveLevel, setEditCognitiveLevel] = useState<string>('فهم واستيعاب');
   const [editDifficulty, setEditDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
 
-  const currentQuestion = questions[currentQuestionIndex];
-  const isFinished = examMode === 'practice' ? currentQuestionIndex >= questions.length : isExamSubmitted;
+  const currentQuestion = effectiveQuestions[currentQuestionIndex];
+  const isFinished = examMode === 'practice' ? currentQuestionIndex >= effectiveQuestions.length : isExamSubmitted;
+
+  // Fetch stored exams on mount or bookId change
+  const fetchExams = async () => {
+    if (!bookId) return;
+    setIsLoadingExams(true);
+    try {
+      const res = await fetch(`/api/ebooks/${bookId}/exams`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.exams && Array.isArray(data.exams)) {
+          setStoredExams(data.exams);
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to fetch exams:", err);
+    } finally {
+      setIsLoadingExams(false);
+    }
+  };
+
+  useEffect(() => {
+    if (bookId) {
+      fetchExams();
+    }
+  }, [bookId]);
 
   // Timer countdown in Exam Mode
   useEffect(() => {
@@ -118,8 +214,9 @@ export default function QuizSection({
   };
 
   const startExamMode = () => {
+    setActiveStoredExam(null);
     setExamMode('exam');
-    setTimeLeft(Math.max(5, questions.length * 2) * 60); // 2 mins per question
+    setTimeLeft(Math.max(5, effectiveQuestions.length * 2) * 60); // 2 mins per question
     setIsTimerRunning(true);
     setCurrentQuestionIndex(0);
     setAnswersMap({});
@@ -127,16 +224,58 @@ export default function QuizSection({
     setIsExamSubmitted(false);
   };
 
+  const handleStartStoredExam = (exam: StoredExam) => {
+    setActiveStoredExam(exam);
+    setExamMode('exam');
+    setTimeLeft((exam.duration_minutes || 15) * 60);
+    setIsTimerRunning(true);
+    setCurrentQuestionIndex(0);
+    setAnswersMap({});
+    setFlaggedQuestions({});
+    setIsExamSubmitted(false);
+  };
+
+  const handleGenerateCustomExam = async () => {
+    if (!bookId) return;
+    setIsGeneratingCustomExam(true);
+    try {
+      const res = await fetch(`/api/ebooks/${bookId}/exams/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scope: examScope,
+          targetTitle: selectedTargetTitle || (examScope === 'lesson' ? chapterTitle : bookTitle),
+          chapterId: selectedChapterId || (allChapters[0]?.id || ''),
+          questionCount: examQuestionCount
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.exams) {
+          setStoredExams(data.exams);
+        } else if (data.exam) {
+          setStoredExams(prev => [data.exam, ...prev]);
+        }
+        setShowGenerateModal(false);
+      }
+    } catch (err) {
+      console.error("Exam generation failed:", err);
+    } finally {
+      setIsGeneratingCustomExam(false);
+    }
+  };
+
   const handleOptionSelect = (optIndex: number) => {
     if (examMode === 'practice') {
       if (isAnswered) return;
       setSelectedOption(optIndex);
       setIsAnswered(true);
-      if (optIndex === currentQuestion.correctOptionIndex) {
+      if (optIndex === currentQuestion?.correctOptionIndex) {
         setScore(prev => prev + 1);
       }
     } else {
-      // Exam Mode: simply record chosen option
+      // Exam Mode: record chosen option
       setAnswersMap(prev => ({ ...prev, [currentQuestionIndex]: optIndex }));
     }
   };
@@ -153,7 +292,7 @@ export default function QuizSection({
 
     // Calculate final score
     let totalCorrect = 0;
-    questions.forEach((q, idx) => {
+    effectiveQuestions.forEach((q, idx) => {
       if (answersMap[idx] === q.correctOptionIndex) {
         totalCorrect++;
       }
@@ -167,12 +306,12 @@ export default function QuizSection({
           await supabase.from('quiz_attempts').insert({
             user_id: user.id,
             book_id: bookId,
-            score: (totalCorrect / Math.max(1, questions.length)) * 100,
-            total_questions: questions.length,
+            score: (totalCorrect / Math.max(1, effectiveQuestions.length)) * 100,
+            total_questions: effectiveQuestions.length,
             answers_log: Object.entries(answersMap).map(([idx, opt]) => ({
               questionIndex: Number(idx),
               selectedOption: opt,
-              isCorrect: opt === questions[Number(idx)]?.correctOptionIndex
+              isCorrect: opt === effectiveQuestions[Number(idx)]?.correctOptionIndex
             }))
           });
         }
@@ -274,6 +413,7 @@ export default function QuizSection({
           {/* MODE SWITCHER */}
           <button
             onClick={() => {
+              setActiveStoredExam(null);
               setExamMode('practice');
               handleReset();
             }}
@@ -283,39 +423,59 @@ export default function QuizSection({
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            🎯 وضع التدريب والتغذية الفورية
+            🎯 تدريب ومراجعة الدرس
           </button>
 
           <button
-            onClick={startExamMode}
+            onClick={() => {
+              setActiveStoredExam(null);
+              startExamMode();
+            }}
             className={`px-4 py-2.5 rounded-xl text-xs font-black transition flex items-center gap-1.5 ${
-              examMode === 'exam'
+              examMode === 'exam' && !activeStoredExam
                 ? 'bg-rose-600 text-white shadow-sm'
                 : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
             }`}
           >
             <Clock className="w-3.5 h-3.5" />
-            <span>⏱️ بدء الامتحان التجريبي المؤقت</span>
+            <span>⏱️ اختبار سريع للدرس</span>
           </button>
 
-          {onGenerateAiQuestions && (
+          <button
+            onClick={() => {
+              setExamMode('archive');
+              fetchExams();
+            }}
+            className={`px-4 py-2.5 rounded-xl text-xs font-black transition flex items-center gap-1.5 ${
+              examMode === 'archive'
+                ? 'bg-purple-600 text-white shadow-sm'
+                : 'bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200'
+            }`}
+          >
+            <BookMarked className="w-3.5 h-3.5 text-purple-600" />
+            <span>📋 سجل وبنك الامتحانات ({storedExams.length})</span>
+          </button>
+
+          {examMode !== 'archive' && onGenerateAiQuestions && (
             <button
               onClick={onGenerateAiQuestions}
               disabled={isGeneratingAiQuestions}
               className="px-3.5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-black rounded-xl flex items-center gap-1.5 transition shadow-sm disabled:opacity-60"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>{isGeneratingAiQuestions ? 'جاري التوليد...' : 'توليد أسئلة بالـ AI'}</span>
+              <span>{isGeneratingAiQuestions ? 'جاري التوليد...' : 'توليد أسئلة الدرس بالـ AI'}</span>
             </button>
           )}
 
-          <button
-            onClick={() => setShowEditor(!showEditor)}
-            className="px-3.5 py-2.5 border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-bold rounded-xl flex items-center gap-1.5 transition"
-          >
-            <Edit3 className="w-3.5 h-3.5 text-indigo-600" />
-            <span>إدارة الأسئلة</span>
-          </button>
+          {examMode !== 'archive' && (
+            <button
+              onClick={() => setShowEditor(!showEditor)}
+              className="px-3.5 py-2.5 border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-bold rounded-xl flex items-center gap-1.5 transition"
+            >
+              <Edit3 className="w-3.5 h-3.5 text-indigo-600" />
+              <span>إدارة الأسئلة</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -502,6 +662,183 @@ export default function QuizSection({
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* 0. EXAMS ARCHIVE & REPOSITORY VIEW */}
+      {examMode === 'archive' && (
+        <div className="space-y-6 animate-fade-in">
+          {/* BANNER & GENERATE ACTION */}
+          <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-6 border border-purple-800">
+            <div className="space-y-2 max-w-2xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-400/30 text-xs font-bold">
+                <BookMarked className="w-3.5 h-3.5" />
+                <span>أرشيف الامتحانات الرسمية والتقييم المعرفي</span>
+              </div>
+              <h3 className="text-xl sm:text-2xl font-black">
+                سجل وبنك امتحانات المقرر: {bookTitle || chapterTitle || 'المقرر التعليمي'}
+              </h3>
+              <p className="text-xs sm:text-sm text-purple-200/80 leading-relaxed">
+                امتحانات شاملة موثقة ومطابقة لمستويات هرم بلوم المعرفي. يمكنك خوض الامتحان إلكترونياً بمؤقت زمني، استخراج نماذج الإجابات التفصيلية، أو طباعة ورقة الامتحان كاختبار ورقي A4.
+              </p>
+            </div>
+
+            <button
+              onClick={() => {
+                setSelectedTargetTitle(bookTitle || '');
+                setSelectedChapterId(allChapters[0]?.id || '');
+                setShowGenerateModal(true);
+              }}
+              className="px-6 py-4 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-950 font-black rounded-2xl text-xs sm:text-sm transition shadow-lg flex items-center justify-center gap-2 shrink-0 active:scale-95"
+            >
+              <Sparkles className="w-4 h-4 text-slate-950" />
+              <span>+ إنشاء وتوليد امتحان جديد 🪄</span>
+            </button>
+          </div>
+
+          {/* EXAMS LIST */}
+          {isLoadingExams ? (
+            <div className="p-12 text-center bg-white rounded-3xl border border-gray-200">
+              <div className="animate-spin w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full mx-auto mb-3" />
+              <p className="text-xs font-bold text-gray-500">جاري تحميل سجل الامتحانات المعتمدة...</p>
+            </div>
+          ) : storedExams.length === 0 ? (
+            <div className="p-12 text-center bg-white rounded-3xl border border-gray-200 space-y-4">
+              <div className="w-16 h-16 bg-purple-50 text-purple-600 rounded-3xl flex items-center justify-center mx-auto shadow-inner">
+                <FileText className="w-8 h-8" />
+              </div>
+              <div>
+                <h4 className="text-base font-black text-gray-900">لا توجد امتحانات محفوظة في السجل حتى الآن</h4>
+                <p className="text-xs text-gray-500 mt-1 max-w-md mx-auto">
+                  يمكنك توليد امتحان شامل لكامل المنهج، أو امتحان خاص بوحدة أو درس محدد بنقرة واحدة باستخدام محرك الذكاء الاصطناعي.
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setSelectedTargetTitle(bookTitle || '');
+                  setSelectedChapterId(allChapters[0]?.id || '');
+                  setShowGenerateModal(true);
+                }}
+                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-xs font-black transition shadow-md inline-flex items-center gap-2"
+              >
+                <Sparkles className="w-4 h-4 text-amber-300" />
+                <span>توليد أول امتحان شامل للمنهج الآن 🚀</span>
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {storedExams.map((exam) => {
+                const isPreviewOpen = expandedExamPreviewId === exam.id;
+                const isCurriculum = exam.scope === 'full_curriculum';
+                const isUnit = exam.scope === 'unit';
+
+                return (
+                  <div
+                    key={exam.id}
+                    className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm hover:shadow-md transition space-y-5 flex flex-col justify-between"
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-black border ${
+                          isCurriculum
+                            ? 'bg-purple-50 text-purple-700 border-purple-200'
+                            : isUnit
+                            ? 'bg-amber-50 text-amber-700 border-amber-200'
+                            : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        }`}>
+                          {isCurriculum ? '🌟 امتحان شامل للمنهج' : isUnit ? `📚 وحدة: ${exam.target_title}` : `📖 درس: ${exam.target_title}`}
+                        </span>
+
+                        <span className="text-[11px] font-bold text-gray-400">
+                          {new Date(exam.created_at).toLocaleDateString('ar-EG')}
+                        </span>
+                      </div>
+
+                      <h4 className="text-base font-black text-gray-900 leading-snug">
+                        {exam.title}
+                      </h4>
+
+                      {/* STATS BADGES */}
+                      <div className="grid grid-cols-3 gap-2 pt-1 text-center">
+                        <div className="p-2.5 bg-gray-50 rounded-2xl border border-gray-100">
+                          <span className="text-[10px] text-gray-400 font-bold block">عدد الأسئلة</span>
+                          <span className="text-xs font-black text-gray-900">{exam.questions?.length || 10} سؤال</span>
+                        </div>
+                        <div className="p-2.5 bg-gray-50 rounded-2xl border border-gray-100">
+                          <span className="text-[10px] text-gray-400 font-bold block">الدرجة الكلية</span>
+                          <span className="text-xs font-black text-indigo-600">{exam.total_marks || 20} درجة</span>
+                        </div>
+                        <div className="p-2.5 bg-gray-50 rounded-2xl border border-gray-100">
+                          <span className="text-[10px] text-gray-400 font-bold block">زمن الامتحان</span>
+                          <span className="text-xs font-black text-rose-600">{exam.duration_minutes || 30} دقيقة</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* ACTION BUTTONS */}
+                    <div className="space-y-2 pt-2 border-t border-gray-100">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleStartStoredExam(exam)}
+                          className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-xs font-black transition shadow-sm flex items-center justify-center gap-1.5 active:scale-95"
+                        >
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>بدء حل الامتحان 🚀</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setExamToPrint(exam);
+                            setIncludeAnswerKeyInPrint(false);
+                          }}
+                          className="px-4 py-3 border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-2xl text-xs font-bold transition flex items-center gap-1.5"
+                          title="طباعة ورقة الامتحان"
+                        >
+                          <Printer className="w-3.5 h-3.5 text-gray-600" />
+                          <span>طباعة</span>
+                        </button>
+
+                        <button
+                          onClick={() => setExpandedExamPreviewId(isPreviewOpen ? null : exam.id)}
+                          className="p-3 border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-2xl transition"
+                          title="استعراض الأسئلة ونموذج الإجابة"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      {/* PREVIEW ACCORDION */}
+                      {isPreviewOpen && (
+                        <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-3 text-xs animate-fade-in max-h-72 overflow-y-auto custom-scrollbar">
+                          <span className="font-black text-gray-800 block border-b border-gray-200 pb-2">
+                            معاينة أسئلة الامتحان ونموذج الإجابة:
+                          </span>
+                          {exam.questions?.map((q, qIdx) => (
+                            <div key={qIdx} className="p-3 bg-white rounded-xl border border-gray-200 space-y-1.5">
+                              <div className="flex items-start justify-between gap-2 font-bold text-gray-900">
+                                <span>{qIdx + 1}. {q.question}</span>
+                                <span className="text-[10px] text-indigo-600 font-black shrink-0">
+                                  {q.points || 2} درجات
+                                </span>
+                              </div>
+                              <div className="text-[11px] text-emerald-700 bg-emerald-50 p-2 rounded-lg font-bold">
+                                الإجابة النموذجية: {getSanitizedOptions(q)[q.correctOptionIndex] || q.options?.[q.correctOptionIndex]}
+                              </div>
+                              {q.explanation && (
+                                <p className="text-[10px] text-gray-500 leading-relaxed">
+                                  💡 {q.explanation}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -821,10 +1158,10 @@ export default function QuizSection({
 
             <div className="space-y-2">
               <h3 className="text-2xl font-black text-gray-900">
-                {score / questions.length >= 0.8 ? 'تهانينا! أداء استثنائي ومتميز 🏆' : 'أحسنت المحاولة! مراجعة جيدة'}
+                {score / effectiveQuestions.length >= 0.8 ? 'تهانينا! أداء استثنائي ومتميز 🏆' : 'أحسنت المحاولة! مراجعة جيدة'}
               </h3>
               <p className="text-xs text-gray-500">
-                لقد حققت <span className="font-black text-indigo-600 text-sm">{score}</span> من إجمالي <span className="font-black text-gray-800 text-sm">{questions.length}</span> درجات بنسبة إتقان <span className="font-black text-emerald-600 text-sm">{Math.round((score / Math.max(1, questions.length)) * 100)}%</span>
+                لقد حققت <span className="font-black text-indigo-600 text-sm">{score}</span> من إجمالي <span className="font-black text-gray-800 text-sm">{effectiveQuestions.length}</span> درجات بنسبة إتقان <span className="font-black text-emerald-600 text-sm">{Math.round((score / Math.max(1, effectiveQuestions.length)) * 100)}%</span>
               </p>
             </div>
 
@@ -836,12 +1173,12 @@ export default function QuizSection({
               </div>
               <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl">
                 <span className="text-[10px] text-rose-700 font-bold block">الإجابات الخاطئة</span>
-                <span className="text-lg font-black text-rose-950">{questions.length - score}</span>
+                <span className="text-lg font-black text-rose-950">{effectiveQuestions.length - score}</span>
               </div>
               <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-2xl">
                 <span className="text-[10px] text-indigo-700 font-bold block">التقدير العام</span>
                 <span className="text-lg font-black text-indigo-950">
-                  {score / questions.length >= 0.9 ? 'ممتاز (A+)' : score / questions.length >= 0.75 ? 'جيد جداً (B)' : 'يحتاج مراجعة (C)'}
+                  {score / effectiveQuestions.length >= 0.9 ? 'ممتاز (A+)' : score / effectiveQuestions.length >= 0.75 ? 'جيد جداً (B)' : 'يحتاج مراجعة (C)'}
                 </span>
               </div>
             </div>
@@ -851,10 +1188,10 @@ export default function QuizSection({
               <span className="text-xs font-black text-gray-800 block">📊 التحليل المعرفي وفق مستويات بلوم (Bloom's Taxonomy):</span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
                 {['تذكر وحفظ المفاهيم', 'فهم واستيعاب', 'تطبيق ومسائل حسابية', 'تحليل واستنتاج'].map(level => {
-                  const matchingQuestions = questions.filter(q => (q.cognitiveLevel || 'فهم واستيعاب').includes(level) || level.includes(q.cognitiveLevel || ''));
+                  const matchingQuestions = effectiveQuestions.filter(q => (q.cognitiveLevel || 'فهم واستيعاب').includes(level) || level.includes(q.cognitiveLevel || ''));
                   if (matchingQuestions.length === 0) return null;
                   const correctCount = matchingQuestions.filter((q) => {
-                    const idx = questions.indexOf(q);
+                    const idx = effectiveQuestions.indexOf(q);
                     const chosen = examMode === 'exam' ? answersMap[idx] : undefined;
                     return chosen !== undefined && chosen === q.correctOptionIndex;
                   }).length;
@@ -870,7 +1207,7 @@ export default function QuizSection({
               </div>
             </div>
 
-            <div className="flex gap-3 pt-2">
+            <div className="flex flex-wrap gap-3 pt-2">
               <button
                 onClick={handleReset}
                 className="flex-1 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-xs font-black transition shadow-md flex items-center justify-center gap-2 active:scale-95"
@@ -879,6 +1216,19 @@ export default function QuizSection({
                 <span>إعادة الاختبار من البداية</span>
               </button>
 
+              {activeStoredExam && (
+                <button
+                  onClick={() => {
+                    setActiveStoredExam(null);
+                    setExamMode('archive');
+                  }}
+                  className="px-5 py-3.5 bg-purple-600 hover:bg-purple-500 text-white rounded-2xl text-xs font-black transition shadow-md flex items-center gap-2"
+                >
+                  <BookMarked className="w-4 h-4" />
+                  <span>العودة لسجل الامتحانات</span>
+                </button>
+              )}
+
               <button
                 onClick={() => window.print()}
                 className="px-6 py-3.5 border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-2xl text-xs font-bold transition flex items-center gap-2"
@@ -886,6 +1236,314 @@ export default function QuizSection({
                 <Printer className="w-4 h-4" />
                 <span>طباعة النتيجة</span>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* GENERATE CUSTOM EXAM MODAL */}
+      {showGenerateModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-gray-100 space-y-6 animate-scale-up" dir="rtl">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div className="flex items-center gap-2 text-purple-600">
+                <Sparkles className="w-5 h-5" />
+                <h3 className="font-black text-base text-gray-900">توليد امتحان جديد بالذكاء الاصطناعي</h3>
+              </div>
+              <button onClick={() => setShowGenerateModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-black text-gray-700 mb-2">نطاق الامتحان الشامل:</label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setExamScope('full_curriculum');
+                      setSelectedTargetTitle(bookTitle || '');
+                    }}
+                    className={`p-3 rounded-2xl border-2 text-xs font-black transition flex flex-col items-center gap-1 ${
+                      examScope === 'full_curriculum'
+                        ? 'border-purple-600 bg-purple-50 text-purple-900'
+                        : 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    <span>🌟 كامل المنهج</span>
+                    <span className="text-[10px] font-medium text-gray-500">امتحان تراكمي</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setExamScope('unit')}
+                    className={`p-3 rounded-2xl border-2 text-xs font-black transition flex flex-col items-center gap-1 ${
+                      examScope === 'unit'
+                        ? 'border-purple-600 bg-purple-50 text-purple-900'
+                        : 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    <span>📚 وحدة دراسية</span>
+                    <span className="text-[10px] font-medium text-gray-500">فصول مترابطة</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setExamScope('lesson');
+                      setSelectedTargetTitle(chapterTitle || '');
+                    }}
+                    className={`p-3 rounded-2xl border-2 text-xs font-black transition flex flex-col items-center gap-1 ${
+                      examScope === 'lesson'
+                        ? 'border-purple-600 bg-purple-50 text-purple-900'
+                        : 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    <span>📖 درس محدد</span>
+                    <span className="text-[10px] font-medium text-gray-500">تشخيص مركز</span>
+                  </button>
+                </div>
+              </div>
+
+              {examScope !== 'full_curriculum' && (
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    {examScope === 'unit' ? 'عنوان الوحدة أو الموضوع:' : 'اختر الدرس المستهدف:'}
+                  </label>
+                  {examScope === 'lesson' && allChapters.length > 0 ? (
+                    <select
+                      value={selectedChapterId}
+                      onChange={(e) => {
+                        setSelectedChapterId(e.target.value);
+                        const ch = allChapters.find(c => c.id === e.target.value);
+                        if (ch) setSelectedTargetTitle(ch.title);
+                      }}
+                      className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold outline-none focus:border-purple-600"
+                    >
+                      {allChapters.map(ch => (
+                        <option key={ch.id} value={ch.id}>{ch.title}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={selectedTargetTitle}
+                      onChange={(e) => setSelectedTargetTitle(e.target.value)}
+                      placeholder={examScope === 'unit' ? 'مثال: الوحدة الأولى: المادة وخواصها' : 'اسم الدرس'}
+                      className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold outline-none focus:border-purple-600"
+                    />
+                  )}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">عدد الأسئلة والزمن:</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[5, 10, 15, 20].map(cnt => (
+                    <button
+                      key={cnt}
+                      type="button"
+                      onClick={() => setExamQuestionCount(cnt)}
+                      className={`p-2.5 rounded-xl border text-xs font-black transition ${
+                        examQuestionCount === cnt
+                          ? 'border-purple-600 bg-purple-600 text-white shadow-sm'
+                          : 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      {cnt} أسئلة
+                    </button>
+                  ))}
+                </div>
+                <span className="text-[10px] text-gray-400 mt-1 block">
+                  الزمن المتوقع: {examQuestionCount <= 5 ? 15 : examQuestionCount <= 10 ? 30 : 45} دقيقة • الدرجة الكلية: {examQuestionCount * 2} درجات
+                </span>
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-2 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setShowGenerateModal(false)}
+                className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-2xl transition"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                disabled={isGeneratingCustomExam}
+                onClick={handleGenerateCustomExam}
+                className="flex-1 py-3 bg-purple-600 hover:bg-purple-500 text-white text-xs font-black rounded-2xl transition shadow-md flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                {isGeneratingCustomExam ? (
+                  <>
+                    <div className="animate-spin w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full" />
+                    <span>جاري التوليد والتوثيق...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>توليد وتوثيق الامتحان 🚀</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PRINTABLE OFFICIAL EXAM PAPER MODAL */}
+      {examToPrint && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-gray-200" dir="rtl">
+            {/* MODAL CONTROL HEADER (Hidden on print) */}
+            <div className="p-4 sm:p-5 border-b border-gray-200 flex items-center justify-between gap-3 bg-gray-50 rounded-t-3xl print:hidden">
+              <div className="flex items-center gap-2">
+                <Printer className="w-5 h-5 text-indigo-600" />
+                <span className="font-black text-sm text-gray-900">معاينة ورقة الامتحان الرسمية (A4 Printable)</span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-1.5 text-xs font-bold text-gray-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={includeAnswerKeyInPrint}
+                    onChange={(e) => setIncludeAnswerKeyInPrint(e.target.checked)}
+                    className="w-4 h-4 rounded text-indigo-600"
+                  />
+                  <span>تضمين نموذج الإجابة وسلم التصحيح</span>
+                </label>
+
+                <button
+                  onClick={() => window.print()}
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black rounded-xl transition shadow-sm flex items-center gap-1.5"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>طباعة فورية 🖨️</span>
+                </button>
+
+                <button
+                  onClick={() => setExamToPrint(null)}
+                  className="p-2 text-gray-400 hover:text-gray-600 rounded-xl"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* PRINTABLE PAPER CONTENT (Printed cleanly) */}
+            <div id="printable-exam-paper" className="p-8 sm:p-12 overflow-y-auto space-y-6 text-black bg-white custom-scrollbar">
+              <style>{`
+                @media print {
+                  body * { visibility: hidden; }
+                  #printable-exam-paper, #printable-exam-paper * { visibility: visible; }
+                  #printable-exam-paper {
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
+                    padding: 20mm;
+                    background: white !important;
+                    color: black !important;
+                  }
+                }
+              `}</style>
+
+              {/* FORMAL EXAMINATION HEADER */}
+              <div className="border-b-2 border-black pb-4 space-y-3">
+                <div className="flex items-start justify-between text-xs font-bold">
+                  <div className="text-right space-y-1">
+                    <div>منصة إيبوك للتعليم الذكي • Osera AI LMS</div>
+                    <div>اختبار تقييمي معتمد لمادة: {bookTitle || 'المقرر التعليمي'}</div>
+                  </div>
+                  <div className="text-center space-y-0.5">
+                    <div className="text-sm font-black underline">ورقة الأسئلة الرسمية</div>
+                    <div className="text-[11px] font-bold text-gray-700">{examToPrint.title}</div>
+                  </div>
+                  <div className="text-left space-y-1">
+                    <div>الزمن المحدد: {examToPrint.duration_minutes} دقيقة</div>
+                    <div>الدرجة الكلية: {examToPrint.total_marks} درجة</div>
+                  </div>
+                </div>
+
+                {/* STUDENT RECORD BOX */}
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-dashed border-gray-400 text-xs font-bold">
+                  <div>اسم الطالب: .......................................</div>
+                  <div>رقم الجلوس: ....................</div>
+                  <div>الفصل / الشعبة: ....................</div>
+                </div>
+              </div>
+
+              {/* INSTRUCTIONS */}
+              <div className="p-3 bg-gray-50 border border-gray-300 rounded-xl text-[11px] space-y-1">
+                <span className="font-black block">تعليمات الاختبار:</span>
+                <ul className="list-disc list-inside space-y-0.5 text-gray-700">
+                  <li>اقرأ كل سؤال بعناية ودقة قبل اختيار أو كتابة الإجابة.</li>
+                  <li>الإجابة الصحيحة لكل سؤال تمنح درجتين كاملتين.</li>
+                </ul>
+              </div>
+
+              {/* QUESTIONS LIST */}
+              <div className="space-y-6 pt-2">
+                {examToPrint.questions?.map((q, idx) => {
+                  const opts = getSanitizedOptions(q);
+                  return (
+                    <div key={idx} className="space-y-2.5 pb-4 border-b border-gray-200">
+                      <div className="flex items-start justify-between gap-2 text-xs font-black">
+                        <span className="text-sm">
+                          ( {idx + 1} ) {q.question}
+                        </span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 bg-gray-100 rounded">
+                          [ {q.points || 2} درجات ]
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pr-4">
+                        {opts.map((opt, oIdx) => (
+                          <div key={oIdx} className="flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-full border border-black flex items-center justify-center text-[10px] font-bold shrink-0">
+                              {['أ', 'ب', 'ج', 'د'][oIdx] || oIdx + 1}
+                            </span>
+                            <span>{opt}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* OPTIONAL MODEL ANSWER SHEET */}
+              {includeAnswerKeyInPrint && (
+                <div className="pt-8 border-t-4 border-double border-black space-y-4 page-break-before">
+                  <div className="text-center font-black text-sm underline">
+                    --- نموذج الإجابة الرسمي وسلم التصحيح المعتمد ---
+                  </div>
+                  <div className="space-y-2 text-xs">
+                    {examToPrint.questions?.map((q, idx) => {
+                      const opts = getSanitizedOptions(q);
+                      return (
+                        <div key={idx} className="p-2 bg-gray-50 rounded border border-gray-200 flex items-start justify-between gap-2">
+                          <div>
+                            <span className="font-bold">س{idx + 1}: </span>
+                            <span className="font-black text-emerald-800">
+                              ({['أ', 'ب', 'ج', 'د'][q.correctOptionIndex]}) {opts[q.correctOptionIndex]}
+                            </span>
+                            {q.explanation && (
+                              <div className="text-[10px] text-gray-600 mt-0.5">
+                                التعليل: {q.explanation}
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-[10px] font-bold text-gray-500 shrink-0">
+                            {q.cognitiveLevel || 'تطبيق'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

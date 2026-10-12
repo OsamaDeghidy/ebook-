@@ -1,0 +1,56 @@
+{
+  "nav": {
+    "home": "Startseite",
+    "marketplace": "Kurskatalog",
+    "reels": "🎬 Bildungs-Reels",
+    "instructor_hub": "Dozentenbereich ⚡",
+    "admin_hub": "Admin-Dashboard 🛡️",
+    "sign_in": "Anmelden",
+    "sign_out": "Abmelden",
+    "my_courses": "Meine Kurse",
+    "help_support": "Hilfe & Support",
+    "about": "Über Uns"
+  },
+  "book": {
+    "read": "Kurs Lesen",
+    "interactive_lesson": "✨ [Neu] Interaktive Lektion",
+    "interactive_curriculum": "🚀 [Neu] KI-Gesamtlehrplan",
+    "reels_tab": "Kapitel-Reels & TikTok 🎬",
+    "flashcards": "Lernkarten",
+    "sandbox": "Labor & Sandbox",
+    "quiz": "Fragendatenbank",
+    "videos": "Videolektionen",
+    "editor": "Texteditor",
+    "qr_code": "Intelligenter QR-Code 📲",
+    "free": "100% Kostenlos",
+    "currency": "EUR",
+    "published": "Für Studenten veröffentlicht",
+    "draft": "Privater Entwurf (Versteckt)",
+    "chapters_index": "Inhaltsverzeichnis",
+    "hide_index": "Inhaltsverzeichnis Ausblenden",
+    "show_index": "Kapitelübersicht",
+    "author": "Autor",
+    "ratings": "Bewertungen",
+    "language": "Sprache",
+    "language_learning_badge": "🎓 Sprachlernkurs"
+  },
+  "languages": {
+    "ar": "العربية",
+    "en": "English",
+    "it": "Italiano",
+    "fr": "Français",
+    "de": "Deutsch"
+  },
+  "common": {
+    "download": "Herunterladen",
+    "share": "Teilen",
+    "copied": "Kopiert!",
+    "close": "Schließen",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "generate": "Mit KI generieren",
+    "processing": "Wird verarbeitet...",
+    "search": "Suchen...",
+    "filter": "Filtern"
+  }
+}

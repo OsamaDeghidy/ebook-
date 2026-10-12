@@ -133,16 +133,15 @@ body {
   font-size: 0.875rem;
 }
 
-/* 🖨️ STRICT HIGH-FIDELITY PRINT STYLES FOR EXAMS & REPORTS */
+/* 🖨️ STRICT HIGH-FIDELITY PRINT STYLES FOR EXAMS, POSTERS & REPORTS */
 @media print {
   @page {
     size: A4 portrait;
-    margin: 12mm 15mm 12mm 15mm;
+    margin: 10mm;
   }
 
-  header, nav, footer, aside, .print\:hidden, [role="banner"], [role="navigation"], .sticky, .fixed:not(#printable-exam-container) {
+  header, nav, footer, aside, .print\:hidden, [role="banner"], [role="navigation"], .sticky {
     display: none !important;
-    visibility: hidden !important;
     height: 0 !important;
     overflow: hidden !important;
   }
@@ -153,7 +152,6 @@ body {
     margin: 0 !important;
     padding: 0 !important;
     width: 100% !important;
-    min-height: 100% !important;
   }
 
   #printable-exam-container {
@@ -163,6 +161,23 @@ body {
     margin: 0 auto !important;
     padding: 0 !important;
     background: #ffffff !important;
+  }
+
+  #print-qr-page {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 190mm !important;
+    max-height: 270mm !important;
+    margin: 0 auto !important;
+    padding: 8mm !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: 2px solid #000000 !important;
+    box-sizing: border-box !important;
+    page-break-after: avoid !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   .break-inside-avoid {
@@ -175,3 +190,4 @@ body {
     page-break-before: always !important;
   }
 }
+

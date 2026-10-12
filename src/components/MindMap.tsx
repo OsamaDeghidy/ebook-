@@ -304,8 +304,7 @@ export default function MindMap({ nodes = [], onUpdateNodes, ebookId, chapterId,
       const svgElement = svgRef.current;
       const svgData = new XMLSerializer().serializeToString(svgElement);
       const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-      const URL = window.URL || window.webkitURL || window;
-      const blobURL = URL.createObjectURL(svgBlob);
+      const blobURL = window.URL.createObjectURL(svgBlob);
       
       const image = new Image();
       image.onload = () => {

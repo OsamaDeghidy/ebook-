@@ -60,6 +60,7 @@ export interface QuizQuestion {
   difficulty?: 'easy' | 'medium' | 'hard';
   topicTag?: string;
   cognitiveLevel?: string; // Bloom's Taxonomy: تذكر | فهم واستيعاب | تطبيق وحل مسائل | تحليل واستنتاج
+  points?: number;
 }
 
 export interface Flashcard {
@@ -135,6 +136,10 @@ export interface Chapter {
   quiz: QuizQuestion[];
   flashcards?: Flashcard[];
   mindMap: MindMapNode[];
+  interactive_explanation?: any; // V2 interactive lesson explanation
+  examTraps?: any[];
+  questions?: any[];
+  learningObjectives?: any[];
 }
 
 export interface FeatureToggles {
@@ -186,6 +191,10 @@ export interface Ebook {
   pregeneration_percent?: number;
   curriculum_explanation?: any;
   curriculum_mindmap?: CurriculumMindMapPayload;
+  language?: 'ar' | 'en' | 'it' | 'fr' | 'de' | string;
+  is_language_learning?: boolean;
+  target_learning_language?: 'ar' | 'en' | 'it' | 'fr' | 'de' | string;
+  exams?: any[];
 }
 
 export interface MarketplaceBook extends Ebook {
@@ -221,6 +230,16 @@ export interface MarketplaceBook extends Ebook {
   pregeneration_percent?: number;
   curriculum_explanation?: any;
   curriculum_mindmap?: CurriculumMindMapPayload;
+  language?: 'ar' | 'en' | 'it' | 'fr' | 'de' | string;
+  is_language_learning?: boolean;
+  target_learning_language?: 'ar' | 'en' | 'it' | 'fr' | 'de' | string;
+  stage?: string;
+  coverUrl?: string;
+  isCurriculum?: boolean;
+  gradeLevel?: string;
+  educationStage?: string;
+  author?: string;
+  is_free?: boolean;
 }
 
 export interface ConversionJob {
@@ -273,12 +292,15 @@ export interface EduReelScene {
     imageUrl?: string;
     imagePrompt?: string;
   };
+  duration?: number;
+  script?: string;
   startSec: number;
   endSec: number;
 }
 
 export interface EduReel {
   id: string;
+  title?: string;
   book_id: string;
   book_title?: string;
   author_name?: string;
@@ -298,6 +320,8 @@ export interface EduReel {
   word_timings: EduReelWordTiming[];
   visual_cards: EduReelVisualCard[];
   interactive_quiz?: EduReelInteractiveQuiz;
+  quickQuiz?: any;
+  stats?: any;
   likes_count: number;
   views_count: number;
   completions_count: number;

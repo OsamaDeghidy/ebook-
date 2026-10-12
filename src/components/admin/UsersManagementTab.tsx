@@ -7,6 +7,7 @@ import {
   Mail, Calendar, Lock, Unlock, Layers, Sparkles, FileText, ExternalLink
 } from 'lucide-react';
 import { MarketplaceBook } from '../../types';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 export interface DetailedUser {
   id: string;
@@ -73,6 +74,7 @@ export const UsersManagementTab: React.FC<UsersManagementTabProps> = ({
   onLaunchBook,
   onRefreshData
 }) => {
+  const { t, language, dir } = useLanguage();
   const [users, setUsers] = useState<DetailedUser[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -279,7 +281,7 @@ export const UsersManagementTab: React.FC<UsersManagementTabProps> = ({
   };
 
   return (
-    <div className="space-y-6 text-right font-sans" dir="rtl">
+    <div className="space-y-6 text-right font-sans" dir={dir}>
       
       {/* STATUS BANNER */}
       {statusMsg && (

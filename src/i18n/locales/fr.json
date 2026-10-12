@@ -1,0 +1,56 @@
+{
+  "nav": {
+    "home": "Accueil",
+    "marketplace": "Catalogue de Cours",
+    "reels": "🎬 Reels Éducatifs",
+    "instructor_hub": "Espace Enseignant ⚡",
+    "admin_hub": "Tableau de Bord 🛡️",
+    "sign_in": "Connexion",
+    "sign_out": "Déconnexion",
+    "my_courses": "Mes Cours",
+    "help_support": "Aide & Support",
+    "about": "À Propos"
+  },
+  "book": {
+    "read": "Lire le Cours",
+    "interactive_lesson": "✨ [Nouveau] Leçon Interactive",
+    "interactive_curriculum": "🚀 [Nouveau] Explication Complète IA",
+    "reels_tab": "Reels & TikTok du Chapitre 🎬",
+    "flashcards": "Cartes Mémoire",
+    "sandbox": "Laboratoire & Bac à Sable",
+    "quiz": "Banque de Questions",
+    "videos": "Vidéos de Cours",
+    "editor": "Éditeur de Texte",
+    "qr_code": "Code QR Intelligent 📲",
+    "free": "100% Gratuit",
+    "currency": "EUR",
+    "published": "Publié pour les Étudiants",
+    "draft": "Brouillon Privé (Masqué)",
+    "chapters_index": "Table des Matières",
+    "hide_index": "Masquer le Sommaire",
+    "show_index": "Sommaire des Chapitres",
+    "author": "Auteur",
+    "ratings": "Avis",
+    "language": "Langue",
+    "language_learning_badge": "🎓 Cours d'Apprentissage Linguistique"
+  },
+  "languages": {
+    "ar": "العربية",
+    "en": "English",
+    "it": "Italiano",
+    "fr": "Français",
+    "de": "Deutsch"
+  },
+  "common": {
+    "download": "Télécharger",
+    "share": "Partager",
+    "copied": "Copié !",
+    "close": "Fermer",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "generate": "Générer avec l'IA",
+    "processing": "Traitement en cours...",
+    "search": "Rechercher...",
+    "filter": "Filtrer"
+  }
+}

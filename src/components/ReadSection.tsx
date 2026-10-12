@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 import { 
   Play, Square, FileText, Lightbulb, BookOpen, Volume2, 
   RefreshCw, Sigma, ShieldAlert, 
@@ -12,57 +14,18 @@ import {
 import { Chapter } from '../types';
 import { useGlobalAudio } from '../hooks/useGlobalAudio';
 import { ContextualAiTutor } from './ai/ContextualAiTutor';
+import { sanitizeBookContent } from '../utils/sanitizeBookContent';
+import { useLanguage } from '../i18n/LanguageContext';
 
 /**
  * Deep text sanitizer to remove escaped characters, format LaTeX smoothly into clear math typography,
- * remove English bracketed tokens from Arabic contexts, and clean raw callout tags.
+ * strip OCR artifacts, normalize math words to symbols, and clean raw callout tags.
  */
 function sanitizeEducationalMarkdown(text: string | undefined): string {
   if (!text) return '';
-  let cleaned = text.replace(/\\n/g, '\n').trim();
-
-  // 1. Math symbols & LaTeX conversions to clean standard typography
-  cleaned = cleaned.replace(/\\times\b/g, '×');
-  cleaned = cleaned.replace(/\\div\b/g, '÷');
-  cleaned = cleaned.replace(/\\pm\b/g, '±');
-  cleaned = cleaned.replace(/\\leq?\b/g, '≤');
-  cleaned = cleaned.replace(/\\geq?\b/g, '≥');
-  cleaned = cleaned.replace(/\\neq\b/g, '≠');
-  cleaned = cleaned.replace(/\\approx\b/g, '≈');
-  cleaned = cleaned.replace(/\\cdot\b/g, '·');
-  cleaned = cleaned.replace(/\\sqrt\{([^}]+)\}/g, '√($1)');
-  cleaned = cleaned.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '($1 / $2)');
-
-  // Clean raw LaTeX formatting like $$ \text{الاتجاهات} = ... $$ into clean readable text
-  cleaned = cleaned.replace(/\$\$\s*\\text\{([^}]+)\}\s*=\s*\\{([^}]+)\\}\s*\$\$/g, '$1: $2');
-  cleaned = cleaned.replace(/\$\$\s*\\text\{([^}]+)\}\s*\$\$/g, '$1');
-  cleaned = cleaned.replace(/\\text\{([^}]+)\}/g, '$1');
-  cleaned = cleaned.replace(/\$\$(.*?)\$\$/g, ' $1 ');
-  cleaned = cleaned.replace(/\$([^\$\n]+)\$/g, '$1');
-  cleaned = cleaned.replace(/\\,/g, ' ');
-
-  // 2. Remove English bracketed translations from predominantly Arabic text
-  // e.g. (Place Value), (Value of the Digit), (Make a Ten), (PowerPoint Deck), (Deck), (Exam Pro Tip)
-  cleaned = cleaned.replace(/\s*\([a-zA-Z\s\-_0-9\/\.\:]+\)/g, '');
-
-  // 3. Remove raw callout tags
-  cleaned = cleaned.replace(/\[!(IMPORTANT|WARNING|TIP|NOTE)\]/gi, '');
-
-  // 4. Fix collapsed single-line tables and strip raw dashed separator rows
-  cleaned = cleaned.replace(/^[ \t]*\|?[-:\s|]{3,}\|?[ \t]*$/gm, '');
-  cleaned = cleaned.replace(/\|\s*[-:\s]{2,}\s*\|/g, '|');
-  cleaned = cleaned.replace(/\|\s*\|\s*/g, '|\n| ');
-  cleaned = cleaned.replace(/\|\|/g, '|\n|');
-
-  // Strip any leading whitespace from table rows so they start at column 0
-  cleaned = cleaned.replace(/^[ \t]*(\|.+)$/gm, '$1');
-
-  // Ensure markdown tables have proper blank lines before and after
-  cleaned = cleaned.replace(/([^\n])\n(\|.*?\|)/g, '$1\n\n$2');
-  cleaned = cleaned.replace(/(\|.*?\|)\n([^\n|])/g, '$1\n\n$2');
-
-  return cleaned;
+  return sanitizeBookContent(text);
 }
+
 
 /**
  * Visual Comparison & Concept Cards Component
@@ -902,6 +865,7 @@ interface ReadSectionProps {
 }
 
 export function ReadSection({ chapter }: ReadSectionProps) {
+  const { t, language, dir } = useLanguage();
   const { isItemPlaying, isItemLoading, play, stop } = useGlobalAudio();
   const [fontSizeLevel, setFontSizeLevel] = useState<'normal' | 'large' | 'xlarge'>('normal');
   const [showOriginalSource, setShowOriginalSource] = useState(false);
@@ -1025,10 +989,20 @@ export function ReadSection({ chapter }: ReadSectionProps) {
     }
 
     const cleanText = fullNarrationText
+      .replace(/\[\!(IMPORTANT|WARNING|TIP|NOTE)\]/gi, ' ')
+      .replace(/\[.*?\]/g, ' ')
+      .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1')
+      .replace(/https?:\/\/\S+/g, ' ')
       .replace(/[\uD83C-\uDBFF\uDC00-\uDFFF]+/g, ' ')
       .replace(/[\u2600-\u27BF\u2300-\u23FF\u2B50\u200D\uFE0F\u20E3\u2190-\u21FF]/g, ' ')
-      .replace(/[🔴🔵🟢🟣🟠🟡⚪⚫🔺🔻⭐✨💡📌🧭📏🗺️⚠️🚨🎉🎙️🎒🔍🎮📖📐🎯🧠💡]/gu, ' ')
-      .replace(/[*_#`~\|\[\]\(\)\{\}]/g, ' ')
+      .replace(/[🔴🔵🟢🟣🟠🟡⚪⚫🔺🔻⭐✨💡📌🧭📏🗺️⚠️🚨🎉🎙️🎒🔍🎮📖📐🎯🧠💡🎬🚀📐⚡🏆🔥]/gu, ' ')
+      .replace(/(\d+)\s*[\/÷]\s*(\d+)/g, '$1 على $2')
+      .replace(/([^\d\s\/\\]+)\s*[\/\\]\s*([^\d\s\/\\]+)/g, '$1 أو $2')
+      .replace(/[\(\)\[\]\{\}«»‹›（）【】〔〕《》“”"'\`\/\\]/g, ' ')
+      .replace(/[*_#`~\|\$]/g, ' ')
+      .replace(/\.{2,}/g, ' ، ')
+      .replace(/…/g, ' ، ')
+      .replace(/[:؛;]/g, ' ، ')
       .replace(/\s+/g, ' ')
       .trim();
 
@@ -1224,10 +1198,11 @@ export function ReadSection({ chapter }: ReadSectionProps) {
           </div>
 
           <div className="p-4 bg-white rounded-2xl border border-indigo-100/80 text-xs sm:text-sm text-gray-800 leading-relaxed font-medium">
-            <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+            <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]} components={markdownComponents}>
               {normalizedSummary}
             </ReactMarkdown>
           </div>
+
         </div>
       )}
 
@@ -1331,10 +1306,11 @@ export function ReadSection({ chapter }: ReadSectionProps) {
           </div>
 
           <div className={`prose prose-slate max-w-none text-gray-800 leading-relaxed ${getFontSizeClass()}`}>
-            <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+            <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]} components={markdownComponents}>
               {normalizedContent}
             </ReactMarkdown>
           </div>
+
         </div>
       )}
 

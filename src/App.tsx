@@ -27,8 +27,11 @@ import { FloatingAiMascot } from './components/ai/FloatingAiMascot';
 import { supabase } from './lib/supabase';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { getPlatformConfig, syncPlatformConfigWithServer, PlatformConfig } from './services/platformConfigService';
+import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
+import { LanguageSelector } from './components/common/LanguageSelector';
 
 function AppContent() {
+  const { t, language, dir } = useLanguage();
   const [platformConfig, setPlatformConfig] = useState<PlatformConfig>(getPlatformConfig());
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -675,7 +678,7 @@ function AppContent() {
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            الرئيسية
+            {t('nav.home', 'الرئيسية')}
           </Link>
 
           <Link
@@ -687,7 +690,7 @@ function AppContent() {
             }`}
           >
             <ShoppingCart className="w-3.5 h-3.5" />
-            <span>متجر المقررات</span>
+            <span>{t('nav.marketplace', 'متجر المقررات')}</span>
             <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
               location.pathname === '/marketplace' ? 'bg-sky-700 text-white' : 'bg-slate-200 text-slate-700'
             }`}>
@@ -706,7 +709,7 @@ function AppContent() {
               }`}
             >
               <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-              <span>🎬 ريلز المعرفة</span>
+              <span>{t('nav.reels', '🎬 ريلز المعرفة')}</span>
             </Link>
           )}
 
@@ -721,13 +724,16 @@ function AppContent() {
               }`}
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              <span>{userRole === 'admin' || isAdminMode ? 'لوحة القيادة 🛡️' : 'لوحة المعلم ⚡'}</span>
+              <span>{userRole === 'admin' || isAdminMode ? t('nav.admin_hub', 'لوحة القيادة 🛡️') : t('nav.instructor_hub', 'لوحة المعلم ⚡')}</span>
             </Link>
           )}
         </nav>
 
         {/* 🌟 RIGHT ACTION CONTROLS & AUTH */}
         <div className="flex items-center gap-2 sm:gap-2.5">
+          {/* 🌐 INTERNATIONAL LANGUAGE SELECTOR */}
+          <LanguageSelector />
+
           {/* GAMIFICATION / DAILY STREAK BADGE */}
           {platformConfig.showGamification && (
             <StudentStreakBadge currentUser={currentUser} />
@@ -740,7 +746,7 @@ function AppContent() {
             title="مركز الشكاوى والدعم الفني"
           >
             <MessageSquare className="w-3.5 h-3.5 text-rose-600" />
-            <span>الشكاوى والدعم 🎫</span>
+            <span>{t('nav.help_support', 'الشكاوى والدعم 🎫')}</span>
           </button>
 
           {/* ADMIN / STUDENT MODE TOGGLE */}
@@ -767,7 +773,7 @@ function AppContent() {
               </div>
               <button
                 onClick={handleLogout}
-                title="تسجيل الخروج"
+                title={t('nav.sign_out', 'تسجيل الخروج')}
                 className="p-2 text-slate-400 hover:text-rose-500 hover:bg-slate-100 rounded-xl transition cursor-pointer"
               >
                 <LogOut className="w-4 h-4" />
@@ -779,7 +785,7 @@ function AppContent() {
               className="hidden sm:flex px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition active:scale-95 items-center gap-1.5 cursor-pointer"
             >
               <User className="w-3.5 h-3.5 text-teal-400" />
-              <span>تسجيل الدخول</span>
+              <span>{t('nav.sign_in', 'تسجيل الدخول')}</span>
             </button>
           )}
 
@@ -1277,9 +1283,11 @@ function AppContent() {
 export default function App() {
   return (
     <ErrorBoundary>
-      <BrowserRouter>
-        <AppContent />
-      </BrowserRouter>
+      <LanguageProvider>
+        <BrowserRouter>
+          <AppContent />
+        </BrowserRouter>
+      </LanguageProvider>
     </ErrorBoundary>
   );
 }

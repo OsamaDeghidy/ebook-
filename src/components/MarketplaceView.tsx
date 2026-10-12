@@ -18,6 +18,7 @@ import {
   getGradesForSystem 
 } from '../constants/taxonomy';
 import { PurchaseModal } from './PurchaseModal';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface MarketplaceViewProps {
   books: MarketplaceBook[];
@@ -52,6 +53,7 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
   onUpdateBook,
   onPurchaseBook
 }) => {
+  const { t, language, dir } = useLanguage();
   const [mainViewTab, setMainViewTab] = useState<'marketplace' | 'my_library'>('marketplace');
   const [quickFilter, setQuickFilter] = useState<'all' | 'bestsellers' | 'trending' | 'top_rated' | 'favorites' | 'read_later' | 'free' | 'paid'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -285,7 +287,7 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
   };
 
   return (
-    <div className="space-y-8 animate-fade-in text-right" dir="rtl">
+    <div className="space-y-8 animate-fade-in text-right" dir={dir}>
       
       {/* 🌟 MARKETING HERO & CALL TO ACTION */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-teal-950 to-indigo-950 text-white p-7 sm:p-10 border border-teal-900/50 shadow-xl">

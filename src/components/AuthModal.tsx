@@ -4,6 +4,7 @@ import { X, Mail, Lock, User, Shield, AlertCircle, Sparkles, GraduationCap, Chec
 import { UserRole } from '../types';
 import { TermsOfUseModal } from './legal/TermsOfUseModal';
 import { getPlatformConfig, PlatformConfig } from '../services/platformConfigService';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface AuthModalProps {
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => {
+  const { t, language, dir } = useLanguage();
   const [platformConfig, setPlatformConfig] = useState<PlatformConfig>(getPlatformConfig());
 
   useEffect(() => {
@@ -129,7 +131,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-md p-4 animate-fade-in text-right" dir="rtl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-md p-4 animate-fade-in text-right" dir={dir}>
       <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl relative max-h-[90vh] overflow-y-auto">
         <button
           onClick={onClose}

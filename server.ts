@@ -29,12 +29,12 @@ import { PDFParse } from "pdf-parse";
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
 import { parseDocumentBuffer } from "./server/services/documentParser";
-import { buildMasterPedagogicalPrompt, evaluatePedagogicalChunking } from "./server/services/pedagogicalChunker";
-import { extractDocumentBlueprint, getPendingLessons, markLessonsCompleted, DocumentSyllabusBlueprint } from "./server/services/documentBlueprint";
+import { buildMasterPedagogicalPrompt, evaluatePedagogicalChunking, deduplicateChapterTitles } from "./server/services/pedagogicalChunker";
+import { extractDocumentBlueprint, getPendingLessons, markLessonsCompleted, DocumentSyllabusBlueprint, SyllabusLessonBlueprint } from "./server/services/documentBlueprint";
 import { buildGroundedBatchPrompt } from "./server/services/groundedLessonBuilder";
 import { buildEducationalReelPrompt } from "./server/services/educationalReels";
 import { buildEducationalPodcastPrompt } from "./server/services/educationalPodcast";
-import { buildEducationalQuizPrompt } from "./server/services/quizEngine";
+import { buildEducationalQuizPrompt, buildComprehensiveExamPrompt, ComprehensiveExam } from "./server/services/quizEngine";
 import { detectTeacherPersona } from "./server/services/teacherPersonas";
 import { buildInteractiveExplanationPrompt } from "./server/services/interactiveExplanationV2";
 import { buildCurriculumMindMapPrompt } from "./server/services/curriculumMindMap";
@@ -119,21 +119,57 @@ function cleanScientificTextForSpeech(input: string): string {
   // 2. Strip bracketed director notes like [متحمس], [توقف للتنفس], [سكتة درامية]
   cleaned = cleaned.replace(/\[.*?\]/g, " ");
 
-  // 3. Strip ALL Unicode Emojis and Symbols so TTS engines never speak raw emoji codes
+  // 3. Strip URLs and markdown links [text](url) -> keep text only
+  cleaned = cleaned.replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1");
+  cleaned = cleaned.replace(/https?:\/\/\S+/g, " ");
+
+  // 4. Strip ALL Unicode Emojis and Symbols so TTS engines never speak raw emoji codes
   cleaned = cleaned.replace(/[\uD83C-\uDBFF\uDC00-\uDFFF]+/g, " ");
   cleaned = cleaned.replace(/[\u2600-\u27BF\u2300-\u23FF\u2B50\u200D\uFE0F\u20E3\u2190-\u21FF]/g, " ");
   cleaned = cleaned.replace(/[🔴🔵🟢🟣🟠🟡⚪⚫🔺🔻⭐✨💡📌🧭📏🗺️⚠️🚨🎉🎙️🎒🔍🎮📖📐🎯🧠💡🎬🚀📐⚡🏆🔥]/gu, " ");
 
-  // 4. Expand common scientific terms & chemical formulas e.g. H2O -> ماء
+  // 5. Expand fractions: e.g. 3/4 -> ٣ على ٤ so slash is never pronounced "شرطة مائلة"
+  cleaned = cleaned.replace(/(\d+)\s*[\/÷]\s*(\d+)/g, "$1 على $2");
+
+  // 6. Expand word slashes: e.g. "الكتاب/المذكرة" -> "الكتاب أو المذكرة"
+  cleaned = cleaned.replace(/([^\d\s\/\\]+)\s*[\/\\]\s*([^\d\s\/\\]+)/g, "$1 أو $2");
+
+  // 7. Expand common scientific terms & chemical formulas e.g. H2O -> ماء
   cleaned = cleaned.replace(/\bH2O\b/gi, "مَاء");
   cleaned = cleaned.replace(/\bCO2\b/gi, "ثَانِي أُكْسِيدِ الْكَرْبُون");
   cleaned = cleaned.replace(/\bO2\b/gi, "أُكْسِجِين");
 
-  // 5. Strip code symbols, table pipes, brackets, and markdown formatting while strictly preserving Arabic diacritics and emotional punctuation (. , ! ? ... ، ؟)
-  cleaned = cleaned.replace(/[\*\_\#\`\~\[\]\(\)\{\}\$\|\\]/g, " ");
+  // 8. Math operations spoken naturally
+  cleaned = cleaned.replace(/(\d+)\s*\+\s*(\d+)/g, "$1 زائد $2");
+  cleaned = cleaned.replace(/(\d+)\s*\-\s*(\d+)/g, "$1 ناقص $2");
+  cleaned = cleaned.replace(/(\d+)\s*[\*×]\s*(\d+)/g, "$1 مضروباً في $2");
+  cleaned = cleaned.replace(/(\d+)\s*=\s*(\d+)/g, "$1 يساوي $2");
+  cleaned = cleaned.replace(/(\d+)\s*[%٪]/g, "$1 بالمائة");
+  cleaned = cleaned.replace(/(\d+)\s*°(?:C|م)?/g, "$1 درجة مئوية");
 
-  // 6. Normalize dramatic punctuation & breathing pauses
-  cleaned = cleaned.replace(/\.{2,}/g, " ... ");
+  // 9. Replace standalone mathematical operators with words
+  cleaned = cleaned.replace(/\s*\+\s*/g, " زائد ");
+  cleaned = cleaned.replace(/\s*=\s*/g, " يساوي ");
+  cleaned = cleaned.replace(/\s*±\s*/g, " زائد أو ناقص ");
+
+  // 10. Strip all brackets, quotes, braces, and slashes so TTS never pronounces "قوس مفتوح" or "قوس مغلق" or "شرطة مائلة"
+  cleaned = cleaned.replace(/[\(\)\[\]\{\}«»‹›（）【】〔〕《》“”"'\`\/\\]/g, " ");
+
+  // 11. Strip markdown formatting (bold, italic, headers, tables, code)
+  cleaned = cleaned.replace(/^[ \t]*[#]+[ \t]*/gm, " ");
+  cleaned = cleaned.replace(/[\*\_\~\|\$]/g, " ");
+
+  // 12. Strip list bullet markers at beginning of lines
+  cleaned = cleaned.replace(/^[ \t]*[-*•⁃▫▪◦][ \t]+/gm, " ");
+
+  // 13. Replace multiple dots (ellipsis) with a single comma pause so TTS never pronounces "نقطة نقطة"
+  cleaned = cleaned.replace(/\.{2,}/g, " ، ");
+  cleaned = cleaned.replace(/…/g, " ، ");
+
+  // 14. Normalize colons and semicolons to natural breathing pauses
+  cleaned = cleaned.replace(/[:؛;]/g, " ، ");
+
+  // 15. Normalize Arabic diacritics and emotional punctuation (. , ! ? ، ؟)
   cleaned = cleaned.replace(/([،!؟\.])+/g, "$1 ");
   cleaned = cleaned.replace(/\s+/g, " ");
 
@@ -531,14 +567,20 @@ async function syncBookToSupabase(book: any) {
     if (book.created_at || book.createdAt) basePayload.created_at = book.created_at || book.createdAt;
     if (book.curriculum_explanation) basePayload.curriculum_explanation = book.curriculum_explanation;
     if (book.curriculum_mindmap) basePayload.curriculum_mindmap = book.curriculum_mindmap;
+    if (book.language) basePayload.language = book.language;
+    if (book.is_language_learning !== undefined) basePayload.is_language_learning = book.is_language_learning;
+    if (book.target_learning_language) basePayload.target_learning_language = book.target_learning_language;
 
     let { error } = await supabase.from('books').upsert(basePayload, { onConflict: 'id' });
-    if (error && (error.message.includes('academic_system') || error.message.includes('curriculum_') || error.message.includes('column'))) {
+    if (error && (error.message.includes('academic_system') || error.message.includes('curriculum_') || error.message.includes('language') || error.message.includes('column'))) {
       // If columns are not yet created in Supabase, retry with core fields
       const fallbackPayload = { ...basePayload };
       delete fallbackPayload.academic_system;
       delete fallbackPayload.curriculum_explanation;
       delete fallbackPayload.curriculum_mindmap;
+      delete fallbackPayload.language;
+      delete fallbackPayload.is_language_learning;
+      delete fallbackPayload.target_learning_language;
       const retryResult = await supabase.from('books').upsert(fallbackPayload, { onConflict: 'id' });
       error = retryResult.error;
     }
@@ -581,7 +623,7 @@ function saveEbooks(data: any[]) {
       const BATCH_SIZE = 3;
       for (let i = 0; i < data.length; i += BATCH_SIZE) {
         const batch = data.slice(i, i + BATCH_SIZE);
-        await Promise.allSettled(batch.map(b => syncSingleBookToSupabase(b)));
+        await Promise.allSettled(batch.map(b => syncBookToSupabase(b)));
         await new Promise(r => setTimeout(r, 100));
       }
     })().catch(err => {
@@ -837,6 +879,254 @@ app.put("/api/ebooks/:id", (req, res) => {
   res.json(updatedEbook);
 });
 
+// 4b. Explicit Save/Sync Chapter Endpoint
+app.post("/api/ebooks/:id/chapters/save", async (req, res) => {
+  const { id } = req.params;
+  const { chapterId, chapter, chapters, title, content, summary } = req.body;
+  const book = ebooks.find((e) => e.id === id);
+  if (!book) {
+    return res.status(404).json({ error: "Ebook not found" });
+  }
+
+  if (chapters && Array.isArray(chapters)) {
+    book.chapters = chapters;
+  } else {
+    const targetId = chapterId || chapter?.id;
+    const chIndex = book.chapters.findIndex((c: any) => c.id === targetId);
+    if (chIndex !== -1) {
+      book.chapters[chIndex] = {
+        ...book.chapters[chIndex],
+        ...(chapter || {}),
+        title: title || chapter?.title || book.chapters[chIndex].title,
+        content: content !== undefined ? content : (chapter?.content !== undefined ? chapter.content : book.chapters[chIndex].content),
+        summary: summary !== undefined ? summary : (chapter?.summary !== undefined ? chapter.summary : book.chapters[chIndex].summary),
+      };
+    } else if (chapter) {
+      book.chapters.push(chapter);
+    }
+  }
+
+  saveEbooks(ebooks);
+
+  try {
+    await supabase.from('books').update({ chapters: book.chapters }).eq('id', id);
+  } catch (dbErr) {
+    console.warn("[Chapter Save] Supabase sync notice:", dbErr);
+  }
+
+  res.json({ success: true, chapters: book.chapters, book });
+});
+
+// 4c. Exams Repository Endpoints
+app.get("/api/ebooks/:id/exams", (req, res) => {
+  const { id } = req.params;
+  const book = ebooks.find((e) => e.id === id);
+  if (!book) {
+    return res.status(404).json({ error: "Ebook not found" });
+  }
+  res.json({ success: true, exams: book.exams || [] });
+});
+
+app.post("/api/ebooks/:id/exams/save", async (req, res) => {
+  const { id } = req.params;
+  const { exam } = req.body;
+  if (!exam || !exam.id) {
+    return res.status(400).json({ error: "Exam payload with valid id is required" });
+  }
+
+  const book = ebooks.find((e) => e.id === id);
+  if (!book) {
+    return res.status(404).json({ error: "Ebook not found" });
+  }
+
+  if (!book.exams) book.exams = [];
+  const existingIndex = book.exams.findIndex((x: any) => x.id === exam.id);
+  if (existingIndex !== -1) {
+    book.exams[existingIndex] = exam;
+  } else {
+    book.exams.unshift(exam);
+  }
+
+  saveEbooks(ebooks);
+
+  try {
+    await supabase.from('books').update({ exams: book.exams }).eq('id', id);
+  } catch (dbErr) {
+    console.warn("[Exam Save] Supabase sync notice:", dbErr);
+  }
+
+  res.json({ success: true, exams: book.exams });
+});
+
+app.post("/api/ebooks/:id/exams/generate", async (req, res) => {
+  const { id } = req.params;
+  const { scope = 'full_curriculum', targetTitle, chapterId, questionCount = 10 } = req.body;
+
+  const book = ebooks.find((e) => e.id === id);
+  if (!book) {
+    return res.status(404).json({ error: "Ebook not found" });
+  }
+
+  // Gather pedagogical context
+  let contextText = "";
+  let effectiveTitle = targetTitle || book.title;
+
+  if (scope === 'lesson' && chapterId) {
+    const ch = book.chapters?.find((c: any) => c.id === chapterId);
+    if (ch) {
+      contextText = `${ch.title}\n${ch.content || ch.summary || ""}`;
+      effectiveTitle = ch.title;
+    }
+  } else if (scope === 'unit' && targetTitle) {
+    const matchingChs = (book.chapters || []).filter((c: any) => 
+      c.title.includes(targetTitle) || (c.summary && c.summary.includes(targetTitle))
+    );
+    if (matchingChs.length > 0) {
+      contextText = matchingChs.map((c: any) => `## ${c.title}\n${c.content || c.summary || ""}`).join("\n\n");
+    } else {
+      contextText = (book.chapters || []).slice(0, 5).map((c: any) => `## ${c.title}\n${c.content || c.summary || ""}`).join("\n\n");
+    }
+  } else {
+    // Full curriculum
+    contextText = (book.chapters || []).map((c: any) => `## ${c.title}\n${(c.content || c.summary || "").substring(0, 1500)}`).join("\n\n");
+    effectiveTitle = `امتحان شامل: ${book.title}`;
+  }
+
+  if (!contextText.trim()) {
+    contextText = book.description || book.title || "مقرر تعليمي عام";
+  }
+
+  const ai = getGenAIClient();
+  let generatedExam: ComprehensiveExam | null = null;
+
+  if (ai) {
+    try {
+      const prompt = buildComprehensiveExamPrompt({
+        bookTitle: book.title,
+        scope,
+        targetTitle: effectiveTitle,
+        contextText,
+        questionCount,
+        grade_level: book.grade_level,
+        category: book.category
+      });
+
+      const examSchema = {
+        type: Type.OBJECT,
+        properties: {
+          title: { type: Type.STRING },
+          scope: { type: Type.STRING },
+          target_title: { type: Type.STRING },
+          duration_minutes: { type: Type.INTEGER },
+          total_marks: { type: Type.INTEGER },
+          passing_marks: { type: Type.INTEGER },
+          instructions: { type: Type.ARRAY, items: { type: Type.STRING } },
+          questions: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                question: { type: Type.STRING },
+                type: { type: Type.STRING },
+                options: { type: Type.ARRAY, items: { type: Type.STRING } },
+                correctOptionIndex: { type: Type.INTEGER },
+                explanation: { type: Type.STRING },
+                bloomLevel: { type: Type.STRING },
+                difficulty: { type: Type.STRING },
+                trapWarning: { type: Type.STRING },
+                points: { type: Type.INTEGER }
+              },
+              required: ["question", "options", "correctOptionIndex", "explanation"]
+            }
+          }
+        },
+        required: ["title", "questions"]
+      };
+
+      const response = await generateContentWithRetry(ai, {
+        contents: [prompt],
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: examSchema,
+          temperature: 0.6,
+        }
+      });
+
+      if (response?.text) {
+        generatedExam = JSON.parse(response.text);
+      }
+    } catch (aiErr) {
+      console.error("[Exam Generator] AI synthesis error, creating robust curriculum backup:", aiErr);
+    }
+  }
+
+  // Fallback if AI offline or returned null
+  if (!generatedExam || !generatedExam.questions || generatedExam.questions.length === 0) {
+    const chaptersToUse = (book.chapters && book.chapters.length > 0) ? book.chapters : [{ title: effectiveTitle, summary: "محتوى تعليمي" }];
+    const fallbackQuestions = chaptersToUse.slice(0, questionCount).map((ch: any, idx: number) => ({
+      id: `q-gen-${Date.now()}-${idx}`,
+      question: `ما هو الاستنتاج المعرفي والتحليلي الأهم المستخلص من درس "${ch.title}"؟`,
+      type: "mcq" as const,
+      options: [
+        `تحليل العلاقة الجوهرية وتطبيقاتها العلمية والعملية في ضوء محاور ${ch.title}`,
+        `حفظ المسميات السطحية دون ربطها بالتفسيرات والعلل الفيزيائية أو النظرية`,
+        `افتراض استقلالية الظواهر عن بعضها بمعزل عن القوانين المنظمة للدرس`,
+        `إهمال الشروط الابتدائية والتجريبية المؤثرة على مسار التجربة`
+      ],
+      correctOptionIndex: 0,
+      explanation: `الإجابة الأولى هي الأصح لأنها تجسد التحليل المعرفي العميق المستهدف في ${ch.title} وربط المفاهيم النظرية بالتطبيق العملي.`,
+      bloomLevel: "analyze" as const,
+      difficulty: "medium" as const,
+      points: 2
+    }));
+
+    generatedExam = {
+      id: `exam-${Date.now()}`,
+      book_id: book.id,
+      title: `امتحان تقييمي معتمد: ${effectiveTitle}`,
+      scope,
+      target_title: effectiveTitle,
+      duration_minutes: questionCount <= 5 ? 15 : questionCount <= 10 ? 30 : 45,
+      total_marks: fallbackQuestions.length * 2,
+      passing_marks: Math.round(fallbackQuestions.length * 2 * 0.6),
+      instructions: [
+        "اقرأ الأسئلة بعناية وتأنٍ قبل اختيار الإجابة المناسبة.",
+        `الزمن المتاح للاختبار هو ${questionCount <= 5 ? 15 : 30} دقيقة كاملة.`,
+        "يتم استخراج بطاقة الإتقان والتصنيف المعرفي فور الانتهاء."
+      ],
+      questions: fallbackQuestions,
+      created_at: new Date().toISOString()
+    };
+  } else {
+    generatedExam.id = `exam-${Date.now()}`;
+    generatedExam.book_id = book.id;
+    generatedExam.created_at = new Date().toISOString();
+    generatedExam.scope = scope;
+    generatedExam.target_title = effectiveTitle;
+    if (!generatedExam.duration_minutes) generatedExam.duration_minutes = questionCount <= 5 ? 15 : 30;
+    if (!generatedExam.total_marks) generatedExam.total_marks = (generatedExam.questions?.length || 10) * 2;
+    if (!generatedExam.passing_marks) generatedExam.passing_marks = Math.round(generatedExam.total_marks * 0.6);
+    generatedExam.questions = generatedExam.questions.map((q: any, i: number) => ({
+      ...q,
+      id: q.id || `q-exam-${Date.now()}-${i}`,
+      points: q.points || 2
+    }));
+  }
+
+  // Persist into book.exams
+  if (!book.exams) book.exams = [];
+  book.exams.unshift(generatedExam);
+  saveEbooks(ebooks);
+
+  try {
+    await supabase.from('books').update({ exams: book.exams }).eq('id', id);
+  } catch (dbErr) {
+    console.warn("[Exam Save] Supabase sync notice:", dbErr);
+  }
+
+  res.json({ success: true, exam: generatedExam, exams: book.exams });
+});
+
 // 5. Convert content or create ebook from prompt / file upload (Async Background Worker System)
 async function runBackgroundEbookConversion(
   jobId: string,
@@ -1079,7 +1369,7 @@ async function runBackgroundEbookConversion(
       category,
       subcategory,
       grade_level,
-      promptText
+      contentText: promptText || extractedText
     });
     console.log(`[Job Worker] Applied Pedagogical Teacher Persona: ${persona.name} (${persona.title})`);
 
@@ -1180,6 +1470,29 @@ async function runBackgroundEbookConversion(
       return s.replace(/\\n/g, '\n').trim();
     };
 
+    const sanitizeServerContent = (text: string | undefined): string => {
+      if (!text) return "";
+      return cleanStr(text)
+        .replace(/[▲▼◆◇■□●○★☆►◄]/g, '')
+        .replace(/^[ \t]*(?:ص|صفحة|Page|P\.)\s*\d+[ \t]*$/gmi, '')
+        .replace(/\[\s*\d+\s*\]/g, '')
+        .replace(/\s*\((?:دور\s*(?:أول|ثان|ثاني)|امتحان\s*\d{4}|ثانوية\s*عامة|نماذج\s*الوزارة)[^)]*\)/gi, '')
+        .replace(/أكبر من أو يساوي/g, '≥')
+        .replace(/أصغر من أو يساوي/g, '≤')
+        .replace(/أكبر من/g, '>')
+        .replace(/أصغر من/g, '<')
+        .trim();
+    };
+
+    // Deduplicate parsed chapters
+    const deduplicatedChapters = deduplicateChapterTitles(parsedEbook?.chapters || []);
+    job.generationProgress = {
+      total_chapters: deduplicatedChapters.length,
+      completed: deduplicatedChapters.map(c => c.title),
+      failed: [],
+      current: deduplicatedChapters.length
+    };
+
     // Formulate a clean Ebook object with IDs
     const ebookId = crypto.randomUUID();
     
@@ -1191,7 +1504,7 @@ async function runBackgroundEbookConversion(
       createdAt: new Date().toISOString(),
       blueprint: syllabusBlueprint || undefined,
       original_text: extractedText || promptText || "",
-      chapters: (parsedEbook?.chapters || []).map((ch: any, cIdx: number) => {
+      chapters: deduplicatedChapters.map((ch: any, cIdx: number) => {
         const chapterId = `ch-${ebookId}-${cIdx + 1}`;
         const matchedLesson = initialBatch[cIdx] || syllabusBlueprint?.lessons?.[cIdx];
         const rawSlice = matchedLesson?.raw_text_snippet || "";
@@ -1199,9 +1512,9 @@ async function runBackgroundEbookConversion(
         return {
           id: chapterId,
           title: cleanStr(ch.title) || cleanStr(matchedLesson?.lesson_title) || `الدرس ${cIdx + 1}`,
-          content: cleanStr(ch.content) || "محتوى الدرس قيد المعالجة.",
-          originalContent: originalText,
-          summary: cleanStr(ch.summary) || "",
+          content: sanitizeServerContent(ch.content) || "محتوى الدرس قيد المعالجة.",
+          originalContent: sanitizeServerContent(originalText),
+          summary: sanitizeServerContent(ch.summary) || "",
           concepts: (ch.concepts || []).map((c: any) => {
             if (typeof c === 'string') return cleanStr(c);
             return {
@@ -1576,30 +1889,72 @@ app.post("/api/narrate-text", async (req, res) => {
   }
 });
 
-// 7.4 Google Cloud Text-to-Speech Engine (Google Chirp 3 HD, Wavenet, Standard)
-async function synthesizeGoogleCloudTTS(text: string, voiceName: string): Promise<Buffer | null> {
+// 7.35 Smart Multilingual Content Language Detector
+function detectContentLanguage(text: string): 'ar' | 'en' | 'it' | 'fr' | 'de' {
+  if (!text) return 'ar';
+  const sample = text.substring(0, 3000);
+  
+  // Count Arabic characters
+  const arabicChars = (sample.match(/[\u0600-\u06FF]/g) || []).length;
+  if (arabicChars > 40) return 'ar';
+
+  const lower = sample.toLowerCase();
+  
+  // Italian common words
+  const itMatches = (lower.match(/\b(il|la|lo|i|gli|le|un|uno|una|della|delle|sono|perché|questo|questa|anche|dopo|sempre|come|ciao|grazie|molto|tutto|quando|tempo|fare|potere|volere)\b/g) || []).length;
+  
+  // French common words
+  const frMatches = (lower.match(/\b(le|la|les|un|une|des|du|dans|avec|pour|sont|cette|est|comme|nous|vous|mais|faire|tout|plus|pouvoir|aller|voir|bonjour|merci)\b/g) || []).length;
+  
+  // German common words
+  const deMatches = (lower.match(/\b(der|die|das|und|ist|in|den|von|zu|mit|sich|des|auf|für|eine|einem|nicht|werden|haben|können|wieder|machen|zeit|jahr)\b/g) || []).length;
+  
+  // English common words
+  const enMatches = (lower.match(/\b(the|is|and|of|in|to|a|that|it|for|on|with|as|this|are|from|at|by|an|have|from|or|one|had|by|word|but|not|what|all|were|we|when|your|can|said)\b/g) || []).length;
+
+  const max = Math.max(itMatches, frMatches, deMatches, enMatches);
+  if (max === 0) return 'ar';
+  if (max === itMatches && itMatches >= 3) return 'it';
+  if (max === frMatches && frMatches >= 3) return 'fr';
+  if (max === deMatches && deMatches >= 3) return 'de';
+  if (max === enMatches && enMatches >= 3) return 'en';
+  return 'ar';
+}
+
+// 7.4 Google Cloud Multilingual Text-to-Speech Engine
+const MULTILINGUAL_VOICE_CONFIGS: Record<string, { male: string; female: string; languageCode: string }> = {
+  ar: { male: "ar-XA-Chirp3-HD-Fenrir", female: "ar-XA-Chirp3-HD-Aoede", languageCode: "ar-XA" },
+  en: { male: "en-US-Journey-D", female: "en-US-Journey-F", languageCode: "en-US" },
+  it: { male: "it-IT-Neural2-C", female: "it-IT-Neural2-A", languageCode: "it-IT" },
+  fr: { male: "fr-FR-Neural2-B", female: "fr-FR-Neural2-A", languageCode: "fr-FR" },
+  de: { male: "de-DE-Neural2-B", female: "de-DE-Neural2-F", languageCode: "de-DE" }
+};
+
+async function synthesizeGoogleCloudTTS(text: string, voiceName: string, langCode?: string): Promise<Buffer | null> {
   const apiKey = process.env.GOOGLE_TTS_API_KEY || process.env.GOOGLE_CLOUD_API_KEY || "";
   if (!apiKey) return null;
 
   try {
-    // Map voice name to supported Google Cloud Arabic TTS voices
-    let validVoice = voiceName || "ar-XA-Chirp3-HD-Fenrir";
-    if (validVoice.includes("Journey-D") || validVoice.includes("Neural2-B") || validVoice.includes("Fenrir")) {
-      validVoice = "ar-XA-Chirp3-HD-Fenrir";
-    } else if (validVoice.includes("Journey-F") || validVoice.includes("Neural2-A") || validVoice.includes("Aoede")) {
-      validVoice = "ar-XA-Chirp3-HD-Aoede";
-    } else if (validVoice.includes("Puck")) {
-      validVoice = "ar-XA-Chirp3-HD-Puck";
-    } else if (validVoice.includes("Kore")) {
-      validVoice = "ar-XA-Chirp3-HD-Kore";
-    } else if (validVoice.includes("Charon")) {
-      validVoice = "ar-XA-Chirp3-HD-Charon";
-    } else if (validVoice.includes("Wavenet-B")) {
-      validVoice = "ar-XA-Wavenet-B";
-    } else if (validVoice.includes("Wavenet-A")) {
-      validVoice = "ar-XA-Wavenet-A";
-    } else if (!validVoice.startsWith("ar-XA")) {
-      validVoice = "ar-XA-Chirp3-HD-Fenrir";
+    let resolvedVoice = voiceName || "ar-XA-Chirp3-HD-Fenrir";
+    let resolvedLangCode = langCode || "";
+
+    if (!resolvedLangCode) {
+      if (resolvedVoice.startsWith("en-")) resolvedLangCode = "en-US";
+      else if (resolvedVoice.startsWith("it-")) resolvedLangCode = "it-IT";
+      else if (resolvedVoice.startsWith("fr-")) resolvedLangCode = "fr-FR";
+      else if (resolvedVoice.startsWith("de-")) resolvedLangCode = "de-DE";
+      else if (resolvedVoice.startsWith("ar-")) resolvedLangCode = "ar-XA";
+      else resolvedLangCode = "ar-XA";
+    }
+
+    // Default voice mapping for Arabic if generic voice requested
+    if (resolvedLangCode === "ar-XA") {
+      if (resolvedVoice.includes("Journey-D") || resolvedVoice.includes("Fenrir")) resolvedVoice = "ar-XA-Chirp3-HD-Fenrir";
+      else if (resolvedVoice.includes("Journey-F") || resolvedVoice.includes("Aoede")) resolvedVoice = "ar-XA-Chirp3-HD-Aoede";
+      else if (resolvedVoice.includes("Puck")) resolvedVoice = "ar-XA-Chirp3-HD-Puck";
+      else if (resolvedVoice.includes("Kore")) resolvedVoice = "ar-XA-Chirp3-HD-Kore";
+      else if (resolvedVoice.includes("Charon")) resolvedVoice = "ar-XA-Chirp3-HD-Charon";
+      else if (!resolvedVoice.startsWith("ar-XA")) resolvedVoice = "ar-XA-Chirp3-HD-Fenrir";
     }
 
     const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`;
@@ -1609,8 +1964,8 @@ async function synthesizeGoogleCloudTTS(text: string, voiceName: string): Promis
       body: JSON.stringify({
         input: { text },
         voice: {
-          languageCode: "ar-XA",
-          name: validVoice
+          languageCode: resolvedLangCode,
+          name: resolvedVoice
         },
         audioConfig: {
           audioEncoding: "MP3",
@@ -1622,7 +1977,7 @@ async function synthesizeGoogleCloudTTS(text: string, voiceName: string): Promis
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      console.warn(`[Google Cloud TTS] API warning for ${validVoice}:`, err);
+      console.warn(`[Google Cloud TTS] API warning for ${resolvedVoice} (${resolvedLangCode}):`, err);
       return null;
     }
 
@@ -1636,38 +1991,42 @@ async function synthesizeGoogleCloudTTS(text: string, voiceName: string): Promis
   return null;
 }
 
-// 7.5 High-Quality Human Audio Engine (Google Cloud Journey/Neural2 + Arabic Neural Voices with Multi-Chunk Resilience & Stream GET/POST support)
+// 7.5 High-Quality Human Audio Engine (Google Cloud Journey/Neural2 + Multilingual Support)
 app.all("/api/tts/stream", async (req, res) => {
   try {
     const rawText = (req.method === "GET" ? req.query.text : req.body?.text) as string;
     const speaker = ((req.method === "GET" ? req.query.speaker : req.body?.speaker) as string) || "female";
     const requestedVoice = ((req.method === "GET" ? req.query.voice : req.body?.voice) as string) || "";
+    const lang = (((req.method === "GET" ? req.query.lang : req.body?.lang) as string) || "ar").toLowerCase();
     if (!rawText) return res.status(400).json({ error: "Text is required" });
 
     const cleanedText = cleanScientificTextForSpeech(rawText);
     if (!cleanedText) return res.status(400).json({ error: "Cleaned text is empty" });
 
-    const isMale = speaker === "male" || speaker === "كريم" || speaker === "Alex" || requestedVoice.includes("Journey-D") || requestedVoice.includes("Neural2-B");
+    const isMale = speaker === "male" || speaker === "كريم" || speaker === "Alex" || speaker === "Marco" || speaker === "Julien" || speaker === "Felix" || requestedVoice.includes("Journey-D") || requestedVoice.includes("Neural2-B") || requestedVoice.includes("Neural2-C");
     
-    // Map requested voice to Google Cloud Chirp3-HD / Wavenet
-    let googleVoice = isMale ? "ar-XA-Chirp3-HD-Fenrir" : "ar-XA-Chirp3-HD-Aoede";
-    if (requestedVoice.includes("Puck") || requestedVoice === "puck") {
-      googleVoice = "ar-XA-Chirp3-HD-Puck";
-    } else if (requestedVoice.includes("Charon") || requestedVoice === "charon") {
-      googleVoice = "ar-XA-Chirp3-HD-Charon";
-    } else if (requestedVoice.includes("Kore") || requestedVoice === "kore") {
-      googleVoice = "ar-XA-Chirp3-HD-Kore";
-    } else if (requestedVoice.includes("Wavenet-B") || requestedVoice === "wavenet-b") {
-      googleVoice = "ar-XA-Wavenet-B";
-    } else if (requestedVoice.includes("Wavenet-A") || requestedVoice === "wavenet-a") {
-      googleVoice = "ar-XA-Wavenet-A";
+    // Choose appropriate native voice for the language
+    const langCfg = MULTILINGUAL_VOICE_CONFIGS[lang] || MULTILINGUAL_VOICE_CONFIGS.ar;
+    let googleVoice = requestedVoice || (isMale ? langCfg.male : langCfg.female);
+    if (lang === 'ar') {
+      if (requestedVoice.includes("Puck") || requestedVoice === "puck") {
+        googleVoice = "ar-XA-Chirp3-HD-Puck";
+      } else if (requestedVoice.includes("Charon") || requestedVoice === "charon") {
+        googleVoice = "ar-XA-Chirp3-HD-Charon";
+      } else if (requestedVoice.includes("Kore") || requestedVoice === "kore") {
+        googleVoice = "ar-XA-Chirp3-HD-Kore";
+      } else if (requestedVoice.includes("Wavenet-B") || requestedVoice === "wavenet-b") {
+        googleVoice = "ar-XA-Wavenet-B";
+      } else if (requestedVoice.includes("Wavenet-A") || requestedVoice === "wavenet-a") {
+        googleVoice = "ar-XA-Wavenet-A";
+      }
     }
 
     const primaryVoice = isMale ? "ar-EG-ShakirNeural" : "ar-EG-SalmaNeural";
     const fallbackVoice = isMale ? "ar-SA-HamedNeural" : "ar-SA-ZariyahNeural";
 
     // Hash entire text for caching
-    const textHash = crypto.createHash("md5").update(`${googleVoice}_${primaryVoice}_${cleanedText}`).digest("hex");
+    const textHash = crypto.createHash("md5").update(`${googleVoice}_${lang}_${cleanedText}`).digest("hex");
     const cachedFilePath = path.join(AUDIO_CACHE_DIR, `${textHash}.mp3`);
 
     // Check if audio already exists in local cache
@@ -1677,9 +2036,9 @@ app.all("/api/tts/stream", async (req, res) => {
       return fs.createReadStream(cachedFilePath).pipe(res);
     }
 
-    // Attempt 1: Google Cloud TTS (Journey-D / Neural2-B) if API Key is present
+    // Attempt 1: Google Cloud TTS (Journey / Neural2 / Chirp3) if API Key is present
     if (process.env.GOOGLE_TTS_API_KEY || process.env.GOOGLE_CLOUD_API_KEY) {
-      const googleAudioBuffer = await synthesizeGoogleCloudTTS(cleanedText, googleVoice);
+      const googleAudioBuffer = await synthesizeGoogleCloudTTS(cleanedText, googleVoice, langCfg.languageCode);
       if (googleAudioBuffer) {
         fs.writeFileSync(cachedFilePath, googleAudioBuffer);
         res.setHeader("Content-Type", "audio/mpeg");
@@ -1855,6 +2214,7 @@ app.post("/api/ebooks/:id/generate-lab-activity", async (req, res) => {
     const isLaw = /قانون|دعوى|محكمة|قضاء|حقوق|دستور|معاهدة|مجلس الأمن|محكمة العدل|نزاع دولي|law|legal|court|treaty/i.test(combinedStr);
     const isGeographyHistory = /جغرافيا|تاريخ|دراسات|خريطة|موقع|بيئة|حضارة|فرعون|آثار|بوصلة|معالم|geography|history/i.test(combinedStr);
     const isStoryArabic = /لغة عربية|نصوص|قراءة|استماع|قصة|برديات|حسي رع|شعر|محادثة|أدب|عربي|arabic|story/i.test(combinedStr);
+    const isLanguage = isStoryArabic || /لغات|إنجليزي|فرنساوي|إيطالي|ألماني|english|italian|french|german|language/i.test(combinedStr);
 
     const labPrompt = isArabic
       ? `أنت كبير مهندسي ومصممي الألعاب والمختبرات والمحاكيات التعليمية التفاعلية الذكية (Osera Adaptive Simulation Architect).
@@ -2308,26 +2668,44 @@ app.post("/api/ebooks/:id/expand-chapters", async (req, res) => {
         category: ebook.category
       });
     } else {
-      // General continuation prompt if all blueprint lessons were already generated or text was short
+      // Check if all lessons in blueprint are already 100% completed
+      if (ebook.blueprint && ebook.blueprint.total_lessons > 0 && currentChapters.length >= ebook.blueprint.total_lessons) {
+        return res.json({
+          success: true,
+          newChapters: [],
+          message: "اكتمل توليد وتغطية جميع فصول ووحدات المنهج المكتشفة في المذكرة بنسبة 100%! لا توجد فصول إضافية متبقية في المستند الأصلي.",
+          totalChapters: currentChapters.length,
+          remainingLessons: 0,
+          book: ebook
+        });
+      }
+
+      // Slice strictly from the UNPROCESSED remaining portion of the original document
       const currentTitles = currentChapters.map((c: any, i: number) => `${i + 1}. ${c.title}`).join("\n");
-      const sourceOutline = (ebook as any).original_text || ebook.description || "";
+      const fullText = (ebook as any).original_text || "";
+      const estimatedCharsPerChapter = Math.max(3500, Math.floor(fullText.length / Math.max(1, currentChapters.length + additionalCount)));
+      const startChar = Math.max(0, Math.min(fullText.length - 2000, currentChapters.length * estimatedCharsPerChapter));
+      const remainingSlice = fullText ? fullText.substring(startChar, Math.min(fullText.length, startChar + 30000)) : ebook.description || "";
 
       expansionPrompt = `
 ${persona.pedagogicalSystemPrompt}
-The user has an interactive educational textbook titled: "${ebook.title}"
+The user has an authentic educational textbook titled: "${ebook.title}"
 Category: "${ebook.category || 'تعليمي'}" - Grade/Level: "${(ebook as any).grade_level || 'عام'}"
-Original Curriculum Context:
-"""
-${sourceOutline.substring(0, 15000)}
-"""
 
-Existing chapters already generated:
+EXISTING CHAPTERS ALREADY GENERATED:
 ${currentTitles || "No chapters yet"}
 
-CRITICAL RULES:
-1. STRICT AUTHENTIC TITLES: Seamlessly continue from chapter ${currentChapters.length} without repeating existing titles. Generate the NEXT ${additionalCount} chapters.
-2. NO DASHED TABLES: Do NOT use markdown tables with dashes.
-3. GROUNDED FIVE-PILLAR MARKDOWN CONTENT: Include full passage, deep sub-topics explanation, vocabulary/laws, worked examples, and exam traps.
+AUTHENTIC UNPROCESSED TEXTBOOK SLICE TO CONTINUE GENERATING FROM:
+"""
+${remainingSlice}
+"""
+
+🚨 CRITICAL MANDATORY RULES (P0):
+1. STRICT AUTHENTICITY: Build the next chapters EXCLUSIVELY from the unprocessed source slice above.
+2. 🚫 ZERO ARBITRARY HALLUCINATIONS: Do NOT invent fictional lessons or jump backwards to repeat already covered topics.
+3. MULTI-PART NAMING: If an extensive lesson spans across this slice, label it clearly: "[اسم الدرس الأصلي] - (الجزء 1)", "[اسم الدرس الأصلي] - (الجزء 2)".
+4. NO DASHED TABLES: Do NOT use markdown pipe tables with dashed rows.
+5. FIVE-PILLAR MARKDOWN: Include full passage, deep conceptual explanation, vocabulary/laws, worked examples, and exam traps.
 `;
     }
 
@@ -2596,16 +2974,28 @@ app.post("/api/v2/generate-interactive-explanation", async (req, res) => {
       return res.status(400).json({ error: "Gemini API Key is not configured." });
     }
 
+    // 🌍 Multilingual & Language-Learning Detection
+    const bookLang = (book?.language || req.body?.language || detectContentLanguage(resolvedContent));
+    const isLangLearning = Boolean(book?.is_language_learning || req.body?.is_language_learning);
+    const targetLearningLang = book?.target_learning_language || req.body?.target_learning_language || "it";
+
+    const langVoiceConfig = MULTILINGUAL_VOICE_CONFIGS[bookLang] || MULTILINGUAL_VOICE_CONFIGS.ar;
+    const resolvedVoiceKarim = req.body?.voiceKarim || (bookLang !== 'ar' ? langVoiceConfig.male : voiceKarim);
+    const resolvedVoiceFarah = req.body?.voiceFarah || (bookLang !== 'ar' ? langVoiceConfig.female : voiceFarah);
+
     const systemPrompt = buildInteractiveExplanationPrompt({
       content: resolvedContent,
       title: resolvedTitle,
       mode,
       bookTitle: book?.title,
       grade_level: grade_level || book?.grade_level,
-      category: category || book?.category
+      category: category || book?.category,
+      language: bookLang,
+      is_language_learning: isLangLearning,
+      target_learning_language: targetLearningLang
     });
 
-    console.log(`[Interactive Explanation V2] Generating ${mode} for "${resolvedTitle}"...`);
+    console.log(`[Interactive Explanation V2] Generating ${mode} for "${resolvedTitle}" in [${bookLang}${isLangLearning ? ` -> ${targetLearningLang}` : ''}]...`);
 
     const response = await generateContentWithRetry(ai, {
       contents: [{ parts: [{ text: systemPrompt }] }],
@@ -2628,9 +3018,11 @@ app.post("/api/v2/generate-interactive-explanation", async (req, res) => {
     // Enhance timeline with voice audio URLs and sequential trigger_time_seconds calculation
     if (payload && Array.isArray(payload.timeline)) {
       let cumulativeTime = 0;
+      const durationFactor = bookLang === "ar" ? 0.35 : 0.28;
+
       payload.timeline = payload.timeline.map((step: any, idx: number) => {
         const words = (step.audio_text || "").split(/\s+/).filter(Boolean);
-        const estimatedDur = Math.max(2.5, Math.round(words.length * 0.35 * 10) / 10);
+        const estimatedDur = Math.max(2.0, Math.round(words.length * durationFactor * 10) / 10);
         
         const trigTime = typeof step.trigger_time_seconds === 'number' && step.trigger_time_seconds > 0 
           ? step.trigger_time_seconds 
@@ -2639,8 +3031,8 @@ app.post("/api/v2/generate-interactive-explanation", async (req, res) => {
         cumulativeTime = trigTime + estimatedDur;
 
         const isKarim = step.speaker === "karim" || step.speaker === "كريم";
-        const selectedVoice = isKarim ? voiceKarim : voiceFarah;
-        const audioUrl = `/api/tts/stream?text=${encodeURIComponent(step.audio_text || "")}&speaker=${isKarim ? 'male' : 'female'}&voice=${encodeURIComponent(selectedVoice)}`;
+        const selectedVoice = isKarim ? resolvedVoiceKarim : resolvedVoiceFarah;
+        const audioUrl = `/api/tts/stream?text=${encodeURIComponent(step.audio_text || "")}&speaker=${isKarim ? 'male' : 'female'}&voice=${encodeURIComponent(selectedVoice)}&lang=${bookLang}`;
 
         return {
           ...step,
@@ -2651,6 +3043,11 @@ app.post("/api/v2/generate-interactive-explanation", async (req, res) => {
           audio_url: audioUrl
         };
       });
+
+      if (!payload.metadata) payload.metadata = {} as any;
+      payload.metadata.language = bookLang;
+      payload.metadata.is_language_learning = isLangLearning;
+      if (isLangLearning) payload.metadata.target_learning_language = targetLearningLang;
 
       if (!payload.metadata.total_estimated_duration_seconds) {
         payload.metadata.total_estimated_duration_seconds = Math.round(cumulativeTime);
@@ -3068,6 +3465,10 @@ app.post("/api/ebooks/:id/generate-questions", async (req, res) => {
       if (chapter) {
         if (!chapter.quiz) chapter.quiz = [];
         chapter.quiz = [...chapter.quiz, ...formattedQuestions];
+        saveEbooks(ebooks);
+        try {
+          await supabase.from('books').update({ chapters: ebook.chapters }).eq('id', req.params.id);
+        } catch (e) {}
       }
     }
 
@@ -4206,7 +4607,38 @@ app.post("/api/reels/generate-for-book", async (req, res) => {
     }
 
     const effectiveStyle = customStyle || defaultStyle;
-    const selectedVoice = voice || "ar-SA-HamedNeural";
+    
+    // 🌍 Multilingual Reel Support
+    const sampleText = targetChapters.map((c: any) => c.content || "").join(" ").substring(0, 3000);
+    const bookLang = (book?.language || req.body?.language || detectContentLanguage(sampleText));
+    const isLangLearning = Boolean(book?.is_language_learning || req.body?.is_language_learning);
+    const targetLearningLang = book?.target_learning_language || req.body?.target_learning_language || "it";
+
+    let effectiveVoice = voice || "ar-SA-HamedNeural";
+    if (bookLang !== 'ar' && (!voice || voice.startsWith('ar-') || voice.includes('HamedNeural') || voice.includes('Fenrir'))) {
+      const voiceCfg = MULTILINGUAL_VOICE_CONFIGS[bookLang] || MULTILINGUAL_VOICE_CONFIGS.en;
+      effectiveVoice = voiceCfg.female;
+    }
+
+    let languageInstruction = `اللغة المعتمدة للريل: العربية الفصحى المشكولة بدقة.`;
+    if (isLangLearning) {
+      languageInstruction = `🌟 نمط تعليم اللغات (Bilingual Language Learning):
+هذا الريل مخصص لـ **تعليم لغة أجنبية (${targetLearningLang}) للناطقين بالعربية**! 
+السكريبت (narration_script) يجب أن يكون مزيجاً مشوقاً: المعلم يلقي الهوك بالعربية، ثم ينطق العبارات والكلمات المستهدفة باللغة (${targetLearningLang}) بلكنة صحيحة ونطق واضح، ويشرح معناها واستخدامها.
+المشاهد (scenes): اعرض الكلمة باللغة الأجنبية مع ترجمتها العربية ونطقها الصوتي!`;
+    } else if (bookLang === 'en') {
+      languageInstruction = `LANGUAGE REQUIREMENT: 100% High-Energy, Natural ENGLISH.
+The narration_script, scene titles, badges, and takeaways MUST be written entirely in crisp, engaging English (65 to 85 words). Do NOT use Arabic.`;
+    } else if (bookLang === 'it') {
+      languageInstruction = `LANGUAGE REQUIREMENT: 100% Natural, Engaging ITALIAN (Italiano).
+The narration_script, scene titles, badges, and quotes MUST be in fluent Italian (65-85 words). Do NOT use Arabic.`;
+    } else if (bookLang === 'fr') {
+      languageInstruction = `LANGUAGE REQUIREMENT: 100% Natural, Engaging FRENCH (Français).
+The narration_script, scene titles, badges, and quotes MUST be in fluent French (65-85 words). Do NOT use Arabic.`;
+    } else if (bookLang === 'de') {
+      languageInstruction = `LANGUAGE REQUIREMENT: 100% Natural, Engaging GERMAN (Deutsch).
+The narration_script, scene titles, badges, and quotes MUST be in fluent German (65-85 words). Do NOT use Arabic.`;
+    }
 
     for (const chapter of targetChapters) {
       const existingReel = allReels.find((r: any) => r.book_id === (book?.id || bookId) && (r.chapter_id === chapter.id || r.chapter_title === chapter.title));
@@ -4218,6 +4650,8 @@ app.post("/api/reels/generate-for-book", async (req, res) => {
       const prompt = `
 أنت كبير مخرجي المحتوى التعليمي والريلز التفاعلية (EduReels 100% Studio) لمنصة Osera AI LMS.
 المطلوب تحويل محتوى هذا الفصل بدقة علمية كاملة وبأعلى معايير الإخراج الصوتي والدرامي إلى ريل تفاعلي سينمائي مبهر (40 - 45 ثانية).
+
+${languageInstruction}
 
 المقرر: "${book?.title || 'مقرر دراسي'}"
 الفصل: "${chapter.title}"
@@ -4344,11 +4778,12 @@ ${chapterContent}
           const audioFilePath = path.join(AUDIO_CACHE_DIR, audioFileName);
 
           let audioSynthesized = false;
-          const isGoogleVoice = selectedVoice.startsWith("ar-XA") || selectedVoice.includes("Chirp3") || selectedVoice.includes("Wavenet");
+          const isGoogleVoice = effectiveVoice.includes("Chirp3") || effectiveVoice.includes("Wavenet") || effectiveVoice.includes("Journey") || effectiveVoice.includes("Neural2") || effectiveVoice.startsWith("ar-") || effectiveVoice.startsWith("en-") || effectiveVoice.startsWith("it-") || effectiveVoice.startsWith("fr-") || effectiveVoice.startsWith("de-");
 
           // Option A: User requested Google Cloud Voice
           if (isGoogleVoice && (process.env.GOOGLE_TTS_API_KEY || process.env.GOOGLE_CLOUD_API_KEY)) {
-            const googleBuffer = await synthesizeGoogleCloudTTS(safeText, selectedVoice);
+            const langCfg = MULTILINGUAL_VOICE_CONFIGS[bookLang] || MULTILINGUAL_VOICE_CONFIGS.ar;
+            const googleBuffer = await synthesizeGoogleCloudTTS(safeText, effectiveVoice, langCfg.languageCode);
             if (googleBuffer) {
               fs.writeFileSync(audioFilePath, googleBuffer);
               audioSynthesized = true;
@@ -4357,11 +4792,11 @@ ${chapterContent}
 
           // Option B: User requested Edge Neural Voice (or Google Cloud fallback)
           if (!audioSynthesized) {
-            const edgeVoice = selectedVoice.startsWith("ar-XA") ? "ar-SA-HamedNeural" : selectedVoice;
+            const edgeVoice = effectiveVoice.startsWith("ar-XA") ? "ar-SA-HamedNeural" : effectiveVoice;
             try {
               const tts = new EdgeTTS({
                 voice: edgeVoice,
-                lang: edgeVoice.startsWith("ar-EG") ? "ar-EG" : (edgeVoice.startsWith("ar-SA") ? "ar-SA" : "ar-JO"),
+                lang: edgeVoice.startsWith("ar-EG") ? "ar-EG" : (edgeVoice.startsWith("ar-SA") ? "ar-SA" : (edgeVoice.startsWith("en-") ? "en-US" : "ar-JO")),
                 outputFormat: "audio-24khz-48kbitrate-mono-mp3",
                 timeout: 20000
               });
@@ -4376,8 +4811,9 @@ ${chapterContent}
 
           // Fallback to Google Cloud if Edge failed and Google key exists
           if (!audioSynthesized && (process.env.GOOGLE_TTS_API_KEY || process.env.GOOGLE_CLOUD_API_KEY)) {
-            const fallbackGoogle = selectedVoice.includes("Salma") || selectedVoice.includes("Zariyah") ? "ar-XA-Chirp3-HD-Aoede" : "ar-XA-Chirp3-HD-Fenrir";
-            const googleBuffer = await synthesizeGoogleCloudTTS(safeText, fallbackGoogle);
+            const langCfg = MULTILINGUAL_VOICE_CONFIGS[bookLang] || MULTILINGUAL_VOICE_CONFIGS.ar;
+            const fallbackGoogle = effectiveVoice.includes("Salma") || effectiveVoice.includes("Zariyah") || effectiveVoice === langCfg.female ? langCfg.female : langCfg.male;
+            const googleBuffer = await synthesizeGoogleCloudTTS(safeText, fallbackGoogle, langCfg.languageCode);
             if (googleBuffer) {
               fs.writeFileSync(audioFilePath, googleBuffer);
               audioSynthesized = true;
@@ -4402,7 +4838,7 @@ ${chapterContent}
           chapter_title: chapter.title,
           style_type: data.style_type || effectiveStyle,
           style: data.style_type || effectiveStyle,
-          voice: selectedVoice,
+          voice: effectiveVoice,
           duration_seconds: data.duration_seconds || 45,
           audio_url: reelAudioUrl,
           narration_script: data.narration_script || `شرح مكثف لدرس (${chapter.title})`,
@@ -4471,14 +4907,48 @@ app.post("/api/reels/generate-single-chapter", async (req, res) => {
 
     const ai = getAiInstance();
     const effectiveStyle = styleType || style || "chalkboard";
-    const selectedVoice = voice || "ar-SA-HamedNeural";
+    
+    // 🌍 Multilingual Reel Support
+    const contentText = chapter.content || clientContent || "";
+    const bookLang = (book?.language || req.body?.language || detectContentLanguage(contentText));
+    const isLangLearning = Boolean(book?.is_language_learning || req.body?.is_language_learning);
+    const targetLearningLang = book?.target_learning_language || req.body?.target_learning_language || "it";
+
+    let effectiveVoice = voice || "ar-SA-HamedNeural";
+    if (bookLang !== 'ar' && (!voice || voice.startsWith('ar-') || voice.includes('HamedNeural') || voice.includes('Fenrir'))) {
+      const voiceCfg = MULTILINGUAL_VOICE_CONFIGS[bookLang] || MULTILINGUAL_VOICE_CONFIGS.en;
+      effectiveVoice = voiceCfg.female;
+    }
+
+    let languageInstruction = `اللغة المعتمدة للريل: العربية الفصحى المشكولة بدقة.`;
+    if (isLangLearning) {
+      languageInstruction = `🌟 نمط تعليم اللغات (Bilingual Language Learning):
+هذا الريل مخصص لـ **تعليم لغة أجنبية (${targetLearningLang}) للناطقين بالعربية**! 
+السكريبت (narration_script) يجب أن يكون مزيجاً مشوقاً: المعلم يلقي الهوك بالعربية، ثم ينطق العبارات والكلمات المستهدفة باللغة (${targetLearningLang}) بلكنة صحيحة ونطق واضح، ويشرح معناها واستخدامها.
+المشاهد (scenes): اعرض الكلمة باللغة الأجنبية مع ترجمتها العربية ونطقها الصوتي!`;
+    } else if (bookLang === 'en') {
+      languageInstruction = `LANGUAGE REQUIREMENT: 100% High-Energy, Natural ENGLISH.
+The narration_script, scene titles, badges, and takeaways MUST be written entirely in crisp, engaging English (65 to 85 words). Do NOT use Arabic.`;
+    } else if (bookLang === 'it') {
+      languageInstruction = `LANGUAGE REQUIREMENT: 100% Natural, Engaging ITALIAN (Italiano).
+The narration_script, scene titles, badges, and quotes MUST be in fluent Italian (65-85 words). Do NOT use Arabic.`;
+    } else if (bookLang === 'fr') {
+      languageInstruction = `LANGUAGE REQUIREMENT: 100% Natural, Engaging FRENCH (Français).
+The narration_script, scene titles, badges, and quotes MUST be in fluent French (65-85 words). Do NOT use Arabic.`;
+    } else if (bookLang === 'de') {
+      languageInstruction = `LANGUAGE REQUIREMENT: 100% Natural, Engaging GERMAN (Deutsch).
+The narration_script, scene titles, badges, and quotes MUST be in fluent German (65-85 words). Do NOT use Arabic.`;
+    }
 
     const prompt = `
 أنت كبير مخرجي المحتوى التعليمي والريلز التفاعلية (EduReels 100% Studio) لمنصة Osera AI LMS لمقرر: "${book?.title || 'مقرر دراسي'}".
 الفصل المطلوب: "${chapter.title}"
+
+${languageInstruction}
+
 المحتوى المعتمد للفصل:
 """
-${(chapter.content || clientContent || "").substring(0, 3500)}
+${contentText.substring(0, 3500)}
 """
 
 المعايير الذهبية للصياغة الصوتية والإخراجية ("narration_script"):
@@ -4598,11 +5068,12 @@ ${(chapter.content || clientContent || "").substring(0, 3500)}
       const audioFilePath = path.join(AUDIO_CACHE_DIR, audioFileName);
 
       let audioSynthesized = false;
-      const isGoogleVoice = selectedVoice.startsWith("ar-XA") || selectedVoice.includes("Chirp3") || selectedVoice.includes("Wavenet");
+      const isGoogleVoice = effectiveVoice.includes("Chirp3") || effectiveVoice.includes("Wavenet") || effectiveVoice.includes("Journey") || effectiveVoice.includes("Neural2") || effectiveVoice.startsWith("ar-") || effectiveVoice.startsWith("en-") || effectiveVoice.startsWith("it-") || effectiveVoice.startsWith("fr-") || effectiveVoice.startsWith("de-");
 
       // Option A: User requested Google Cloud Voice
       if (isGoogleVoice && (process.env.GOOGLE_TTS_API_KEY || process.env.GOOGLE_CLOUD_API_KEY)) {
-        const googleBuffer = await synthesizeGoogleCloudTTS(safeText, selectedVoice);
+        const langCfg = MULTILINGUAL_VOICE_CONFIGS[bookLang] || MULTILINGUAL_VOICE_CONFIGS.ar;
+        const googleBuffer = await synthesizeGoogleCloudTTS(safeText, effectiveVoice, langCfg.languageCode);
         if (googleBuffer) {
           fs.writeFileSync(audioFilePath, googleBuffer);
           audioSynthesized = true;
@@ -4611,11 +5082,11 @@ ${(chapter.content || clientContent || "").substring(0, 3500)}
 
       // Option B: User requested Edge Neural Voice (or Google Cloud fallback)
       if (!audioSynthesized) {
-        const edgeVoice = selectedVoice.startsWith("ar-XA") ? "ar-SA-HamedNeural" : selectedVoice;
+        const edgeVoice = effectiveVoice.startsWith("ar-XA") ? "ar-SA-HamedNeural" : effectiveVoice;
         try {
           const tts = new EdgeTTS({
             voice: edgeVoice,
-            lang: edgeVoice.startsWith("ar-EG") ? "ar-EG" : (edgeVoice.startsWith("ar-SA") ? "ar-SA" : "ar-JO"),
+            lang: edgeVoice.startsWith("ar-EG") ? "ar-EG" : (edgeVoice.startsWith("ar-SA") ? "ar-SA" : (edgeVoice.startsWith("en-") ? "en-US" : "ar-JO")),
             outputFormat: "audio-24khz-48kbitrate-mono-mp3",
             timeout: 20000
           });
@@ -4630,8 +5101,9 @@ ${(chapter.content || clientContent || "").substring(0, 3500)}
 
       // Fallback to Google Cloud if Edge failed and Google key exists
       if (!audioSynthesized && (process.env.GOOGLE_TTS_API_KEY || process.env.GOOGLE_CLOUD_API_KEY)) {
-        const fallbackGoogle = selectedVoice.includes("Salma") || selectedVoice.includes("Zariyah") ? "ar-XA-Chirp3-HD-Aoede" : "ar-XA-Chirp3-HD-Fenrir";
-        const googleBuffer = await synthesizeGoogleCloudTTS(safeText, fallbackGoogle);
+        const langCfg = MULTILINGUAL_VOICE_CONFIGS[bookLang] || MULTILINGUAL_VOICE_CONFIGS.ar;
+        const fallbackGoogle = langCfg.female;
+        const googleBuffer = await synthesizeGoogleCloudTTS(safeText, fallbackGoogle, langCfg.languageCode);
         if (googleBuffer) {
           fs.writeFileSync(audioFilePath, googleBuffer);
           audioSynthesized = true;
@@ -4659,7 +5131,8 @@ ${(chapter.content || clientContent || "").substring(0, 3500)}
       chapter_title: chapter.title,
       style_type: data.style_type || effectiveStyle,
       style: data.style_type || effectiveStyle,
-      voice: selectedVoice,
+      voice: effectiveVoice,
+      language: bookLang,
       duration_seconds: data.duration_seconds || 45,
       audio_url: singleAudioUrl || existing?.audio_url,
       narration_script: data.narration_script || `شرح درس (${chapter.title})`,

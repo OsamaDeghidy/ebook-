@@ -11,8 +11,10 @@ import {
   PlatformConfig, 
   DEFAULT_PLATFORM_CONFIG 
 } from '../../services/platformConfigService';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 export const PlatformSettingsTab: React.FC = () => {
+  const { t, language, dir } = useLanguage();
   const [config, setConfig] = useState<PlatformConfig>(getPlatformConfig());
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -107,7 +109,7 @@ export const PlatformSettingsTab: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 text-right font-sans" dir="rtl">
+    <div className="space-y-6 text-right font-sans" dir={dir}>
       
       {/* HEADER BANNER */}
       <div className="p-5 rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-white/10 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">

@@ -1,0 +1,56 @@
+{
+  "nav": {
+    "home": "Home",
+    "marketplace": "Catalogo Corsi",
+    "reels": "🎬 Reels Educativi",
+    "instructor_hub": "Area Docenti ⚡",
+    "admin_hub": "Dashboard Admin 🛡️",
+    "sign_in": "Accedi",
+    "sign_out": "Esci",
+    "my_courses": "I miei Corsi",
+    "help_support": "Assistenza & Supporto",
+    "about": "Chi Siamo"
+  },
+  "book": {
+    "read": "Leggi il Corso",
+    "interactive_lesson": "✨ [Nuovo] Lezione Interattiva",
+    "interactive_curriculum": "🚀 [Nuovo] Spiegazione Completa AI",
+    "reels_tab": "Reels & TikTok del Capitolo 🎬",
+    "flashcards": "Flashcards",
+    "sandbox": "Laboratorio & Sandbox",
+    "quiz": "Banca delle Domande",
+    "videos": "Videolezioni",
+    "editor": "Editor di Testo",
+    "qr_code": "Codice QR Intelligente 📲",
+    "free": "100% Gratuito",
+    "currency": "EUR",
+    "published": "Pubblicato per gli Studenti",
+    "draft": "Bozza Privata (Nascosto)",
+    "chapters_index": "Indice dei Capitoli",
+    "hide_index": "Nascondi Indice",
+    "show_index": "Indice dei Capitoli",
+    "author": "Autore",
+    "ratings": "Recensioni",
+    "language": "Lingua",
+    "language_learning_badge": "🎓 Corso di Apprendimento Linguistico"
+  },
+  "languages": {
+    "ar": "العربية",
+    "en": "English",
+    "it": "Italiano",
+    "fr": "Français",
+    "de": "Deutsch"
+  },
+  "common": {
+    "download": "Scarica",
+    "share": "Condividi",
+    "copied": "Copiato!",
+    "close": "Chiudi",
+    "save": "Salva",
+    "cancel": "Annulla",
+    "generate": "Genera con IA",
+    "processing": "Elaborazione in corso...",
+    "search": "Cerca...",
+    "filter": "Filtra"
+  }
+}
