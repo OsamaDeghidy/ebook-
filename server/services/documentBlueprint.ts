@@ -189,19 +189,26 @@ export async function extractDocumentBlueprint(
     category?: string;
     grade_level?: string;
     semester?: string;
+    language?: string;
+    academic_system?: string;
   },
   generateFn: (params: any) => Promise<any>
 ): Promise<DocumentSyllabusBlueprint> {
+  const isExplicitArabic = metadata.language === 'ar' || metadata.academic_system === 'general_arabic' || metadata.academic_system === 'technical';
+  const isExplicitEnglish = metadata.language === 'en' || metadata.academic_system?.includes('international') || metadata.academic_system === 'general_languages';
+  const hasArabicChar = /[\u0600-\u06FF]/.test(extractedText || '');
+  const isArabic = isExplicitArabic || (!isExplicitEnglish && hasArabicChar);
+
   if (!extractedText || extractedText.length < 50) {
     return {
-      book_title: metadata.fileName || "المقرر التعليمي",
+      book_title: metadata.fileName || (isArabic ? "المقرر التعليمي" : "Educational Course"),
       total_lessons: 1,
-      detected_units: ["الوحدة الأولى"],
+      detected_units: isArabic ? ["الوحدة الأولى"] : ["Unit 1"],
       lessons: [
         {
           lesson_order: 1,
-          lesson_title: metadata.fileName || "الدرس الأول",
-          sub_topics: ["المفاهيم الأساسية", "الشرح والتطبيقات"],
+          lesson_title: metadata.fileName || (isArabic ? "الدرس الأول" : "Lesson 1"),
+          sub_topics: isArabic ? ["المفاهيم الأساسية", "الشرح والتطبيقات"] : ["Key Concepts", "Applications"],
           raw_text_snippet: extractedText || "",
           status: "pending"
         }
@@ -223,6 +230,7 @@ DOCUMENT METADATA:
 - Category: "${metadata.category || 'Curriculum'}"
 - Grade / Level: "${metadata.grade_level || 'General'}"
 - Semester: "${metadata.semester || 'Term 1'}"
+- Required Language: "${isArabic ? 'Arabic (العربية)' : 'English (or source language)'}"
 
 DOCUMENT TEXT TO SCAN:
 """
@@ -230,6 +238,12 @@ ${previewText}
 """
 
 🚨 CRITICAL MANDATORY DISCOVERY & ORDERING RULES (P0):
+0. 🌐 STRICT TARGET LANGUAGE MANDATE (P0):
+   ${isArabic
+     ? `The Target Language is Modern Standard Arabic (العربية). All book_title, detected_units, lesson_title, and sub_topics MUST be written strictly in Arabic. 🚫 NEVER translate Arabic curriculum, lessons, or concepts to English under any circumstances!`
+     : `The Target Language is English (or textbook language). Output all titles in English without Arabic text.`
+   }
+
 1. STRICT SEQUENTIAL DOCUMENT ORDER (PAGE 1 TO END):
    - You MUST extract units and lessons in the EXACT ORDER they appear in the booklet from top to bottom.
    - 🚫 NEVER jump across the booklet.

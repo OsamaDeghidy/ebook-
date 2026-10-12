@@ -489,6 +489,7 @@ function AppContent() {
     academic_year?: string;
     price?: number;
     preview_video_url?: string;
+    language?: string;
   }) => {
     setIsConverting(true);
     setProgressPercent(10);
@@ -528,9 +529,35 @@ function AppContent() {
       }
       if (!generatedEbook) throw new Error("لم يتم إرجاع بيانات الكتاب.");
 
-      const academicTags = [
+      // 🔍 Rich Search Engine Optimization (SEO) & Algorithmic Tag Discovery
+      const seoKeywords: string[] = [
         'كتاب_تفاعلي',
+        'مذكرة_شاملة',
         'ذكاء_اصطناعي',
+        'بنك_أسئلة',
+        'اختبارات_إلكترونية',
+        'خرائط_مفاهيمية'
+      ];
+
+      if (payload.subcategory) {
+        seoKeywords.push(payload.subcategory.replace(/\s+/g, '_'));
+        seoKeywords.push(`مادة_${payload.subcategory.replace(/\s+/g, '_')}`);
+      }
+      if (payload.grade_level) {
+        seoKeywords.push(payload.grade_level.replace(/\s+/g, '_'));
+      }
+      if (payload.academic_system) {
+        seoKeywords.push(payload.academic_system.replace(/\s+/g, '_'));
+      }
+      if (payload.semester) {
+        seoKeywords.push(payload.semester.replace(/\s+/g, '_'));
+      }
+      if (payload.education_level) {
+        seoKeywords.push(payload.education_level === 'pre_university' ? 'تعليم_مدرسي' : 'تعليم_جامعي');
+      }
+
+      // Add taxonomy structured tags
+      const structuredTaxonomyTags = [
         payload.education_level ? `edu_level:${payload.education_level}` : '',
         payload.academic_system ? `system:${payload.academic_system}` : '',
         payload.subcategory ? `sub:${payload.subcategory}` : '',
@@ -540,28 +567,48 @@ function AppContent() {
         payload.preview_video_url ? `video:${payload.preview_video_url}` : ''
       ].filter(Boolean);
 
+      const combinedSeoTags = Array.from(new Set([...seoKeywords, ...structuredTaxonomyTags]));
+
       const isAutoPublished = isAdminMode || userRole === 'admin';
       const creatorAuthorName = currentUser?.user_metadata?.full_name || currentUser?.email?.split('@')[0] || 'د. كريم كامل';
+      
+      const resolvedLanguage = payload.language || (
+        payload.academic_system === 'general_arabic' || payload.academic_system === 'technical' ? 'ar' :
+        payload.academic_system?.includes('international') || payload.academic_system === 'general_languages' ? 'en' : 'ar'
+      );
+
+      const isStemSubject = Boolean(
+        payload.subcategory?.includes('رياض') ||
+        payload.subcategory?.includes('علوم') ||
+        payload.subcategory?.includes('كيمياء') ||
+        payload.subcategory?.includes('فيزياء') ||
+        payload.subcategory?.includes('أحياء') ||
+        payload.subcategory?.includes('Math') ||
+        payload.subcategory?.includes('Science') ||
+        payload.subcategory?.includes('Physics') ||
+        payload.subcategory?.includes('Chemistry')
+      );
+
       const newBook: MarketplaceBook = {
         ...generatedEbook,
         author_name: creatorAuthorName,
         author_id: currentUser?.id,
         category: payload.category || 'academic_curriculum',
         track: payload.track || 'academic',
-        education_level: payload.education_level,
-        academic_system: payload.academic_system,
-        subcategory: payload.subcategory,
-        grade_level: payload.grade_level,
-        semester: payload.semester,
-        academic_year: payload.academic_year,
+        education_level: payload.education_level || 'pre_university',
+        academic_system: payload.academic_system || 'general_arabic',
+        subcategory: payload.subcategory || '',
+        grade_level: payload.grade_level || '',
+        semester: payload.semester || '',
+        academic_year: payload.academic_year || '',
         source_file_name: payload.fileName,
-        tags: academicTags,
+        tags: combinedSeoTags,
         price: Number(payload.price) || 0,
         preview_video_url: payload.preview_video_url,
         is_external: false,
         is_published: isAutoPublished,
         approval_status: isAutoPublished ? 'approved' : 'pending',
-        thumbnail_url: 'https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=800&q=80',
+        thumbnail_url: generatedEbook.thumbnail_url || 'https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=800&q=80',
         rating: 5.0,
         reviews_count: 1,
         created_at: new Date().toISOString()
@@ -570,16 +617,18 @@ function AppContent() {
       setEbooks(prev => [newBook, ...prev]);
 
       try {
-        const basePayload: any = {
+        // 🌟 Populate 100% of Supabase Books Table Columns
+        const fullDbPayload: any = {
           id: newBook.id,
           title: newBook.title,
-          description: newBook.description,
+          description: newBook.description || '',
           author_name: newBook.author_name,
           author_id: currentUser?.id || null,
           category: newBook.category,
-          tags: newBook.tags,
+          tags: combinedSeoTags,
           price: newBook.price,
           is_external: false,
+          external_url: newBook.external_url || null,
           is_published: isAutoPublished,
           approval_status: isAutoPublished ? 'approved' : 'pending',
           thumbnail_url: newBook.thumbnail_url,
@@ -587,20 +636,31 @@ function AppContent() {
           reviews_count: 1,
           chapters: newBook.chapters,
           mind_map: newBook.mind_map || [],
-          question_bank: newBook.question_bank || []
+          question_bank: newBook.question_bank || [],
+          education_level: newBook.education_level,
+          academic_system: newBook.academic_system,
+          subcategory: newBook.subcategory,
+          grade_level: newBook.grade_level,
+          semester: newBook.semester,
+          academic_year: newBook.academic_year,
+          language: resolvedLanguage,
+          is_language_learning: Boolean(payload.subcategory?.includes('لغات') || payload.subcategory?.includes('English')),
+          target_learning_language: resolvedLanguage !== 'ar' ? resolvedLanguage : null,
+          is_stem_enhanced: isStemSubject,
+          curriculum_explanation: newBook.curriculum_explanation || newBook.description || '',
+          curriculum_mindmap: newBook.curriculum_mindmap || newBook.mind_map || [],
+          exams: newBook.exams || [],
+          pregeneration_status: 'completed',
+          pregeneration_percent: 100,
+          preview_video_url: newBook.preview_video_url || null
         };
 
-        const { error: insertError } = await supabase.from('books').upsert({
-          ...basePayload,
-          preview_video_url: newBook.preview_video_url || null
-        });
+        const { error: insertError } = await supabase.from('books').upsert(fullDbPayload);
 
         if (insertError) {
-          console.warn("Retrying book insert with standard schema:", insertError);
-          const { error: retryError } = await supabase.from('books').upsert(basePayload);
-          if (retryError) console.error("Supabase upsert error:", retryError);
+          console.warn("Supabase upsert notice:", insertError.message);
         } else {
-          console.log("Book successfully confirmed in Supabase!");
+          console.log("Book successfully confirmed in Supabase with all SEO and academic fields!");
         }
       } catch (dbErr) {
         console.error("Database save error:", dbErr);

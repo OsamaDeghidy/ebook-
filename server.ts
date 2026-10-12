@@ -566,10 +566,14 @@ async function syncBookToSupabase(book: any) {
     if (book.approval_status) basePayload.approval_status = book.approval_status;
     if (book.created_at || book.createdAt) basePayload.created_at = book.created_at || book.createdAt;
     if (book.curriculum_explanation) basePayload.curriculum_explanation = book.curriculum_explanation;
-    if (book.curriculum_mindmap) basePayload.curriculum_mindmap = book.curriculum_mindmap;
+    if (book.curriculum_mindmap) basePayload.curriculum_mindmap = book.curriculum_mindmap || book.mind_map || [];
     if (book.language) basePayload.language = book.language;
     if (book.is_language_learning !== undefined) basePayload.is_language_learning = book.is_language_learning;
     if (book.target_learning_language) basePayload.target_learning_language = book.target_learning_language;
+    if (book.exams) basePayload.exams = book.exams;
+    basePayload.pregeneration_status = book.pregeneration_status || 'completed';
+    basePayload.pregeneration_percent = book.pregeneration_percent !== undefined ? book.pregeneration_percent : 100;
+    if (book.is_stem_enhanced !== undefined) basePayload.is_stem_enhanced = book.is_stem_enhanced;
 
     let { error } = await supabase.from('books').upsert(basePayload, { onConflict: 'id' });
     if (error && (error.message.includes('academic_system') || error.message.includes('curriculum_') || error.message.includes('language') || error.message.includes('column'))) {
@@ -581,6 +585,10 @@ async function syncBookToSupabase(book: any) {
       delete fallbackPayload.language;
       delete fallbackPayload.is_language_learning;
       delete fallbackPayload.target_learning_language;
+      delete fallbackPayload.exams;
+      delete fallbackPayload.pregeneration_status;
+      delete fallbackPayload.pregeneration_percent;
+      delete fallbackPayload.is_stem_enhanced;
       const retryResult = await supabase.from('books').upsert(fallbackPayload, { onConflict: 'id' });
       error = retryResult.error;
     }
@@ -1171,9 +1179,19 @@ async function runBackgroundEbookConversion(
     academic_year?: string;
     price?: number;
     preview_video_url?: string;
+    education_level?: string;
+    academic_system?: string;
+    language?: string;
+    is_language_learning?: boolean;
+    target_learning_language?: string;
   }
 ) {
-  const { promptText, fileUrl, fileBase64, fileName, fileType, category, subcategory, grade_level, semester, academic_year, price, preview_video_url } = payload;
+  const { 
+    promptText, fileUrl, fileBase64, fileName, fileType, 
+    category, subcategory, grade_level, semester, academic_year, 
+    price, preview_video_url, education_level, academic_system, 
+    language, is_language_learning, target_learning_language 
+  } = payload;
   const job = conversionJobs[jobId];
   if (!job) return;
 
@@ -1401,6 +1419,14 @@ async function runBackgroundEbookConversion(
     });
     console.log(`[Job Worker] Applied Pedagogical Teacher Persona: ${persona.name} (${persona.title})`);
 
+    // 🌐 Language Policy Resolution (Strict Respect for User Choice & Taxonomy)
+    const isExplicitArabic = language === 'ar' || academic_system === 'general_arabic' || academic_system === 'technical';
+    const isExplicitEnglish = language === 'en' || academic_system?.includes('international') || academic_system === 'general_languages';
+    const combinedProbe = `${fileName || ''} ${promptText || ''} ${subcategory || ''} ${(extractedText || '').substring(0, 5000)}`;
+    const hasArabicChar = /[\u0600-\u06FF]/.test(combinedProbe);
+    const effectiveLanguage = isExplicitArabic ? 'ar' : (isExplicitEnglish ? 'en' : (hasArabicChar ? 'ar' : (language || 'ar')));
+    console.log(`[Job Worker] Language Policy Resolved: ${effectiveLanguage} (Requested: ${language || 'Auto'}, System: ${academic_system || 'None'}, ArabicChars: ${hasArabicChar})`);
+
     // 1. EXTRACT EXHAUSTIVE DOCUMENT SYLLABUS BLUEPRINT
     job.progressStep = "مسح المذكرة بالكامل وتوليد سجل المنهج التفصيلي (Syllabus Blueprint)...";
     job.progressPercent = 48;
@@ -1409,7 +1435,7 @@ async function runBackgroundEbookConversion(
     try {
       syllabusBlueprint = await extractDocumentBlueprint(
         extractedText || promptText || "",
-        { fileName, category, grade_level, semester },
+        { fileName, category, grade_level, semester, language: effectiveLanguage, academic_system },
         async (params) => generateContentWithRetry(ai, params, ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.5-flash"])
       );
       console.log(`[Job Worker] Syllabus Blueprint generated: ${syllabusBlueprint.total_lessons} lessons discovered in document.`);
@@ -1431,7 +1457,9 @@ async function runBackgroundEbookConversion(
         bookTitle: syllabusBlueprint.book_title || fileName || "المقرر التعليمي المعتمد",
         grade_level,
         category,
-        semester
+        semester,
+        language: effectiveLanguage,
+        academic_system
       });
 
       const response = await generateContentWithRetry(ai, {
@@ -1471,6 +1499,9 @@ async function runBackgroundEbookConversion(
         academic_year,
         promptText,
         textLength: extractedText?.length || promptText?.length || 5000,
+        language: effectiveLanguage,
+        academic_system,
+        extractedText
       });
 
       contents.push(instructionPrompt);
@@ -1587,45 +1618,57 @@ async function runBackgroundEbookConversion(
 
     // Also persist directly to Supabase from the backend
     try {
-      const academicTags = [
+      const seoKeywords = [
+        finalizedEbook.title,
+        category,
+        subcategory,
+        grade_level,
+        semester,
+        academic_system,
+        effectiveLanguage === 'ar' ? 'منهج_عربي' : 'english_curriculum',
+        'مذكرات_تفاعلية',
+        'كتاب_تفاعلي',
+        'ذكاء_اصطناعي',
+        'بنك_أسئلة',
+        'شرح_وتلخيص',
+        'خرائط_ذهنية'
+      ].filter(Boolean);
+
+      const academicTags = Array.from(new Set([
         'كتاب_تفاعلي',
         'ذكاء_اصطناعي',
         subcategory ? `sub:${subcategory}` : '',
         grade_level ? `grade:${grade_level}` : '',
         semester ? `term:${semester}` : '',
-        academic_year ? `year:${academic_year}` : ''
-      ].filter(Boolean);
+        academic_year ? `year:${academic_year}` : '',
+        academic_system ? `sys:${academic_system}` : '',
+        ...seoKeywords
+      ])).filter(Boolean);
 
       finalizedEbook.price = Number(price) || 0;
       if (preview_video_url) {
         finalizedEbook.preview_video_url = preview_video_url;
       }
+      finalizedEbook.category = category || "digital_book";
+      finalizedEbook.subcategory = subcategory || "";
+      finalizedEbook.grade_level = grade_level || "";
+      finalizedEbook.semester = semester || "";
+      finalizedEbook.academic_year = academic_year || "";
+      finalizedEbook.academic_system = academic_system || "general_arabic";
+      finalizedEbook.education_level = education_level || "";
+      finalizedEbook.language = effectiveLanguage;
+      finalizedEbook.is_language_learning = Boolean(is_language_learning);
+      finalizedEbook.target_learning_language = target_learning_language || "";
+      finalizedEbook.is_stem_enhanced = false;
+      finalizedEbook.curriculum_explanation = finalizedEbook.description;
+      finalizedEbook.curriculum_mindmap = [];
+      finalizedEbook.exams = [];
+      finalizedEbook.pregeneration_status = 'completed';
+      finalizedEbook.pregeneration_percent = 100;
+      finalizedEbook.tags = academicTags;
 
-      const supabasePayload = {
-        id: finalizedEbook.id,
-        title: finalizedEbook.title,
-        description: finalizedEbook.description,
-        author_name: 'د. كريم كامل',
-        category: category || 'digital_book',
-        tags: academicTags.length > 0 ? academicTags : ['كتاب_تفاعلي', 'ذكاء_اصطناعي'],
-        price: Number(price) || 0,
-        preview_video_url: preview_video_url || null,
-        is_external: false,
-        is_published: true,
-        thumbnail_url: 'https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=800&q=80',
-        rating: 5.0,
-        reviews_count: 1,
-        chapters: finalizedEbook.chapters,
-        mind_map: [],
-        question_bank: []
-      };
-
-      const { error: insertErr } = await supabase.from('books').upsert(supabasePayload);
-      if (insertErr) {
-        console.error("[Job Worker] Direct Supabase upsert error:", insertErr);
-      } else {
-        console.log(`[Job Worker] Job ${jobId} successfully saved book to Supabase directly!`);
-      }
+      await syncBookToSupabase(finalizedEbook);
+      console.log(`[Job Worker] Job ${jobId} successfully synced book to Supabase directly!`);
     } catch (dbErr) {
       console.error("[Job Worker] Error saving to Supabase from backend:", dbErr);
     }
@@ -1647,7 +1690,28 @@ async function runBackgroundEbookConversion(
 
 // 5. Convert content or create ebook from prompt / file upload (Synchronous & Serverless Resilient)
 app.post("/api/ebooks", async (req, res) => {
-  const { promptText, fileUrl, fileBase64, fileName, fileType, category, subcategory, grade_level, semester, academic_year, price, preview_video_url, userId, userRole, userEmail } = req.body;
+  const { 
+    promptText, 
+    fileUrl, 
+    fileBase64, 
+    fileName, 
+    fileType, 
+    category, 
+    subcategory, 
+    grade_level, 
+    semester, 
+    academic_year, 
+    price, 
+    preview_video_url, 
+    userId, 
+    userRole, 
+    userEmail,
+    language,
+    academic_system,
+    education_level,
+    is_language_learning,
+    target_learning_language
+  } = req.body;
   
   if (!promptText && !fileBase64 && !fileUrl) {
     return res.status(400).json({ error: "Must provide either promptText, a file, or both to convert." });
@@ -1674,7 +1738,25 @@ app.post("/api/ebooks", async (req, res) => {
   };
 
   try {
-    const finalizedEbook = await runBackgroundEbookConversion(jobId, { promptText, fileUrl, fileBase64, fileName, fileType, category, subcategory, grade_level, semester, academic_year, price, preview_video_url });
+    const finalizedEbook = await runBackgroundEbookConversion(jobId, { 
+      promptText, 
+      fileUrl, 
+      fileBase64, 
+      fileName, 
+      fileType, 
+      category, 
+      subcategory, 
+      grade_level, 
+      semester, 
+      academic_year, 
+      price, 
+      preview_video_url,
+      language,
+      academic_system,
+      education_level,
+      is_language_learning,
+      target_learning_language
+    });
     if (!finalizedEbook) {
       const job = conversionJobs[jobId];
       return res.status(500).json({ error: job?.error || "فشل توليد الكتاب بالذكاء الاصطناعي" });
@@ -2661,7 +2743,13 @@ app.post("/api/ebooks/:id/expand-chapters", async (req, res) => {
       console.log(`[Expand Chapters] Generating fresh blueprint for book ${ebook.id}...`);
       const freshBlueprint = await extractDocumentBlueprint(
         (ebook as any).original_text,
-        { fileName: ebook.title, category: ebook.category, grade_level: (ebook as any).grade_level },
+        { 
+          fileName: ebook.title, 
+          category: ebook.category, 
+          grade_level: (ebook as any).grade_level,
+          academic_system: (ebook as any).academic_system,
+          language: (ebook as any).language
+        },
         async (params) => generateContentWithRetry(ai, params, ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.5-flash"])
       );
       
@@ -2693,7 +2781,9 @@ app.post("/api/ebooks/:id/expand-chapters", async (req, res) => {
         persona,
         bookTitle: ebook.title,
         grade_level: (ebook as any).grade_level,
-        category: ebook.category
+        category: ebook.category,
+        academic_system: (ebook as any).academic_system,
+        language: (ebook as any).language
       });
     } else {
       // Check if all lessons in blueprint are already 100% completed

@@ -11,15 +11,21 @@ export function buildGroundedBatchPrompt(params: {
   grade_level?: string;
   category?: string;
   semester?: string;
+  language?: string;
+  academic_system?: string;
 }): string {
-  const { lessons, persona, bookTitle, grade_level, category, semester } = params;
+  const { lessons, persona, bookTitle, grade_level, category, semester, language, academic_system } = params;
 
-  // Auto-detect language
+  // Auto-detect language with explicit preference & taxonomy awareness
+  const isExplicitArabic = language === 'ar' || academic_system === 'general_arabic' || academic_system === 'technical';
+  const isExplicitEnglish = language === 'en' || academic_system?.includes('international') || academic_system === 'general_languages';
   const combinedText = `${bookTitle} ${lessons.map(l => `${l.lesson_title} ${l.raw_text_snippet}`).join(' ')}`;
-  const isArabic = /[\u0600-\u06FF]/.test(combinedText);
+  const hasArabicChar = /[\u0600-\u06FF]/.test(combinedText);
+
+  const isArabic = isExplicitArabic || (!isExplicitEnglish && hasArabicChar);
 
   const langMandate = isArabic
-    ? `TARGET LANGUAGE: Modern Standard Arabic. Output all titles, content, summaries, quizzes, and flashcards strictly in Arabic.`
+    ? `TARGET LANGUAGE: Modern Standard Arabic (اللغة العربية الفصحى). Output all chapter titles, content explanations, vocabulary, laws, summaries, quizzes, and flashcards STRICTLY in Arabic. ZERO English translation or English language paragraphs! (Western numbers 0-9 and LaTeX symbols are allowed only for math/formulas).`
     : `TARGET LANGUAGE: English (or match source). Output all titles, content, summaries, quizzes, and flashcards strictly in English with ZERO Arabic text.`;
 
   const lessonsContext = lessons.map((l) => `

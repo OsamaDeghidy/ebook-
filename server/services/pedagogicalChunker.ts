@@ -95,16 +95,23 @@ export function buildMasterPedagogicalPrompt(params: {
   academic_year?: string;
   promptText?: string;
   textLength: number;
+  language?: string;
+  academic_system?: string;
+  extractedText?: string;
 }): { prompt: string; persona: TeacherPersona } {
   const decision = evaluatePedagogicalChunking(params);
   const { persona } = decision;
 
-  // Auto-detect language
-  const combinedContext = `${params.title || ''} ${params.fileName || ''} ${params.promptText || ''}`;
-  const isArabic = /[\u0600-\u06FF]/.test(combinedContext);
+  // Auto-detect language with explicit preference & taxonomy awareness
+  const isExplicitArabic = params.language === 'ar' || params.academic_system === 'general_arabic' || params.academic_system === 'technical';
+  const isExplicitEnglish = params.language === 'en' || params.academic_system?.includes('international') || params.academic_system === 'general_languages';
+  const combinedContext = `${params.title || ''} ${params.fileName || ''} ${params.promptText || ''} ${params.subcategory || ''} ${(params.extractedText || '').substring(0, 5000)}`;
+  const hasArabicChar = /[\u0600-\u06FF]/.test(combinedContext);
+
+  const isArabic = isExplicitArabic || (!isExplicitEnglish && hasArabicChar);
 
   const langMandate = isArabic
-    ? `TARGET OUTPUT LANGUAGE: Modern Standard Arabic. Generate all unit titles, chapter titles, content explanations, vocabulary, and quizzes strictly in Arabic. ZERO language mixing.`
+    ? `TARGET OUTPUT LANGUAGE: Modern Standard Arabic (اللغة العربية الفصحى). Generate all unit titles, chapter titles, content explanations, vocabulary, and quizzes strictly in Arabic. ZERO language mixing and ZERO English translation paragraphs! (Western numbers 0-9 and LaTeX symbols are used for formulas).`
     : `TARGET OUTPUT LANGUAGE: English (or match textbook language). Since source material is English/foreign language, ALL titles, content, summaries, quizzes, and flashcards MUST be in English. NEVER generate Arabic text.`;
 
   const prompt = `

@@ -33,6 +33,7 @@ interface ContentUploaderProps {
     academic_year?: string;
     price?: number;
     preview_video_url?: string;
+    language?: string;
   }) => void;
   isConverting: boolean;
   progressPercent?: number;
@@ -100,6 +101,7 @@ export default function ContentUploader({
   // Cascading Academic metadata states
   const [educationLevel, setEducationLevel] = useState<string>('pre_university');
   const [academicSystem, setAcademicSystem] = useState<string>('general_arabic');
+  const [bookLanguage, setBookLanguage] = useState<string>('ar');
   const [gradeLevel, setGradeLevel] = useState<string>('الصف الأول الثانوي');
   const [subcategory, setSubcategory] = useState<string>(ACADEMIC_SUBJECTS[0]);
   const [universityFaculty, setUniversityFaculty] = useState<string>(UNIVERSITY_FACULTIES[0]);
@@ -215,6 +217,13 @@ export default function ContentUploader({
     setAcademicSystem(system);
     const validGrades = getGradesForSystem(educationLevel, system);
     if (validGrades.length > 0) setGradeLevel(validGrades[0]);
+    if (system === 'general_arabic' || system === 'technical') {
+      setBookLanguage('ar');
+    } else if (system === 'international_french') {
+      setBookLanguage('fr');
+    } else if (system === 'international_american' || system === 'international_british' || system === 'general_languages') {
+      setBookLanguage('en');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -276,7 +285,8 @@ export default function ContentUploader({
       semester: isAcademicMode ? semester : 'كتاب عام مستمر',
       academic_year: academicYear,
       price: Number(price) || 0,
-      preview_video_url: previewVideoUrl.trim() || undefined
+      preview_video_url: previewVideoUrl.trim() || undefined,
+      language: bookLanguage
     });
   };
 
@@ -693,6 +703,47 @@ export default function ContentUploader({
             </div>
           </div>
         )}
+
+        {/* 🌐 LANGUAGE SELECTION CARD */}
+        <div className="p-4 bg-white border border-indigo-200/90 rounded-3xl shadow-xs space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-black text-gray-900 flex items-center gap-2">
+              <span className="text-base">🌐</span>
+              <span>لغة المنهج والمحتوى الأساسية (Target Language)</span>
+            </label>
+            <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-150">
+              {bookLanguage === 'ar' ? 'العربية 🇪🇬 🇸🇦' : bookLanguage === 'en' ? 'الإنجليزية 🇬🇧 🇺🇸' : bookLanguage === 'fr' ? 'الفرنسية 🇫🇷' : bookLanguage === 'de' ? 'الألمانية 🇩🇪' : 'الإيطالية 🇮🇹'}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            {[
+              { id: 'ar', label: 'العربية', flag: '🇪🇬 🇸🇦', note: 'المناهج العربية' },
+              { id: 'en', label: 'English', flag: '🇬🇧 🇺🇸', note: 'لغات ودولي' },
+              { id: 'fr', label: 'Français', flag: '🇫🇷', note: 'الفرنسية' },
+              { id: 'de', label: 'Deutsch', flag: '🇩🇪', note: 'الألمانية' },
+              { id: 'it', label: 'Italiano', flag: '🇮🇹', note: 'الإيطالية' }
+            ].map((lang) => (
+              <button
+                type="button"
+                key={lang.id}
+                onClick={() => setBookLanguage(lang.id)}
+                disabled={isConverting}
+                className={`p-2.5 rounded-2xl border text-xs font-bold transition flex flex-col items-center justify-center gap-1 cursor-pointer ${
+                  bookLanguage === lang.id
+                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm font-black'
+                    : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                }`}
+              >
+                <span className="text-sm">{lang.flag}</span>
+                <span className="font-black text-xs">{lang.label}</span>
+                <span className={`text-[9px] ${bookLanguage === lang.id ? 'text-indigo-200' : 'text-gray-400'}`}>{lang.note}</span>
+              </button>
+            ))}
+          </div>
+          <p className="text-[11px] text-gray-500 font-medium">
+            💡 <strong>قاعدة حاسمة:</strong> يلتزم الذكاء الاصطناعي بكتابة وتوليد كافة الفصول، الشروحات، وبنوك الأسئلة باللغة المحددة هنا بنسبة 100% ومنع الخلط اللغوي.
+          </p>
+        </div>
 
         {/* PROMPT / TEXT PASTING ZONE */}
         <div className="space-y-1.5">
