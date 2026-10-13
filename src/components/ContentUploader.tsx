@@ -61,6 +61,7 @@ export default function ContentUploader({
   const [promptText, setPromptText] = useState('');
   const [price, setPrice] = useState<number>(0);
   const [previewVideoUrl, setPreviewVideoUrl] = useState<string>('');
+  const [cloudPdfUrl, setCloudPdfUrl] = useState<string>('');
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<{ 
     name: string; 
@@ -150,26 +151,36 @@ export default function ContentUploader({
       return;
     }
 
-    if (file.size > 100 * 1024 * 1024) {
-      setErrorMsg("حجم الملف كبير جداً. الحد الأقصى المسموح به هو 100 ميجابايت.");
+    if (file.size > 250 * 1024 * 1024) {
+      setErrorMsg("حجم الملف كبير جداً. الحد الأقصى المسموح به هو 250 ميجابايت.");
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64String = (reader.result as string).split(',')[1];
+    if (file.size <= 15 * 1024 * 1024) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64String = (reader.result as string).split(',')[1];
+        setSelectedFile({
+          name: file.name,
+          size: formatBytes(file.size),
+          type: file.type,
+          base64: base64String,
+          rawFile: file
+        });
+      };
+      reader.onerror = () => {
+        setErrorMsg("حدث خطأ أثناء قراءة الملف. يرجى المحاولة مرة أخرى.");
+      };
+      reader.readAsDataURL(file);
+    } else {
       setSelectedFile({
         name: file.name,
         size: formatBytes(file.size),
         type: file.type,
-        base64: base64String,
+        base64: '',
         rawFile: file
       });
-    };
-    reader.onerror = () => {
-      setErrorMsg("حدث خطأ أثناء قراءة الملف. يرجى المحاولة مرة أخرى.");
-    };
-    reader.readAsDataURL(file);
+    }
   };
 
   const handleDrag = (e: React.DragEvent) => {
@@ -228,40 +239,79 @@ export default function ContentUploader({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedFile && !promptText.trim()) {
-      setErrorMsg("يرجى كتابة فكرة الكتاب أو رفع ملف PDF للبدء.");
+    const trimmedCloudUrl = cloudPdfUrl.trim();
+    if (!selectedFile && !trimmedCloudUrl && !promptText.trim()) {
+      setErrorMsg("يرجى رفع ملف PDF، أو لصق رابط الملف من Google Cloud Storage، أو كتابة فكرة الكتاب للبدء.");
       return;
     }
 
-    let fileUrl: string | undefined = undefined;
+    let fileUrl: string | undefined = trimmedCloudUrl || undefined;
+    let resolvedFileName: string | undefined = selectedFile?.name;
+    let resolvedFileType: string | undefined = selectedFile?.type;
 
-    // 1. Direct Cloud Upload to Supabase Storage if file is attached
+    if (!resolvedFileName && trimmedCloudUrl) {
+      const rawTail = decodeURIComponent(trimmedCloudUrl.split('?')[0].split('/').pop() || 'cloud_curriculum.pdf');
+      resolvedFileName = rawTail.replace(/^\d+-/, '') || 'cloud_curriculum.pdf';
+      resolvedFileType = 'application/pdf';
+    }
+
+    // 1. Direct Cloud Upload to Google Cloud Storage / Gemini Files API
     if (selectedFile?.rawFile) {
       try {
         setIsUploadingCloud(true);
-        const fileExt = selectedFile.rawFile.name.split('.').pop();
-        const safeId = crypto.randomUUID();
-        const fileName = `${Date.now()}-${safeId}.${fileExt}`;
-        const filePath = `uploads/${fileName}`;
+        const formData = new FormData();
+        formData.append("file", selectedFile.rawFile);
 
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('ebook-files')
-          .upload(filePath, selectedFile.rawFile, {
-            cacheControl: '3600',
-            upsert: false
-          });
+        const uploadRes = await fetch("/api/upload-to-gcp", {
+          method: "POST",
+          body: formData
+        });
 
-        if (!uploadError && uploadData) {
-          const { data: { publicUrl } } = supabase.storage
-            .from('ebook-files')
-            .getPublicUrl(filePath);
-          fileUrl = publicUrl;
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          fileUrl = uploadData.fileUrl;
+        } else {
+          const errData = await uploadRes.json().catch(() => ({}));
+          console.warn("GCP upload route failed, falling back to Supabase:", errData);
+          // Fallback to Supabase Storage if file is small (< 50MB)
+          if (selectedFile.rawFile.size < 48 * 1024 * 1024) {
+            const fileExt = selectedFile.rawFile.name.split('.').pop();
+            const safeId = crypto.randomUUID();
+            const fileName = `${Date.now()}-${safeId}.${fileExt}`;
+            const filePath = `uploads/${fileName}`;
+
+            const { data: uploadData, error: uploadError } = await supabase.storage
+              .from('ebook-files')
+              .upload(filePath, selectedFile.rawFile, {
+                cacheControl: '3600',
+                upsert: false
+              });
+
+            if (!uploadError && uploadData) {
+              const { data: { publicUrl } } = supabase.storage
+                .from('ebook-files')
+                .getPublicUrl(filePath);
+              fileUrl = publicUrl;
+            }
+          } else {
+            setErrorMsg(errData.error || "تعذر رفع الملف السحابي. يرجى التأكد من اتصال الإنترنت والمحاولة مرة أخرى.");
+            setIsUploadingCloud(false);
+            return;
+          }
         }
-      } catch (uploadErr) {
-        console.warn("Direct storage upload failed, falling back to base64 payload:", uploadErr);
+      } catch (uploadErr: any) {
+        console.warn("Direct storage upload failed:", uploadErr);
+        setErrorMsg("حدث خطأ أثناء الاتصال بالسيرفر لرفع الملف: " + (uploadErr.message || ""));
+        setIsUploadingCloud(false);
+        return;
       } finally {
         setIsUploadingCloud(false);
       }
+    }
+
+    if (!fileUrl && !selectedFile?.base64 && !promptText.trim()) {
+      setErrorMsg("تعذر تجهيز ملف المذكرة للتحويل. يرجى إعادة اختيار الملف أو لصق رابط السحابة.");
+      return;
     }
 
     const activeSubcategory = isAcademicMode 
@@ -274,8 +324,8 @@ export default function ContentUploader({
       promptText,
       fileUrl,
       fileBase64: fileUrl ? undefined : selectedFile?.base64,
-      fileName: selectedFile?.name,
-      fileType: selectedFile?.type,
+      fileName: resolvedFileName,
+      fileType: resolvedFileType,
       category: isAcademicMode ? 'academic_curriculum' : generalCategory,
       track: isAcademicMode ? 'academic' : 'general_literature',
       education_level: isAcademicMode ? educationLevel : undefined,
@@ -478,11 +528,42 @@ export default function ContentUploader({
                 </div>
                 <div className="space-y-1">
                   <p className="text-sm font-bold text-gray-700">اسحب وأفلت ملف الـ PDF أو Word (DOCX) هنا، أو <span className="text-indigo-600 underline">تصفح جهازك</span></p>
-                  <p className="text-xs text-gray-400">يدعم كتب الـ PDF، مستندات Word (DOCX)، المذكرات والمراجع حتى 100 ميجابايت</p>
+                  <p className="text-xs text-gray-400">يدعم كتب الـ PDF، مستندات Word (DOCX)، المذكرات والمراجع حتى 250 ميجابايت (شامل ملفات الـ PDF المصورة / الممسوحة ضوئياً)</p>
                 </div>
               </>
             )}
           </div>
+        </div>
+
+        {/* ☁️ DIRECT GOOGLE CLOUD STORAGE PDF LINK INPUT */}
+        <div className="p-4 bg-gradient-to-r from-sky-50/80 via-indigo-50/60 to-slate-50 border border-indigo-200 rounded-2xl space-y-2">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <label className="text-xs font-black text-indigo-950 flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded-lg bg-indigo-600 text-white text-[10px] font-black">☁️ رابط مباشر من السحابة</span>
+              <span>أو الصق رابط ملف الـ PDF المرفوع مسبقاً على Google Cloud Storage:</span>
+            </label>
+            {cloudPdfUrl.trim() && (
+              <button
+                type="button"
+                onClick={() => setCloudPdfUrl('')}
+                className="text-[11px] font-bold text-rose-600 hover:underline"
+              >
+                مسح الرابط
+              </button>
+            )}
+          </div>
+          <input
+            type="text"
+            dir="ltr"
+            value={cloudPdfUrl}
+            onChange={(e) => setCloudPdfUrl(e.target.value)}
+            disabled={isConverting}
+            placeholder="https://storage.googleapis.com/ebookstoreg/uploads/... أو gs://ebookstoreg/uploads/..."
+            className="w-full p-2.5 bg-white border border-indigo-200 rounded-xl text-gray-900 text-xs font-mono focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/10"
+          />
+          <p className="text-[11px] text-slate-600 font-bold">
+            يدعم الروابط بصيغة <code className="bg-white px-1.5 py-0.5 rounded border text-indigo-700">https://storage.googleapis.com/ebookstoreg/...</code> أو <code className="bg-white px-1.5 py-0.5 rounded border text-indigo-700">https://storage.cloud.google.com/...</code> أو <code className="bg-white px-1.5 py-0.5 rounded border text-indigo-700">gs://ebookstoreg/...</code> حتى لو كان الملف غير عام (Not public) بفضل الربط السحابي المباشر!
+          </p>
         </div>
 
         {/* AI AUTO-INFERENCE BADGE */}

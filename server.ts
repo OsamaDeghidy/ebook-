@@ -23,12 +23,14 @@ import path from "path";
 import fs from "fs";
 import os from "os";
 import crypto from "crypto";
+import multer from "multer";
+import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { EdgeTTS } from "node-edge-tts";
 import { GoogleGenAI, Type } from "@google/genai";
 import { PDFParse } from "pdf-parse";
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
-import { parseDocumentBuffer } from "./server/services/documentParser";
+import { parseDocumentBuffer, extractPdfTextViaVisionPages } from "./server/services/documentParser";
 import { buildMasterPedagogicalPrompt, evaluatePedagogicalChunking, deduplicateChapterTitles } from "./server/services/pedagogicalChunker";
 import { extractDocumentBlueprint, getPendingLessons, markLessonsCompleted, DocumentSyllabusBlueprint, SyllabusLessonBlueprint } from "./server/services/documentBlueprint";
 import { buildGroundedBatchPrompt } from "./server/services/groundedLessonBuilder";
@@ -291,15 +293,14 @@ const getAiInstance = (keyOverride?: string) => getGenAIClient(keyOverride);
  * Prioritizes high-speed, 1M context, active models: gemini-3-flash-preview, gemini-flash-lite-latest, gemini-flash-latest
  */
 const DEFAULT_GEMINI_MODELS = [
-  "gemini-3.6-flash",              // Ultra-fast, 100% Active (200 OK)
-  "gemini-3.5-flash",              // High-speed fallback (200 OK)
-  "gemini-3.5-flash-lite",         // Ultra-low latency ~1.5s (200 OK)
-  "gemini-3-flash-preview",        // 1M context active (200 OK)
+  "gemini-3.5-flash-lite",         // Ultra-low latency ~1.5s, highest quota (200 OK)
   "gemini-3.1-flash-lite-preview", // Active lite preview (200 OK)
+  "gemini-3-flash-preview",        // 1M context active (200 OK)
+  "gemini-3.5-flash",              // High-speed fallback (200 OK)
   "gemini-3.7-flash"
 ];
 
-// Track temporarily disabled keys (e.g. 402 depleted credits or 429 quota exhausted)
+// Track temporarily disabled keys (e.g. 402 depleted credits)
 const disabledKeysMap = new Map<string, number>();
 
 /**
@@ -332,6 +333,8 @@ const generateContentWithRetry = async (
     const client = activeKey ? getGenAIClient(activeKey) : _ai;
     if (!client) continue;
 
+    let hitQuotaOnAllModels = true;
+
     for (const model of modelsChain) {
       console.log(`[Gemini API] Dispatching to ${model} (Key #${keyIdx + 1}/${totalKeys})`);
       
@@ -354,30 +357,30 @@ const generateContentWithRetry = async (
           `[Gemini API] Model ${model} (Key #${keyIdx + 1}): ${errMessage.substring(0, 140)}`
         );
 
-        // 1. If 402 (Prepayment credits depleted) or 429 (Resource exhausted / Quota limit)
-        if (
-          errStr.includes("402") || 
-          errStr.includes("prepayment") || 
-          errStr.includes("depleted") || 
-          errStr.includes("429") || 
-          errStr.includes("quota") || 
-          errStr.includes("resource_exhausted")
-        ) {
-          console.warn(`[Gemini API] Key #${keyIdx + 1} exhausted/depleted. Blacklisting for 5m and rotating to next key...`);
+        // 1. If 402 (Account-level Prepayment credits depleted), blacklist key for 5m and jump to next key
+        if (errStr.includes("402") || errStr.includes("prepayment") || errStr.includes("depleted")) {
+          console.warn(`[Gemini API] Key #${keyIdx + 1} credits depleted (402). Blacklisting for 5m and rotating to next key...`);
           if (activeKey) disabledKeysMap.set(activeKey, Date.now() + 5 * 60 * 1000);
           currentKeyIndex = (currentKeyIndex + 1) % totalKeys;
-          break; // Break model loop, jump to next key immediately!
+          hitQuotaOnAllModels = false;
+          break;
         }
 
-        // 2. If 404 (Model deprecated or not found), try next model on same key
+        // 2. If 429 (Per-model quota exhausted), try the next model in modelsChain on the same key first!
+        if (errStr.includes("429") || errStr.includes("quota") || errStr.includes("resource_exhausted")) {
+          continue;
+        }
+
+        hitQuotaOnAllModels = false;
+
+        // 3. If 404 (Model deprecated or not found), try next model on same key
         if (errStr.includes("404") || errStr.includes("not found") || errStr.includes("no longer available")) {
           continue;
         }
 
-        // 3. If 503 (High demand) or transient socket error, quick 500ms retry once
+        // 4. If 503 (High demand) or transient socket error, quick 400ms retry once then move to next model
         if (errStr.includes("503") || errStr.includes("high demand") || errStr.includes("fetch failed") || errStr.includes("socket")) {
-          console.log(`[Gemini API] Retrying ${model} after brief 500ms backoff...`);
-          await new Promise((resolve) => setTimeout(resolve, 500));
+          await new Promise((resolve) => setTimeout(resolve, 400));
           try {
             const retryRes = await client.models.generateContent({
               ...params,
@@ -390,6 +393,12 @@ const generateContentWithRetry = async (
           }
         }
       }
+    }
+
+    if (hitQuotaOnAllModels && activeKey) {
+      console.warn(`[Gemini API] Key #${keyIdx + 1} hit 429 across all models in chain. Cooling down key for 60s...`);
+      disabledKeysMap.set(activeKey, Date.now() + 60 * 1000);
+      currentKeyIndex = (currentKeyIndex + 1) % totalKeys;
     }
   }
 
@@ -542,6 +551,10 @@ const EBOOKS_FILE = path.join(process.cwd(), "ebooks-db.json");
 async function syncBookToSupabase(book: any) {
   try {
     if (!book || !book.id) return;
+    // Supabase books.id is strictly UUID; skip legacy/sample non-UUID IDs (e.g. "sample-photosynthesis", "fallback-*", "eb-*")
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(book.id));
+    if (!isUuid) return;
+
     const basePayload: any = {
       id: book.id,
       title: book.title || "مقرر تفاعلي",
@@ -618,24 +631,18 @@ function loadEbooks(): any[] {
   return ebooks;
 }
 
-function saveEbooks(data: any[]) {
+function saveEbooks(data: any[], targetBook?: any) {
   try {
     fs.writeFileSync(EBOOKS_FILE, JSON.stringify(data, null, 2), "utf-8");
   } catch (err) {
     console.error("Error writing ebooks database file:", err);
   }
 
-  // Smooth throttled sync to Supabase (in batches of 3) to prevent network socket congestion and fetch failures
-  if (Array.isArray(data) && data.length > 0) {
-    (async () => {
-      const BATCH_SIZE = 3;
-      for (let i = 0; i < data.length; i += BATCH_SIZE) {
-        const batch = data.slice(i, i + BATCH_SIZE);
-        await Promise.allSettled(batch.map(b => syncBookToSupabase(b)));
-        await new Promise(r => setTimeout(r, 100));
-      }
-    })().catch(err => {
-      console.warn("[Supabase Sync] Bulk sync notice:", err);
+  // Only sync the targeted or most recently added UUID book to prevent bulk network socket saturation
+  const bookToSync = targetBook || (Array.isArray(data) && data.length > 0 ? data[data.length - 1] : null);
+  if (bookToSync) {
+    syncBookToSupabase(bookToSync).catch(err => {
+      console.warn("[Supabase Sync] Single book sync notice:", err);
     });
   }
 }
@@ -1163,6 +1170,139 @@ app.post("/api/ebooks/:id/exams/generate", async (req, res) => {
   res.json({ success: true, exam: generatedExam, exams: book.exams });
 });
 
+// Persistent local cache directory for uploaded and cloud-resolved curriculum files
+const PERSISTENT_UPLOADS_DIR = path.join(process.cwd(), "data", "uploads");
+if (!fs.existsSync(PERSISTENT_UPLOADS_DIR)) {
+  try { fs.mkdirSync(PERSISTENT_UPLOADS_DIR, { recursive: true }); } catch (e) {}
+}
+
+/**
+ * Parses Google Cloud Storage URLs in all 3 formats:
+ * 1. Public URL: https://storage.googleapis.com/<bucket>/<key>
+ * 2. Authenticated URL: https://storage.cloud.google.com/<bucket>/<key>
+ * 3. Cloud Storage URI: gs://<bucket>/<key>
+ */
+function parseGcsBucketAndKey(urlStr: string): { bucket: string; key: string } | null {
+  if (!urlStr) return null;
+  const trimmed = urlStr.trim();
+
+  if (trimmed.startsWith("gs://")) {
+    const withoutScheme = trimmed.slice(5);
+    const slashIdx = withoutScheme.indexOf("/");
+    if (slashIdx > 0) {
+      return {
+        bucket: withoutScheme.slice(0, slashIdx),
+        key: decodeURIComponent(withoutScheme.slice(slashIdx + 1).split("?")[0]),
+      };
+    }
+  }
+
+  try {
+    const u = new URL(trimmed);
+    if (u.hostname === "storage.googleapis.com" || u.hostname === "storage.cloud.google.com") {
+      const parts = u.pathname.replace(/^\/+/, "").split("/");
+      if (parts.length >= 2) {
+        return {
+          bucket: parts[0],
+          key: decodeURIComponent(parts.slice(1).join("/")),
+        };
+      }
+    } else if (u.hostname.endsWith(".storage.googleapis.com")) {
+      const bucket = u.hostname.replace(".storage.googleapis.com", "");
+      const key = decodeURIComponent(u.pathname.replace(/^\/+/, ""));
+      if (bucket && key) return { bucket, key };
+    }
+  } catch (e) {}
+
+  return null;
+}
+
+/**
+ * Resolves a file buffer from local disk cache, authenticated Google Cloud Storage (S3), or HTTP fetch.
+ */
+async function resolveCloudOrLocalFileBuffer(fileUrl: string): Promise<{ buffer: Buffer | null; resolvedFileName?: string }> {
+  if (!fileUrl) return { buffer: null };
+  const cleanUrl = fileUrl.trim();
+
+  // 1. Check direct local disk path (/data/uploads/...)
+  if (cleanUrl.startsWith("/data/uploads/") || cleanUrl.startsWith("data/uploads/")) {
+    const diskPath = path.join(process.cwd(), cleanUrl.startsWith("/") ? cleanUrl.substring(1) : cleanUrl);
+    if (fs.existsSync(diskPath)) {
+      const buf = fs.readFileSync(diskPath);
+      console.log(`[Storage Resolver] Loaded from local disk cache: ${diskPath} (${(buf.length / 1048576).toFixed(1)}MB)`);
+      return { buffer: buf, resolvedFileName: path.basename(diskPath) };
+    }
+  }
+
+  // 2. Check if it's a Google Cloud Storage URL (gs://, storage.googleapis.com, storage.cloud.google.com)
+  const gcsInfo = parseGcsBucketAndKey(cleanUrl);
+  if (gcsInfo) {
+    const baseKeyName = path.basename(gcsInfo.key).replace(/[^a-zA-Z0-9._-]/g, "_");
+    const cachedLocalPath = path.join(PERSISTENT_UPLOADS_DIR, baseKeyName);
+
+    // 2a. Check if this exact GCS object is already cached in data/uploads/
+    if (fs.existsSync(cachedLocalPath)) {
+      const buf = fs.readFileSync(cachedLocalPath);
+      console.log(`[Storage Resolver] Loaded GCS object from local cache: ${cachedLocalPath} (${(buf.length / 1048576).toFixed(1)}MB)`);
+      return { buffer: buf, resolvedFileName: baseKeyName };
+    }
+
+    // 2b. Download from GCS using authenticated S3Client (works on private "Not public" buckets!)
+    if (process.env.GCS_ACCESS_KEY && process.env.GCS_SECRET_KEY) {
+      try {
+        console.log(`[Storage Resolver] Downloading gs://${gcsInfo.bucket}/${gcsInfo.key} via authenticated GCS client...`);
+        const s3 = new S3Client({
+          endpoint: "https://storage.googleapis.com",
+          region: "auto",
+          credentials: {
+            accessKeyId: process.env.GCS_ACCESS_KEY,
+            secretAccessKey: process.env.GCS_SECRET_KEY,
+          },
+          forcePathStyle: true,
+        });
+
+        const getRes = await s3.send(
+          new GetObjectCommand({
+            Bucket: gcsInfo.bucket,
+            Key: gcsInfo.key,
+          })
+        );
+
+        const byteArray = await getRes.Body?.transformToByteArray();
+        if (byteArray && byteArray.length > 0) {
+          const buf = Buffer.from(byteArray);
+          try {
+            fs.writeFileSync(cachedLocalPath, buf);
+          } catch (cacheErr) {}
+          console.log(`[Storage Resolver] Downloaded & cached GCS object (${(buf.length / 1048576).toFixed(1)}MB) -> ${cachedLocalPath}`);
+          return { buffer: buf, resolvedFileName: baseKeyName };
+        }
+      } catch (s3Err: any) {
+        console.warn(`[Storage Resolver] Authenticated GCS download warning for ${gcsInfo.key}:`, s3Err?.message || s3Err);
+      }
+    }
+  }
+
+  // 3. Fallback to standard HTTP fetch (for public URLs / Supabase URLs)
+  if (cleanUrl.startsWith("http://") || cleanUrl.startsWith("https://")) {
+    try {
+      const fileRes = await fetch(cleanUrl);
+      if (fileRes.ok) {
+        const arrayBuf = await fileRes.arrayBuffer();
+        const buf = Buffer.from(arrayBuf);
+        console.log(`[Storage Resolver] Downloaded via HTTP fetch (${(buf.length / 1048576).toFixed(1)}MB)`);
+        return { buffer: buf };
+      } else {
+        console.warn(`[Storage Resolver] HTTP fetch returned status ${fileRes.status} for ${cleanUrl}`);
+      }
+    } catch (fetchErr: any) {
+      console.warn(`[Storage Resolver] HTTP fetch error:`, fetchErr?.message || fetchErr);
+    }
+  }
+
+  return { buffer: null };
+}
+
 // 5. Convert content or create ebook from prompt / file upload (Async Background Worker System)
 async function runBackgroundEbookConversion(
   jobId: string,
@@ -1255,7 +1395,7 @@ async function runBackgroundEbookConversion(
       };
 
       ebooks.push(mockEbook);
-      saveEbooks(ebooks); // Persist db file
+      saveEbooks(ebooks, mockEbook);
       
       job.progressPercent = 100;
       job.progressStep = "Ebook ready! Loading into bookshelf...";
@@ -1272,137 +1412,132 @@ async function runBackgroundEbookConversion(
 
   try {
     console.log(`[Job Worker] Initiating true Gemini Ebook conversion for job ${jobId}...`);
-    job.progressStep = "Initializing multi-sensory document analysis...";
+    job.progressStep = "جاري تهيئة محرك التحليل الذكي للمستند...";
     job.progressPercent = 15;
 
-    // Set up materials for Gemini analysis
     let contents: any[] = [];
     let extractedText = "";
-    
-    if (fileUrl) {
-      job.progressStep = `جاري جلب وتحليل الملف السحابي (${fileName || ""})...`;
-      job.progressPercent = 25;
-      try {
-        const fileRes = await fetch(fileUrl);
-        if (fileRes.ok) {
-          const arrayBuf = await fileRes.arrayBuffer();
-          const buffer = Buffer.from(arrayBuf);
+    let isScannedVisionPdf = false;
+    let scannedTotalPages = 0;
+    let scannedLastPage = 0;
+    let effectiveFileName = fileName || "";
 
-          // Fast local parsing
-          if (fileType === 'application/pdf' || (fileName && fileName.toLowerCase().endsWith('.pdf'))) {
-            try {
-              const parsedDoc = await parseDocumentBuffer(buffer, fileType || 'application/pdf', fileName || 'cloud_doc');
-              extractedText = parsedDoc.text;
-            } catch (pErr) {
-              console.warn("[Job Worker] Local parsing from cloud URL warning:", pErr);
+    if (fileUrl) {
+      if (fileUrl.includes("generativelanguage.googleapis.com") || fileUrl.startsWith("files/")) {
+        console.log(`[Job Worker] Detected Google Cloud native file URI: ${fileUrl}`);
+        contents.push({
+          fileData: {
+            fileUri: fileUrl,
+            mimeType: fileType || "application/pdf"
+          }
+        });
+        job.progressStep = `تم ربط وتجهيز ملف Google Cloud (${fileName || "مستند المنهج"}) بنجاح! جاري البناء الأكاديمي الشامل...`;
+        job.progressPercent = 45;
+      } else {
+        job.progressStep = `جاري جلب وفحص الملف من السحابة (${fileName || "ملف الـ PDF"})...`;
+        job.progressPercent = 25;
+
+        const { buffer, resolvedFileName } = await resolveCloudOrLocalFileBuffer(fileUrl);
+        if (!effectiveFileName && resolvedFileName) {
+          effectiveFileName = resolvedFileName.replace(/^\d+-/, "");
+        }
+
+        if (buffer) {
+          const isPdfDoc =
+            fileType === "application/pdf" ||
+            effectiveFileName.toLowerCase().endsWith(".pdf") ||
+            fileUrl.toLowerCase().includes(".pdf");
+
+          try {
+            const parsedDoc = await parseDocumentBuffer(
+              buffer,
+              fileType || (isPdfDoc ? "application/pdf" : "text/plain"),
+              effectiveFileName || "cloud_doc.pdf"
+            );
+            extractedText = parsedDoc.text;
+          } catch (pErr) {
+            console.warn("[Job Worker] Local parsing from cloud URL warning:", pErr);
+          }
+
+          // If PDF is scanned or has unmapped fonts (extractedText empty), run high-speed Vision OCR on pages!
+          if ((!extractedText || extractedText.length < 350) && isPdfDoc) {
+            job.progressStep = `الكتاب ممسوح ضوئياً (Scanned PDF) — جاري القراءة البصرية الذكية (Vision OCR) لصفحات وفهرس الكتاب...`;
+            job.progressPercent = 32;
+            const visionRes = await extractPdfTextViaVisionPages(
+              buffer,
+              async (params) => generateContentWithRetry(ai, params, ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite-preview", "gemini-3-flash-preview"]),
+              { startPage: 1, maxPagesToScan: 14, includeTocEndPages: true }
+            );
+            if (visionRes.text && visionRes.text.length > 200) {
+              extractedText = visionRes.text;
+              isScannedVisionPdf = true;
+              scannedTotalPages = visionRes.totalPages;
+              scannedLastPage = visionRes.lastScannedPage;
             }
           }
 
-          if (extractedText && extractedText.length > 50) {
-            console.log(`[Job Worker] Extracted ${extractedText.length} characters from cloud PDF.`);
+          if (extractedText && extractedText.length > 100) {
+            console.log(`[Job Worker] Extracted ${extractedText.length} authentic characters from ${effectiveFileName || fileUrl}.`);
             contents.push({
-              text: `### SOURCE TEXTBOOK / CURRICULUM CONTENT (${fileName || "Uploaded Material"}):\n\n${extractedText.substring(0, 900000)}`
+              text: `### SOURCE TEXTBOOK / CURRICULUM CONTENT (${effectiveFileName || "Uploaded Material"}):\n\n${extractedText.substring(0, 900000)}`
             });
-            job.progressStep = `تم استخراج محتوى المذكرة (${(extractedText.length / 1000).toFixed(0)} ألف حرف) بنجاح!`;
-            job.progressPercent = 45;
-          } else {
-            // Fallback to Gemini Files API
-            const tempFilePath = path.join(os.tmpdir(), `gemini_upload_${Date.now()}_doc.pdf`);
-            fs.writeFileSync(tempFilePath, buffer);
-
-            const uploadRes = await (ai.files as any).upload({
-              file: tempFilePath,
-              mimeType: fileType || "application/pdf"
-            });
-
-            contents.push({
-              fileData: {
-                fileUri: uploadRes.uri,
-                mimeType: uploadRes.mimeType
-              }
-            });
-
-            try { fs.unlinkSync(tempFilePath); } catch (e) {}
-            job.progressStep = `تم استلام وتحليل الملف بنجاح! جاري بناء الفصول والأسئلة...`;
+            job.progressStep = `تم استخراج محتوى المنهج (${(extractedText.length / 1000).toFixed(1)} ألف حرف) بنجاح! جاري هيكلة الفصول...`;
             job.progressPercent = 45;
           }
+        } else {
+          throw new Error(`تعذر الوصول إلى ملف الـ PDF من الرابط (${fileUrl}). يرجى التأكد من صحة الرابط أو صلاحيات البوكت.`);
         }
-      } catch (e) {
-        console.warn("Could not fetch fileUrl for Gemini analysis:", e);
       }
     } else if (fileBase64 && fileType) {
-      const buffer = Buffer.from(fileBase64, 'base64');
+      const buffer = Buffer.from(fileBase64, "base64");
       const sizeMB = (buffer.length / (1024 * 1024)).toFixed(1);
       extractedText = "";
 
-      // 1. Fast Unified Document Extraction (PDF via pdf-parse, DOCX via mammoth, TXT)
       job.progressStep = `جاري فحص واستخراج محتوى المذكرة (${sizeMB} ميجابايت)...`;
       job.progressPercent = 25;
 
+      const isPdfDoc =
+        fileType.includes("pdf") || (effectiveFileName && effectiveFileName.toLowerCase().endsWith(".pdf"));
+
       try {
-        const parsedDoc = await parseDocumentBuffer(buffer, fileType, fileName || "document");
+        const parsedDoc = await parseDocumentBuffer(buffer, fileType, effectiveFileName || "document");
         extractedText = parsedDoc.text;
       } catch (parseErr: any) {
         console.warn("[Job Worker] Local parseDocumentBuffer warning:", parseErr);
       }
 
-      if (extractedText && extractedText.length > 50) {
-        console.log(`[Job Worker] Document text extraction successful: ${extractedText.length} characters extracted from ${fileName || 'document'}.`);
-        contents.push({
-          text: `### SOURCE TEXTBOOK / CURRICULUM CONTENT (${fileName || "Uploaded Material"}):\n\n${extractedText.substring(0, 900000)}`
-        });
-        job.progressStep = `تم استخراج محتوى المذكرة (${(extractedText.length / 1000).toFixed(0)} ألف حرف) بنجاح! جاري البناء الأكاديمي التربوي...`;
-        job.progressPercent = 45;
-      } else {
-        // 2. Upload via Gemini Files API if large (> 5MB) or for non-text PDFs/images
-        if (buffer.length > 5 * 1024 * 1024) {
-          job.progressStep = `رفع الملف السحابي (${sizeMB} ميجابايت) عبر Gemini Cloud Files API...`;
-          job.progressPercent = 30;
-          console.log(`[Job Worker] Uploading large file (${sizeMB}MB) to Gemini Files API...`);
-
-          try {
-            const tempFilePath = path.join(os.tmpdir(), `gemini_upload_${Date.now()}_doc.pdf`);
-            fs.writeFileSync(tempFilePath, buffer);
-
-            const uploadRes = await (ai.files as any).upload({
-              file: tempFilePath,
-              mimeType: fileType
-            });
-
-            contents.push({
-              fileData: {
-                fileUri: uploadRes.uri,
-                mimeType: uploadRes.mimeType
-              }
-            });
-
-            try { fs.unlinkSync(tempFilePath); } catch (e) {}
-            job.progressStep = `تم رفع الملف بنجاح (${sizeMB}MB)! جاري التحليل الأكاديمي الشامل...`;
-            job.progressPercent = 45;
-          } catch (uploadErr: any) {
-            console.warn("[Job Worker] Files API upload warning:", uploadErr);
-            // Only push inlineData if buffer is under 15MB to prevent HTTP socket resets
-            if (buffer.length <= 15 * 1024 * 1024) {
-              contents.push({
-                inlineData: {
-                  mimeType: fileType,
-                  data: fileBase64
-                }
-              });
-            } else {
-              throw new Error(`حجم الملف كبير (${sizeMB}MB) وتعذر رفعه للسحابة. يرجى رفع ملف أصغر أو نصي.`);
-            }
-          }
-        } else {
-          contents.push({
-            inlineData: {
-              mimeType: fileType,
-              data: fileBase64
-            }
-          });
-          job.progressStep = `معالجة مستند (${fileName || ""})...`;
-          job.progressPercent = 30;
+      if ((!extractedText || extractedText.length < 350) && isPdfDoc) {
+        job.progressStep = `الكتاب ممسوح ضوئياً (${sizeMB}MB) — جاري القراءة البصرية الذكية (Vision OCR) لصفحات الكتاب...`;
+        job.progressPercent = 32;
+        const visionRes = await extractPdfTextViaVisionPages(
+          buffer,
+          async (params) => generateContentWithRetry(ai, params, ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite-preview", "gemini-3-flash-preview"]),
+          { startPage: 1, maxPagesToScan: 14, includeTocEndPages: true }
+        );
+        if (visionRes.text && visionRes.text.length > 200) {
+          extractedText = visionRes.text;
+          isScannedVisionPdf = true;
+          scannedTotalPages = visionRes.totalPages;
+          scannedLastPage = visionRes.lastScannedPage;
         }
+      }
+
+      if (extractedText && extractedText.length > 100) {
+        console.log(`[Job Worker] Document text extraction successful: ${extractedText.length} characters extracted from ${effectiveFileName || "document"}.`);
+        contents.push({
+          text: `### SOURCE TEXTBOOK / CURRICULUM CONTENT (${effectiveFileName || "Uploaded Material"}):\n\n${extractedText.substring(0, 900000)}`
+        });
+        job.progressStep = `تم استخراج محتوى المذكرة (${(extractedText.length / 1000).toFixed(1)} ألف حرف) بنجاح! جاري البناء الأكاديمي التربوي...`;
+        job.progressPercent = 45;
+      } else if (buffer.length <= 15 * 1024 * 1024) {
+        contents.push({
+          inlineData: {
+            mimeType: fileType,
+            data: fileBase64
+          }
+        });
+        job.progressStep = `معالجة مستند (${effectiveFileName || ""})...`;
+        job.progressPercent = 35;
       }
     } else {
       job.progressStep = "تحليل التوجيهات وموضوعات المقرر المطلوبة...";
@@ -1410,8 +1545,8 @@ async function runBackgroundEbookConversion(
     }
 
     const persona = detectTeacherPersona({
-      title: fileName || promptText?.substring(0, 50),
-      fileName,
+      title: effectiveFileName || promptText?.substring(0, 50),
+      fileName: effectiveFileName,
       category,
       subcategory,
       grade_level,
@@ -1422,7 +1557,7 @@ async function runBackgroundEbookConversion(
     // 🌐 Language Policy Resolution (Strict Respect for User Choice & Taxonomy)
     const isExplicitArabic = language === 'ar' || academic_system === 'general_arabic' || academic_system === 'technical';
     const isExplicitEnglish = language === 'en' || academic_system?.includes('international') || academic_system === 'general_languages';
-    const combinedProbe = `${fileName || ''} ${promptText || ''} ${subcategory || ''} ${(extractedText || '').substring(0, 5000)}`;
+    const combinedProbe = `${effectiveFileName || ''} ${promptText || ''} ${subcategory || ''} ${(extractedText || '').substring(0, 5000)}`;
     const hasArabicChar = /[\u0600-\u06FF]/.test(combinedProbe);
     const effectiveLanguage = isExplicitArabic ? 'ar' : (isExplicitEnglish ? 'en' : (hasArabicChar ? 'ar' : (language || 'ar')));
     console.log(`[Job Worker] Language Policy Resolved: ${effectiveLanguage} (Requested: ${language || 'Auto'}, System: ${academic_system || 'None'}, ArabicChars: ${hasArabicChar})`);
@@ -1432,12 +1567,28 @@ async function runBackgroundEbookConversion(
     job.progressPercent = 48;
 
     let syllabusBlueprint: DocumentSyllabusBlueprint | null = null;
+    const isGoogleCloudFile = Boolean(fileUrl && (fileUrl.includes("generativelanguage.googleapis.com") || fileUrl.startsWith("files/")));
     try {
       syllabusBlueprint = await extractDocumentBlueprint(
         extractedText || promptText || "",
-        { fileName, category, grade_level, semester, language: effectiveLanguage, academic_system },
-        async (params) => generateContentWithRetry(ai, params, ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.5-flash"])
+        { 
+          fileName: effectiveFileName, 
+          category, 
+          grade_level, 
+          semester, 
+          language: effectiveLanguage, 
+          academic_system,
+          fileUri: isGoogleCloudFile ? fileUrl : undefined,
+          fileMimeType: fileType || "application/pdf"
+        },
+        async (params) => generateContentWithRetry(ai, params, ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite-preview", "gemini-3-flash-preview", "gemini-3.5-flash"])
       );
+      if (syllabusBlueprint && isScannedVisionPdf) {
+        syllabusBlueprint.is_scanned_pdf = true;
+        syllabusBlueprint.total_pdf_pages = scannedTotalPages;
+        syllabusBlueprint.last_scanned_page = scannedLastPage;
+        syllabusBlueprint.source_file_url = fileUrl;
+      }
       console.log(`[Job Worker] Syllabus Blueprint generated: ${syllabusBlueprint.total_lessons} lessons discovered in document.`);
     } catch (bErr) {
       console.warn("[Job Worker] Blueprint extraction error, using fallback:", bErr);
@@ -1454,7 +1605,7 @@ async function runBackgroundEbookConversion(
       const groundedPrompt = buildGroundedBatchPrompt({
         lessons: initialBatch,
         persona,
-        bookTitle: syllabusBlueprint.book_title || fileName || "المقرر التعليمي المعتمد",
+        bookTitle: syllabusBlueprint.book_title || effectiveFileName || "المقرر التعليمي المعتمد",
         grade_level,
         category,
         semester,
@@ -1477,7 +1628,7 @@ async function runBackgroundEbookConversion(
           },
           temperature: 0.15,
         },
-      }, ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-3.7-flash"]);
+      }, ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite-preview", "gemini-3-flash-preview", "gemini-3.5-flash"]);
 
       parsedEbook = JSON.parse(response.text || "{}");
       if (!parsedEbook.title) parsedEbook.title = syllabusBlueprint.book_title;
@@ -1490,8 +1641,8 @@ async function runBackgroundEbookConversion(
     } else {
       // Fallback if blueprint empty
       const { prompt: instructionPrompt } = buildMasterPedagogicalPrompt({
-        title: fileName || promptText?.substring(0, 50),
-        fileName,
+        title: effectiveFileName || promptText?.substring(0, 50),
+        fileName: effectiveFileName,
         category,
         subcategory,
         grade_level,
@@ -1562,6 +1713,7 @@ async function runBackgroundEbookConversion(
       sizeCategory: parsedEbook?.sizeCategory || "short",
       createdAt: new Date().toISOString(),
       blueprint: syllabusBlueprint || undefined,
+      source_file_url: fileUrl || undefined,
       original_text: extractedText || promptText || "",
       chapters: deduplicatedChapters.map((ch: any, cIdx: number) => {
         const chapterId = `ch-${ebookId}-${cIdx + 1}`;
@@ -1613,65 +1765,58 @@ async function runBackgroundEbookConversion(
       })
     };
 
-    ebooks.push(finalizedEbook);
-    saveEbooks(ebooks); // Persist to JSON db
+    const seoKeywords = [
+      finalizedEbook.title,
+      category,
+      subcategory,
+      grade_level,
+      semester,
+      academic_system,
+      effectiveLanguage === 'ar' ? 'منهج_عربي' : 'english_curriculum',
+      'مذكرات_تفاعلية',
+      'كتاب_تفاعلي',
+      'ذكاء_اصطناعي',
+      'بنك_أسئلة',
+      'شرح_وتلخيص',
+      'خرائط_ذهنية'
+    ].filter(Boolean);
 
-    // Also persist directly to Supabase from the backend
-    try {
-      const seoKeywords = [
-        finalizedEbook.title,
-        category,
-        subcategory,
-        grade_level,
-        semester,
-        academic_system,
-        effectiveLanguage === 'ar' ? 'منهج_عربي' : 'english_curriculum',
-        'مذكرات_تفاعلية',
-        'كتاب_تفاعلي',
-        'ذكاء_اصطناعي',
-        'بنك_أسئلة',
-        'شرح_وتلخيص',
-        'خرائط_ذهنية'
-      ].filter(Boolean);
+    const academicTags = Array.from(new Set([
+      'كتاب_تفاعلي',
+      'ذكاء_اصطناعي',
+      subcategory ? `sub:${subcategory}` : '',
+      grade_level ? `grade:${grade_level}` : '',
+      semester ? `term:${semester}` : '',
+      academic_year ? `year:${academic_year}` : '',
+      academic_system ? `sys:${academic_system}` : '',
+      ...seoKeywords
+    ])).filter(Boolean);
 
-      const academicTags = Array.from(new Set([
-        'كتاب_تفاعلي',
-        'ذكاء_اصطناعي',
-        subcategory ? `sub:${subcategory}` : '',
-        grade_level ? `grade:${grade_level}` : '',
-        semester ? `term:${semester}` : '',
-        academic_year ? `year:${academic_year}` : '',
-        academic_system ? `sys:${academic_system}` : '',
-        ...seoKeywords
-      ])).filter(Boolean);
-
-      finalizedEbook.price = Number(price) || 0;
-      if (preview_video_url) {
-        finalizedEbook.preview_video_url = preview_video_url;
-      }
-      finalizedEbook.category = category || "digital_book";
-      finalizedEbook.subcategory = subcategory || "";
-      finalizedEbook.grade_level = grade_level || "";
-      finalizedEbook.semester = semester || "";
-      finalizedEbook.academic_year = academic_year || "";
-      finalizedEbook.academic_system = academic_system || "general_arabic";
-      finalizedEbook.education_level = education_level || "";
-      finalizedEbook.language = effectiveLanguage;
-      finalizedEbook.is_language_learning = Boolean(is_language_learning);
-      finalizedEbook.target_learning_language = target_learning_language || "";
-      finalizedEbook.is_stem_enhanced = false;
-      finalizedEbook.curriculum_explanation = finalizedEbook.description;
-      finalizedEbook.curriculum_mindmap = [];
-      finalizedEbook.exams = [];
-      finalizedEbook.pregeneration_status = 'completed';
-      finalizedEbook.pregeneration_percent = 100;
-      finalizedEbook.tags = academicTags;
-
-      await syncBookToSupabase(finalizedEbook);
-      console.log(`[Job Worker] Job ${jobId} successfully synced book to Supabase directly!`);
-    } catch (dbErr) {
-      console.error("[Job Worker] Error saving to Supabase from backend:", dbErr);
+    finalizedEbook.price = Number(price) || 0;
+    if (preview_video_url) {
+      finalizedEbook.preview_video_url = preview_video_url;
     }
+    finalizedEbook.category = category || "digital_book";
+    finalizedEbook.subcategory = subcategory || "";
+    finalizedEbook.grade_level = grade_level || "";
+    finalizedEbook.semester = semester || "";
+    finalizedEbook.academic_year = academic_year || "";
+    finalizedEbook.academic_system = academic_system || "general_arabic";
+    finalizedEbook.education_level = education_level || "";
+    finalizedEbook.language = effectiveLanguage;
+    finalizedEbook.is_language_learning = Boolean(is_language_learning);
+    finalizedEbook.target_learning_language = target_learning_language || "";
+    finalizedEbook.is_stem_enhanced = false;
+    finalizedEbook.curriculum_explanation = finalizedEbook.description;
+    finalizedEbook.curriculum_mindmap = [];
+    finalizedEbook.exams = [];
+    finalizedEbook.pregeneration_status = 'completed';
+    finalizedEbook.pregeneration_percent = 100;
+    finalizedEbook.tags = academicTags;
+
+    ebooks.push(finalizedEbook);
+    saveEbooks(ebooks, finalizedEbook); // Persist to JSON db & sync target book to Supabase
+    console.log(`[Job Worker] Job ${jobId} persisted and queued for Supabase sync.`);
 
     job.progressStep = "Ebook ready! Loading into bookshelf...";
     job.progressPercent = 100;
@@ -1687,6 +1832,90 @@ async function runBackgroundEbookConversion(
     return null;
   }
 }
+
+// 4.9 Dedicated Large-File Upload Endpoint directly to Google Cloud Storage + Local Cache (up to 250MB)
+const uploadDir = path.join(os.tmpdir(), "ebook_uploads");
+if (!fs.existsSync(uploadDir)) {
+  try { fs.mkdirSync(uploadDir, { recursive: true }); } catch (e) {}
+}
+
+const gcpUploader = multer({
+  dest: uploadDir,
+  limits: { fileSize: 250 * 1024 * 1024 } // 250 MB max
+});
+
+app.post("/api/upload-to-gcp", gcpUploader.single("file"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "لم يتم استلام أي ملف للرفع." });
+    }
+
+    const sizeMB = (req.file.size / (1024 * 1024)).toFixed(1);
+    const effectiveMime = req.file.mimetype || (req.file.originalname?.toLowerCase().endsWith(".pdf") ? "application/pdf" : "application/pdf");
+    const safeFileName = `${Date.now()}-${req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+
+    console.log(`[Google Cloud Upload] Processing ${req.file.originalname} (${sizeMB}MB)...`);
+
+    // 1. Always save a fast local cache copy in data/uploads/ so server conversion & chapter expansion read in 0.01s
+    const localFilePath = path.join(PERSISTENT_UPLOADS_DIR, safeFileName);
+    try {
+      fs.copyFileSync(req.file.path, localFilePath);
+    } catch (copyErr) {
+      console.warn("[Google Cloud Upload] Local cache copy notice:", copyErr);
+    }
+    const localFileUrl = `/data/uploads/${safeFileName}`;
+
+    // 2. Permanent storage in Google Cloud Storage bucket (ebookstoreg)
+    let gcsUrl: string | undefined = undefined;
+    if (process.env.GCS_ACCESS_KEY && process.env.GCS_SECRET_KEY) {
+      try {
+        const s3 = new S3Client({
+          endpoint: "https://storage.googleapis.com",
+          region: "auto",
+          credentials: {
+            accessKeyId: process.env.GCS_ACCESS_KEY,
+            secretAccessKey: process.env.GCS_SECRET_KEY
+          },
+          forcePathStyle: true
+        });
+
+        const safeKey = `uploads/${safeFileName}`;
+        const fileBuffer = fs.readFileSync(req.file.path);
+        await s3.send(new PutObjectCommand({
+          Bucket: process.env.GCS_BUCKET_NAME || "ebookstoreg",
+          Key: safeKey,
+          Body: fileBuffer,
+          ContentType: effectiveMime,
+          ContentLength: fileBuffer.length
+        }));
+
+        gcsUrl = `https://storage.googleapis.com/${process.env.GCS_BUCKET_NAME || "ebookstoreg"}/${safeKey}`;
+        console.log(`[Google Cloud Storage] Successfully saved permanent copy to bucket ebookstoreg: ${gcsUrl}`);
+      } catch (gcsErr: any) {
+        console.warn("[Google Cloud Storage] Bucket storage warning:", gcsErr?.message || gcsErr);
+      }
+    }
+
+    // Clean up temporary multer upload file
+    try { fs.unlinkSync(req.file.path); } catch (e) {}
+
+    return res.json({
+      success: true,
+      fileUrl: gcsUrl || localFileUrl,
+      gcsUrl,
+      localFileUrl,
+      fileName: req.file.originalname,
+      fileType: effectiveMime,
+      sizeBytes: req.file.size
+    });
+  } catch (err: any) {
+    console.error("[Google Cloud Upload] Upload error:", err);
+    if (req.file && fs.existsSync(req.file.path)) {
+      try { fs.unlinkSync(req.file.path); } catch (e) {}
+    }
+    return res.status(500).json({ error: "فشل رفع الملف إلى سحابة Google Cloud: " + (err?.message || err) });
+  }
+});
 
 // 5. Convert content or create ebook from prompt / file upload (Synchronous & Serverless Resilient)
 app.post("/api/ebooks", async (req, res) => {
@@ -2737,6 +2966,54 @@ app.post("/api/ebooks/:id/expand-chapters", async (req, res) => {
   // Check for pending lessons in syllabus blueprint
   let pendingLessons: SyllabusLessonBlueprint[] = ebook.blueprint ? getPendingLessons(ebook.blueprint, additionalCount) : [];
 
+  // If this is a scanned PDF and pendingLessons are exhausted (or need the next scanned pages), scan the next batch of PDF pages!
+  const sourceFileUrl = (ebook as any).source_file_url || ebook.blueprint?.source_file_url;
+  const isScannedPdf = Boolean(ebook.blueprint?.is_scanned_pdf);
+  const lastScannedPage = Number(ebook.blueprint?.last_scanned_page || 0);
+  const totalPdfPages = Number(ebook.blueprint?.total_pdf_pages || 0);
+
+  if (pendingLessons.length === 0 && isScannedPdf && sourceFileUrl && lastScannedPage < totalPdfPages) {
+    try {
+      console.log(`[Expand Chapters] Scanning next Vision OCR batch for scanned PDF (${sourceFileUrl}) starting at page ${lastScannedPage + 1}/${totalPdfPages}...`);
+      const { buffer } = await resolveCloudOrLocalFileBuffer(sourceFileUrl);
+      if (buffer) {
+        const visionRes = await extractPdfTextViaVisionPages(
+          buffer,
+          async (params) => generateContentWithRetry(ai, params, ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite-preview", "gemini-3-flash-preview"]),
+          { startPage: lastScannedPage + 1, maxPagesToScan: 12, includeTocEndPages: false }
+        );
+        if (visionRes.text && visionRes.text.length > 150) {
+          (ebook as any).original_text = ((ebook as any).original_text || "") + "\n\n" + visionRes.text;
+          const nextBlueprint = await extractDocumentBlueprint(
+            visionRes.text,
+            {
+              fileName: ebook.title,
+              category: ebook.category,
+              grade_level: (ebook as any).grade_level,
+              academic_system: (ebook as any).academic_system,
+              language: (ebook as any).language
+            },
+            async (params) => generateContentWithRetry(ai, params, ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite-preview", "gemini-3-flash-preview"])
+          );
+          const baseOrder = ebook.blueprint?.lessons?.length || currentChapters.length;
+          const appendedLessons = (nextBlueprint.lessons || []).map((l, idx) => ({
+            ...l,
+            lesson_order: baseOrder + idx + 1,
+            status: "pending" as const
+          }));
+          if (ebook.blueprint) {
+            ebook.blueprint.lessons = [...(ebook.blueprint.lessons || []), ...appendedLessons];
+            ebook.blueprint.total_lessons = ebook.blueprint.lessons.length;
+            ebook.blueprint.last_scanned_page = visionRes.lastScannedPage;
+          }
+          pendingLessons = appendedLessons.slice(0, additionalCount);
+        }
+      }
+    } catch (scanErr) {
+      console.warn("[Expand Chapters] Scanned PDF next-batch OCR warning:", scanErr);
+    }
+  }
+
   // If blueprint missing or exhausted, re-derive blueprint from source text
   if (pendingLessons.length === 0 && (ebook as any).original_text && (ebook as any).original_text.length > 200) {
     try {
@@ -2750,7 +3027,7 @@ app.post("/api/ebooks/:id/expand-chapters", async (req, res) => {
           academic_system: (ebook as any).academic_system,
           language: (ebook as any).language
         },
-        async (params) => generateContentWithRetry(ai, params, ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.5-flash"])
+        async (params) => generateContentWithRetry(ai, params, ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite-preview", "gemini-3-flash-preview"])
       );
       
       const existingCount = currentChapters.length;
@@ -2787,7 +3064,7 @@ app.post("/api/ebooks/:id/expand-chapters", async (req, res) => {
       });
     } else {
       // Check if all lessons in blueprint are already 100% completed
-      if (ebook.blueprint && ebook.blueprint.total_lessons > 0 && currentChapters.length >= ebook.blueprint.total_lessons) {
+      if (ebook.blueprint && ebook.blueprint.total_lessons > 0 && currentChapters.length >= ebook.blueprint.total_lessons && (!isScannedPdf || lastScannedPage >= totalPdfPages)) {
         return res.json({
           success: true,
           newChapters: [],
@@ -2840,7 +3117,7 @@ ${remainingSlice}
         },
         temperature: 0.15
       }
-    }, ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-3.7-flash"]);
+    }, ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite-preview", "gemini-3-flash-preview", "gemini-3.5-flash"]);
 
     const result = JSON.parse(response.text || "{}");
     const newChapters = (result.chapters || []).map((ch: any, idx: number) => {
@@ -2901,23 +3178,28 @@ ${remainingSlice}
     }
 
     ebook.chapters = [...currentChapters, ...newChapters];
-    saveEbooks(ebooks);
+    saveEbooks(ebooks, ebook);
 
     // Save to Supabase
     try {
-      await supabase.from('books').update({
-        chapters: ebook.chapters,
-        metadata: { blueprint: ebook.blueprint }
-      }).eq('id', ebook.id);
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(ebook.id));
+      if (isUuid) {
+        await supabase.from('books').update({
+          chapters: ebook.chapters
+        }).eq('id', ebook.id);
+      }
     } catch (dbErr) {
       console.warn("Supabase chapters update error:", dbErr);
     }
+
+    const pendingInBlueprint = ebook.blueprint ? ebook.blueprint.lessons.filter(l => l.status === "pending").length : 0;
+    const moreScannedPages = isScannedPdf && (ebook.blueprint?.last_scanned_page || 0) < totalPdfPages ? Math.ceil((totalPdfPages - (ebook.blueprint?.last_scanned_page || 0)) / 4) : 0;
 
     res.json({
       success: true,
       newChapters,
       totalChapters: ebook.chapters.length,
-      remainingLessons: ebook.blueprint ? ebook.blueprint.lessons.filter(l => l.status === "pending").length : 0,
+      remainingLessons: pendingInBlueprint + moreScannedPages,
       book: ebook
     });
   } catch (err: any) {

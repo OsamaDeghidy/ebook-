@@ -21,22 +21,46 @@ export function normalizeExtractedText(rawText: string): string {
   // 1. Normalize line endings
   cleaned = cleaned.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 
-  // 2. Remove null bytes and non-printable control characters (except tabs and newlines)
+  // 2. Strip pdf-parse v2 page separator markers (e.g., "-- 1 of 102 --")
+  cleaned = cleaned.replace(/^--\s*\d+\s*of\s*\d+\s*--$/gmi, "");
+  cleaned = cleaned.replace(/--\s*\d+\s*of\s*\d+\s*--/gi, "");
+
+  // 3. Remove null bytes and non-printable control characters (except tabs and newlines)
   cleaned = cleaned.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
 
-  // 3. Normalize multiple blank lines to at most two
+  // 4. Normalize multiple blank lines to at most two
   cleaned = cleaned.replace(/\n{3,}/g, "\n\n");
 
-  // 4. Remove excessive horizontal whitespace
+  // 5. Remove excessive horizontal whitespace
   cleaned = cleaned.replace(/[ \t]{2,}/g, " ");
 
-  // 5. Trim lines
+  // 6. Trim lines
   cleaned = cleaned
     .split("\n")
     .map((line) => line.trim())
-    .join("\n");
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n");
 
   return cleaned.trim();
+}
+
+/**
+ * Checks whether extracted text contains real readable Arabic or Latin text
+ * rather than empty scanned pages or corrupted custom-font glyphs (\uFFFD / Private Use Area)
+ */
+export function isMeaningfulExtractedText(text: string): boolean {
+  if (!text || text.trim().length < 350) return false;
+  const trimmed = text.trim();
+  // Base letters only (Arabic letters \u0621-\u064A without diacritics, plus Latin a-zA-Z)
+  const baseLetters = (trimmed.match(/[\u0621-\u064Aa-zA-Z]/g) || []).length;
+  const diacritics = (trimmed.match(/[\u064B-\u065F\u0670]/g) || []).length;
+  const brokenGlyphs = (trimmed.match(/[\uFFFD\u2400-\u243F\uE000-\uF8FF]/g) || []).length;
+  if (baseLetters < 250) return false;
+  // If replacement/control-picture glyphs (\uFFFD, ␦, PUA) exceed 5% of base letters, CMap is corrupted
+  if (brokenGlyphs > baseLetters * 0.05) return false;
+  // If diacritics (harakat) outnumber actual base letters, most base consonants were lost in CMap
+  if (diacritics > baseLetters * 0.85) return false;
+  return true;
 }
 
 /**
@@ -65,15 +89,24 @@ export async function parseDocumentBuffer(
       const result = await mammoth.extractRawText({ buffer });
       extractedText = result.value || "";
     } else if (isPdf) {
+      let pdfParser: PDFParse | null = null;
       try {
-        const pdfParser = new PDFParse({ data: buffer } as any);
+        pdfParser = new PDFParse({ data: buffer } as any);
         const parsed = await pdfParser.getText();
-        extractedText = parsed.text || "";
-        pageCount = (parsed as any)?.numpages || undefined;
+        const rawPdfText = parsed.text || "";
+        const pageMatch = rawPdfText.match(/--\s*\d+\s*of\s*(\d+)\s*--/i);
+        pageCount =
+          (parsed as any)?.total ||
+          (parsed as any)?.numpages ||
+          (pageMatch ? parseInt(pageMatch[1], 10) : undefined);
+        extractedText = rawPdfText;
       } catch (pdfErr) {
         console.warn("[Document Parser] PDF text parsing fallback attempt:", pdfErr);
-        // Fallback for simple ascii extraction if pdf parser meets corrupted fonts
-        extractedText = buffer.toString("utf-8");
+        extractedText = "";
+      } finally {
+        if (pdfParser) {
+          try { await pdfParser.destroy(); } catch (e) {}
+        }
       }
     } else {
       // Plain text or Markdown
@@ -84,7 +117,14 @@ export async function parseDocumentBuffer(
     throw new Error(`فشل استخراج النصوص من المستند (${fileName}): ${err.message}`);
   }
 
-  const normalized = normalizeExtractedText(extractedText);
+  let normalized = normalizeExtractedText(extractedText);
+  if (isPdf && !isMeaningfulExtractedText(normalized)) {
+    console.log(
+      `[Document Parser] PDF "${fileName}" has non-readable/scanned text layer (normalized len: ${normalized.length}, pages: ${pageCount || "?"}). Marking for Vision OCR.`
+    );
+    normalized = "";
+  }
+
   const wordCount = normalized ? normalized.split(/\s+/).filter(Boolean).length : 0;
 
   return {
@@ -98,6 +138,137 @@ export async function parseDocumentBuffer(
       : "text/plain",
     fileName,
   };
+}
+
+export const extractTextFromFileBuffer = parseDocumentBuffer;
+
+/**
+ * High-Speed Vision OCR Extractor for Scanned or Unmapped-Font PDFs
+ * Renders target PDF pages to lightweight PNG buffers via PDFParse.getScreenshot
+ * and transcribes authentic curriculum text via Gemini Flash-Lite Vision.
+ */
+export async function extractPdfTextViaVisionPages(
+  buffer: Buffer,
+  generateFn: (params: any) => Promise<any>,
+  options?: {
+    startPage?: number;
+    maxPagesToScan?: number;
+    maxPages?: number;
+    includeTocEndPages?: boolean;
+  }
+): Promise<{
+  text: string;
+  totalPages: number;
+  lastScannedPage: number;
+  lastPageScanned?: number;
+}> {
+  const startPage = Math.max(1, options?.startPage || 1);
+  const maxPagesToScan = options?.maxPagesToScan || options?.maxPages || 14;
+  const includeTocEndPages = options?.includeTocEndPages ?? (startPage === 1);
+
+  let pdfParser: PDFParse | null = null;
+  try {
+    pdfParser = new PDFParse({ data: buffer } as any);
+    const textProbe = await pdfParser.getText({ partial: [1] } as any).catch(() => ({ text: "", total: 0 }));
+    const pageMatch = (textProbe.text || "").match(/--\s*\d+\s*of\s*(\d+)\s*--/i);
+    const totalPages = (textProbe as any)?.total || (pageMatch ? parseInt(pageMatch[1], 10) : 20);
+
+    const endPage = Math.min(totalPages, startPage + maxPagesToScan - 1);
+    const pagesToRender: number[] = [];
+    for (let p = startPage; p <= endPage; p++) {
+      pagesToRender.push(p);
+    }
+
+    // Also include the last 2 pages on initial scan in case the Arabic Table of Contents (الفهرس) is at the end of the book
+    if (includeTocEndPages && totalPages > endPage + 2) {
+      pagesToRender.push(totalPages - 1, totalPages);
+    }
+
+    console.log(
+      `[Vision OCR] Rendering ${pagesToRender.length} pages (${pagesToRender.join(", ")}) of ${totalPages} total pages...`
+    );
+
+    const shotResult = await pdfParser.getScreenshot({
+      partial: pagesToRender,
+      scale: 0.85,
+    } as any);
+
+    const renderedPages: any[] = shotResult?.pages || [];
+    if (renderedPages.length === 0) {
+      return { text: "", totalPages, lastScannedPage: endPage };
+    }
+
+    // Group into batches of 5 pages per Gemini Vision call for fast parallel transcription
+    const BATCH_SIZE = 5;
+    const batches: any[][] = [];
+    for (let i = 0; i < renderedPages.length; i += BATCH_SIZE) {
+      batches.push(renderedPages.slice(i, i + BATCH_SIZE));
+    }
+
+    const batchPromises = batches.map(async (batch, bIdx) => {
+      const pageNums = batch.map((p: any, idx: number) => p.pageNumber || pagesToRender[bIdx * BATCH_SIZE + idx]);
+      const parts: any[] = [];
+
+      for (const pageObj of batch) {
+        let base64Png = "";
+        if (pageObj.dataUrl && typeof pageObj.dataUrl === "string") {
+          base64Png = pageObj.dataUrl.replace(/^data:image\/\w+;base64,/, "");
+        } else if (pageObj.data) {
+          base64Png = Buffer.from(pageObj.data).toString("base64");
+        }
+        if (base64Png) {
+          parts.push({
+            inlineData: {
+              mimeType: "image/png",
+              data: base64Png,
+            },
+          });
+        }
+      }
+
+      parts.push({
+        text: `أنت محرك قراءة واستخراج مناهج تعليمية فائق الدقة (High-Precision Academic OCR).
+استخرج كافة النصوص التعليمية الواردة في هذه الصفحات (الصفحات: ${pageNums.join("، ")}) بنفس لغتها الأصلية بدقة 100% دون أي اختصار أو حذف.
+- اكتب عناوين الوحدات والدروس والفهرس (إن وجد) بوضوح تام.
+- استخرج جميع الشروحات، التعريفات، القوانين العلمية والرياضية، الأمثلة المحلولة، الجداول، والأسئلة كما وردت في الكتاب.
+- تجاهل فقط العلامات المائية أو أرقام الهواتف الإعلانية الجانبية.`,
+      });
+
+      try {
+        const res = await generateFn({
+          contents: [{ parts }],
+          config: {
+            temperature: 0.1,
+          },
+        });
+        return `\n\n--- [صفحات المستند: ${pageNums.join(" - ")}] ---\n` + (res?.text || "");
+      } catch (ocrErr: any) {
+        console.warn(`[Vision OCR] Batch ${bIdx + 1} (pages ${pageNums.join(",")}) warning:`, ocrErr?.message || ocrErr);
+        return "";
+      }
+    });
+
+    const batchTexts = await Promise.all(batchPromises);
+    const combinedText = normalizeExtractedText(batchTexts.join("\n\n"));
+
+    console.log(
+      `[Vision OCR] Extracted ${combinedText.length} characters of authentic text from ${renderedPages.length} pages.`
+    );
+
+    return {
+      text: combinedText,
+      totalPages,
+      lastScannedPage: endPage,
+      lastPageScanned: endPage,
+    };
+  } catch (err: any) {
+    console.warn("[Vision OCR] Failed to extract via vision screenshots:", err?.message || err);
+    return { text: "", totalPages: 0, lastScannedPage: startPage, lastPageScanned: startPage };
+  } finally {
+    if (pdfParser) {
+      try { await pdfParser.destroy(); } catch (e) {}
+    }
+  }
 }
 
 /**

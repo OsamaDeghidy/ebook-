@@ -1,1 +1,439 @@
-[]
+[
+  {
+    "id": "reel-1791837629291",
+    "book_id": "f7dc0289-cb3a-41dd-a65f-aba6aec34abc",
+    "book_title": "مبادئ تكنولوجيا المعلومات والاتصالات",
+    "author_name": "خبير المادة",
+    "category": "academic_curriculum",
+    "subcategory": "Computer Science & ICT",
+    "thumbnail_url": "",
+    "chapter_id": "ch-f7dc0289-cb3a-41dd-a65f-aba6aec34abc-1",
+    "chapter_title": "مقدمة في تكنولوجيا المعلومات والاتصالات",
+    "style_type": "chalkboard",
+    "style": "chalkboard",
+    "voice": "ar-XA-Chirp3-HD-Fenrir",
+    "language": "ar",
+    "duration_seconds": 45,
+    "audio_url": "https://ydlzvuutjgelpxueufgn.supabase.co/storage/v1/object/public/book-audios/reel_f7dc0289-cb3a-41dd-a65f-aba6aec34abc_ch-f7dc0289-cb3a-41dd-a65f-aba6aec34abc-1_1791837622180.mp3",
+    "narration_script": "هَلْ سَأَلْتَ نَفْسَكَ يَوْماً... كَيْفَ تَتَحَوَّلُ الأَرْقَامُ الصَّمَّاءُ إِلَى قَرَارَاتٍ ذَكِيَّةٍ؟ تَأَمَّلْ مَعِي! اَلْبَيَانَاتُ هِيَ اَلْحَقَائِقُ اَلْخَامُ اَلَّتِي لَمْ تُعَالَجْ بَعْدُ، كَدَرَجَاتِ اَلْحَرَارَةِ اَلْيَوْمِيَّةِ... وَالسِّرُّ هُنَا! عِنْدَمَا نَقُومُ بِمُعَالَجَتِهَا وَتَنْظِيمِهَا، تَتَحَوَّلُ سِحْرِيّاً إِلَى \"مَعْلُومَاتٍ\" ذَاتِ مَعْنًى وَقِيمَةٍ تُسَاهِمُ فِي اتِّخَاذِ اَلْقَرَارِ! تِكْنُولُوجْيَا اَلْمَعْلُومَاتِ وَالِاتِّصَالَاتِ (ICT) هِيَ اَلْمُحَرِّكُ اَلَّذِي يَمْنَحُنَا الأَدَوَاتِ لِإِنْشَاءِ وَإِدَارَةِ هَذَا اَلتَّحَوُّلِ اَلذَّكِيِّ فِي حَيَاتِنَا... فَكِّرْ فِيهَا دَائِماً: اَلْبَيَانَاتُ كَالْمَادَّةِ اَلْخَامِ، وَالْمَعْلُومَاتُ هِيَ اَلْمَنْتُوجُ اَلْنِهَائِيُّ اَلْمُفِيدُ!",
+    "scenes": [
+      {
+        "id": "scene-1",
+        "act": "hook",
+        "title": "السر خلف البيانات",
+        "badgeText": "🔥 فكرة محورية",
+        "visualType": "quote",
+        "visualData": {
+          "highlightQuote": "كيف تتحول الأرقام الصماء إلى قرارات ذكية؟"
+        },
+        "startSec": 0,
+        "endSec": 10
+      },
+      {
+        "id": "scene-2",
+        "act": "concept",
+        "title": "البيانات مقابل المعلومات",
+        "badgeText": "🧠 الشرح العميق",
+        "visualType": "bullet_points",
+        "visualData": {
+          "bullets": [
+            "البيانات: حقائق وأرقام خام غير معالجة.",
+            "المعالجة: تنظيم وتحليل البيانات لتحويلها لقيمة.",
+            "المعلومات: مخرجات ذات معنى تدعم اتخاذ القرار."
+          ],
+          "formulaLatex": "\\text{Data} \\xrightarrow{\\text{Processing}} \\text{Information}",
+          "codeSnippet": "",
+          "imagePrompt": "A dynamic 3D diagram showing raw data blocks entering a modern CPU processing hub and exiting as glowing structured graphs and actionable insights."
+        },
+        "startSec": 10,
+        "endSec": 30
+      },
+      {
+        "id": "scene-3",
+        "act": "takeaway",
+        "title": "الخلاصة الجوهرية",
+        "badgeText": "🏆 التطبيق والنتيجة",
+        "visualType": "bullet_points",
+        "visualData": {
+          "highlightQuote": "البيانات هي المادة الخام، والمعلومات هي المنتج النهائي المتبوع بقرار ذكي."
+        },
+        "startSec": 30,
+        "endSec": 45
+      }
+    ],
+    "word_timings": [
+      {
+        "word": "هَلْ",
+        "startMs": 0,
+        "endMs": 588
+      },
+      {
+        "word": "سَأَلْتَ",
+        "startMs": 588,
+        "endMs": 1176
+      },
+      {
+        "word": "نَفْسَكَ",
+        "startMs": 1176,
+        "endMs": 1765
+      },
+      {
+        "word": "يَوْماً...",
+        "startMs": 1765,
+        "endMs": 2353
+      },
+      {
+        "word": "كَيْفَ",
+        "startMs": 2353,
+        "endMs": 2941
+      },
+      {
+        "word": "تَتَحَوَّلُ",
+        "startMs": 2941,
+        "endMs": 3529
+      },
+      {
+        "word": "الأَرْقَامُ",
+        "startMs": 3529,
+        "endMs": 4118
+      },
+      {
+        "word": "الصَّمَّاءُ",
+        "startMs": 4118,
+        "endMs": 4706
+      },
+      {
+        "word": "إِلَى",
+        "startMs": 4706,
+        "endMs": 5294
+      },
+      {
+        "word": "قَرَارَاتٍ",
+        "startMs": 5294,
+        "endMs": 5882
+      },
+      {
+        "word": "ذَكِيَّةٍ؟",
+        "startMs": 5882,
+        "endMs": 6471
+      },
+      {
+        "word": "تَأَمَّلْ",
+        "startMs": 6471,
+        "endMs": 7059
+      },
+      {
+        "word": "مَعِي!",
+        "startMs": 7059,
+        "endMs": 7647
+      },
+      {
+        "word": "اَلْبَيَانَاتُ",
+        "startMs": 7647,
+        "endMs": 8235
+      },
+      {
+        "word": "هِيَ",
+        "startMs": 8235,
+        "endMs": 8824
+      },
+      {
+        "word": "اَلْحَقَائِقُ",
+        "startMs": 8824,
+        "endMs": 9412
+      },
+      {
+        "word": "اَلْخَامُ",
+        "startMs": 9412,
+        "endMs": 10000
+      },
+      {
+        "word": "اَلَّتِي",
+        "startMs": 10000,
+        "endMs": 10588
+      },
+      {
+        "word": "لَمْ",
+        "startMs": 10588,
+        "endMs": 11176
+      },
+      {
+        "word": "تُعَالَجْ",
+        "startMs": 11176,
+        "endMs": 11765
+      },
+      {
+        "word": "بَعْدُ،",
+        "startMs": 11765,
+        "endMs": 12353
+      },
+      {
+        "word": "كَدَرَجَاتِ",
+        "startMs": 12353,
+        "endMs": 12941
+      },
+      {
+        "word": "اَلْحَرَارَةِ",
+        "startMs": 12941,
+        "endMs": 13529
+      },
+      {
+        "word": "اَلْيَوْمِيَّةِ...",
+        "startMs": 13529,
+        "endMs": 14118
+      },
+      {
+        "word": "وَالسِّرُّ",
+        "startMs": 14118,
+        "endMs": 14706
+      },
+      {
+        "word": "هُنَا!",
+        "startMs": 14706,
+        "endMs": 15294
+      },
+      {
+        "word": "عِنْدَمَا",
+        "startMs": 15294,
+        "endMs": 15882
+      },
+      {
+        "word": "نَقُومُ",
+        "startMs": 15882,
+        "endMs": 16471
+      },
+      {
+        "word": "بِمُعَالَجَتِهَا",
+        "startMs": 16471,
+        "endMs": 17059
+      },
+      {
+        "word": "وَتَنْظِيمِهَا،",
+        "startMs": 17059,
+        "endMs": 17647
+      },
+      {
+        "word": "تَتَحَوَّلُ",
+        "startMs": 17647,
+        "endMs": 18235
+      },
+      {
+        "word": "سِحْرِيّاً",
+        "startMs": 18235,
+        "endMs": 18824
+      },
+      {
+        "word": "إِلَى",
+        "startMs": 18824,
+        "endMs": 19412
+      },
+      {
+        "word": "\"مَعْلُومَاتٍ\"",
+        "startMs": 19412,
+        "endMs": 20000
+      },
+      {
+        "word": "ذَاتِ",
+        "startMs": 20000,
+        "endMs": 20588
+      },
+      {
+        "word": "مَعْنًى",
+        "startMs": 20588,
+        "endMs": 21176
+      },
+      {
+        "word": "وَقِيمَةٍ",
+        "startMs": 21176,
+        "endMs": 21765
+      },
+      {
+        "word": "تُسَاهِمُ",
+        "startMs": 21765,
+        "endMs": 22353
+      },
+      {
+        "word": "فِي",
+        "startMs": 22353,
+        "endMs": 22941
+      },
+      {
+        "word": "اتِّخَاذِ",
+        "startMs": 22941,
+        "endMs": 23529
+      },
+      {
+        "word": "اَلْقَرَارِ!",
+        "startMs": 23529,
+        "endMs": 24118
+      },
+      {
+        "word": "تِكْنُولُوجْيَا",
+        "startMs": 24118,
+        "endMs": 24706
+      },
+      {
+        "word": "اَلْمَعْلُومَاتِ",
+        "startMs": 24706,
+        "endMs": 25294
+      },
+      {
+        "word": "وَالِاتِّصَالَاتِ",
+        "startMs": 25294,
+        "endMs": 25882
+      },
+      {
+        "word": "(ICT)",
+        "startMs": 25882,
+        "endMs": 26471
+      },
+      {
+        "word": "هِيَ",
+        "startMs": 26471,
+        "endMs": 27059
+      },
+      {
+        "word": "اَلْمُحَرِّكُ",
+        "startMs": 27059,
+        "endMs": 27647
+      },
+      {
+        "word": "اَلَّذِي",
+        "startMs": 27647,
+        "endMs": 28235
+      },
+      {
+        "word": "يَمْنَحُنَا",
+        "startMs": 28235,
+        "endMs": 28824
+      },
+      {
+        "word": "الأَدَوَاتِ",
+        "startMs": 28824,
+        "endMs": 29412
+      },
+      {
+        "word": "لِإِنْشَاءِ",
+        "startMs": 29412,
+        "endMs": 30000
+      },
+      {
+        "word": "وَإِدَارَةِ",
+        "startMs": 30000,
+        "endMs": 30588
+      },
+      {
+        "word": "هَذَا",
+        "startMs": 30588,
+        "endMs": 31176
+      },
+      {
+        "word": "اَلتَّحَوُّلِ",
+        "startMs": 31176,
+        "endMs": 31765
+      },
+      {
+        "word": "اَلذَّكِيِّ",
+        "startMs": 31765,
+        "endMs": 32353
+      },
+      {
+        "word": "فِي",
+        "startMs": 32353,
+        "endMs": 32941
+      },
+      {
+        "word": "حَيَاتِنَا...",
+        "startMs": 32941,
+        "endMs": 33529
+      },
+      {
+        "word": "فَكِّرْ",
+        "startMs": 33529,
+        "endMs": 34118
+      },
+      {
+        "word": "فِيهَا",
+        "startMs": 34118,
+        "endMs": 34706
+      },
+      {
+        "word": "دَائِماً:",
+        "startMs": 34706,
+        "endMs": 35294
+      },
+      {
+        "word": "اَلْبَيَانَاتُ",
+        "startMs": 35294,
+        "endMs": 35882
+      },
+      {
+        "word": "كَالْمَادَّةِ",
+        "startMs": 35882,
+        "endMs": 36471
+      },
+      {
+        "word": "اَلْخَامِ،",
+        "startMs": 36471,
+        "endMs": 37059
+      },
+      {
+        "word": "وَالْمَعْلُومَاتُ",
+        "startMs": 37059,
+        "endMs": 37647
+      },
+      {
+        "word": "هِيَ",
+        "startMs": 37647,
+        "endMs": 38235
+      },
+      {
+        "word": "اَلْمَنْتُوجُ",
+        "startMs": 38235,
+        "endMs": 38824
+      },
+      {
+        "word": "اَلْنِهَائِيُّ",
+        "startMs": 38824,
+        "endMs": 39412
+      },
+      {
+        "word": "اَلْمُفِيدُ!",
+        "startMs": 39412,
+        "endMs": 40000
+      }
+    ],
+    "visual_cards": [
+      {
+        "title": "معادلة التحول الرقمي",
+        "content": "البيانات (مدخلات خام) + معالجة وتنظيم = معلومات (مخرجات مفيدة)",
+        "type": "formula",
+        "startSec": 5,
+        "endSec": 20
+      },
+      {
+        "title": "مفهوم ICT",
+        "content": "تكنولوجيا المعلومات والاتصالات هي الأجهزة والبرمجيات والشبكات المستخدمة لإدارة وتبادل المعلومات.",
+        "type": "diagram",
+        "startSec": 21,
+        "endSec": 35
+      }
+    ],
+    "interactive_quiz": {
+      "question": "ما الفرق الجوهري بين 'البيانات' و'المعلومات'؟",
+      "options": [
+        "البيانات هي المخرجات والمعلومات هي المدخلات",
+        "البيانات حقائق خام غير معالجة، بينما المعلومات مخرجات معالجة وذات معنى",
+        "لا يوجد أي فرق بينهما وهما كلمتان لمعنى واحد"
+      ],
+      "correctIndex": 1,
+      "triggerSec": 32,
+      "explanation": "البيانات تمثل الحقائق الخام قبل المعالجة (مثل درجات الحرارة المسجلة)، بينما المعلومات هي المخرجات المنظمة والمعالجة (مثل تقرير متوسط درجات الحرارة)."
+    },
+    "likes_count": 32,
+    "views_count": 183,
+    "completions_count": 45,
+    "is_public_teaser": true,
+    "created_at": "2026-10-12T20:40:29.291Z"
+  }
+]

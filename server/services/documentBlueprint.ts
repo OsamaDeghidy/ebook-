@@ -19,6 +19,10 @@ export interface DocumentSyllabusBlueprint {
   detected_units: string[];
   lessons: SyllabusLessonBlueprint[];
   raw_full_text?: string;
+  is_scanned_pdf?: boolean;
+  total_pdf_pages?: number;
+  last_scanned_page?: number;
+  source_file_url?: string;
   createdAt: string;
 }
 
@@ -191,15 +195,17 @@ export async function extractDocumentBlueprint(
     semester?: string;
     language?: string;
     academic_system?: string;
+    fileUri?: string;
+    fileMimeType?: string;
   },
   generateFn: (params: any) => Promise<any>
 ): Promise<DocumentSyllabusBlueprint> {
   const isExplicitArabic = metadata.language === 'ar' || metadata.academic_system === 'general_arabic' || metadata.academic_system === 'technical';
   const isExplicitEnglish = metadata.language === 'en' || metadata.academic_system?.includes('international') || metadata.academic_system === 'general_languages';
-  const hasArabicChar = /[\u0600-\u06FF]/.test(extractedText || '');
+  const hasArabicChar = /[\u0600-\u06FF]/.test(extractedText || metadata.fileName || '');
   const isArabic = isExplicitArabic || (!isExplicitEnglish && hasArabicChar);
 
-  if (!extractedText || extractedText.length < 50) {
+  if ((!extractedText || extractedText.length < 50) && !metadata.fileUri) {
     return {
       book_title: metadata.fileName || (isArabic ? "المقرر التعليمي" : "Educational Course"),
       total_lessons: 1,
@@ -219,7 +225,7 @@ export async function extractDocumentBlueprint(
   }
 
   // Scan full text (up to 300,000 characters for complete syllabus discovery)
-  const previewText = extractedText.substring(0, 300000);
+  const previewText = extractedText ? extractedText.substring(0, 300000) : "";
 
   const blueprintPrompt = `
 You are the Master Educational Document Architect.
@@ -232,10 +238,10 @@ DOCUMENT METADATA:
 - Semester: "${metadata.semester || 'Term 1'}"
 - Required Language: "${isArabic ? 'Arabic (العربية)' : 'English (or source language)'}"
 
-DOCUMENT TEXT TO SCAN:
+${previewText ? `DOCUMENT TEXT TO SCAN:
 """
 ${previewText}
-"""
+"""` : 'NOTE: The complete document is attached as cloud file data. Perform exhaustive discovery scan across all units and lessons.'}
 
 🚨 CRITICAL MANDATORY DISCOVERY & ORDERING RULES (P0):
 0. 🌐 STRICT TARGET LANGUAGE MANDATE (P0):
@@ -271,8 +277,19 @@ ${previewText}
 `;
 
   try {
+    const promptContents: any[] = [];
+    if (metadata.fileUri) {
+      promptContents.push({
+        fileData: {
+          fileUri: metadata.fileUri,
+          mimeType: metadata.fileMimeType || 'application/pdf'
+        }
+      });
+    }
+    promptContents.push(blueprintPrompt);
+
     const response = await generateFn({
-      contents: [blueprintPrompt],
+      contents: promptContents,
       config: {
         responseMimeType: "application/json",
         responseSchema: blueprintResponseSchema,
