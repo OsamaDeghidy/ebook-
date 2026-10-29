@@ -9,11 +9,11 @@ import {
   Target, GraduationCap, LayoutGrid, Table2, 
   ChevronDown, ChevronUp, Sparkles, CheckCircle2,
   ZoomIn, ZoomOut, Check, Clock, Maximize2, Minimize2,
-  Headphones, X, Compass, FlaskConical, Scale
+  Headphones, X, Compass, FlaskConical, Scale,
+  Edit3, Save, Undo, Redo, Bold, Italic, Heading1, Heading2, List, ListOrdered, Quote, Code, Eye
 } from 'lucide-react';
 import { Chapter } from '../types';
 import { useGlobalAudio } from '../hooks/useGlobalAudio';
-import { ContextualAiTutor } from './ai/ContextualAiTutor';
 import { sanitizeBookContent } from '../utils/sanitizeBookContent';
 import { useLanguage } from '../i18n/LanguageContext';
 
@@ -862,16 +862,110 @@ function ChapterWorkedExampleAndComparison({ chapter }: { chapter: Chapter }) {
  */
 interface ReadSectionProps {
   chapter: Chapter;
+  isInstructorOrAdmin?: boolean;
+  onSaveChapter?: (updatedChapter: Chapter) => Promise<void>;
 }
 
-export function ReadSection({ chapter }: ReadSectionProps) {
+export function ReadSection({ chapter, isInstructorOrAdmin, onSaveChapter }: ReadSectionProps) {
   const { t, language, dir } = useLanguage();
   const { isItemPlaying, isItemLoading, play, stop } = useGlobalAudio();
-  const [fontSizeLevel, setFontSizeLevel] = useState<'normal' | 'large' | 'xlarge'>('normal');
   const [showOriginalSource, setShowOriginalSource] = useState(false);
   const [isZenMode, setIsZenMode] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [selectedConcept, setSelectedConcept] = useState<{ title: string; desc: string } | null>(null);
+
+  // 📝 INLINE WORD-LIKE EDITOR STATE FOR INSTRUCTORS
+  const [isInlineEditing, setIsInlineEditing] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(chapter.title);
+  const [editedSummary, setEditedSummary] = useState(chapter.summary || '');
+  const [editedContent, setEditedContent] = useState(chapter.content || '');
+  const [isSaving, setIsSaving] = useState(false);
+  const [editTab, setEditTab] = useState<'editor' | 'preview'>('editor');
+  const [saveSuccessMsg, setSaveSuccessMsg] = useState(false);
+
+  // Undo / Redo history
+  const [history, setHistory] = useState<Array<{ title: string; summary: string; content: string }>>([
+    { title: chapter.title, summary: chapter.summary || '', content: chapter.content || '' }
+  ]);
+  const [historyIdx, setHistoryIdx] = useState(0);
+
+  const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    setEditedTitle(chapter.title);
+    setEditedSummary(chapter.summary || '');
+    setEditedContent(chapter.content || '');
+    setIsInlineEditing(false);
+    setHistory([{ title: chapter.title, summary: chapter.summary || '', content: chapter.content || '' }]);
+    setHistoryIdx(0);
+  }, [chapter.id]);
+
+  const recordHistory = (title: string, summary: string, content: string) => {
+    const nextHistory = history.slice(0, historyIdx + 1);
+    nextHistory.push({ title, summary, content });
+    if (nextHistory.length > 30) nextHistory.shift();
+    setHistory(nextHistory);
+    setHistoryIdx(nextHistory.length - 1);
+  };
+
+  const insertFormatting = (prefix: string, suffix: string = '') => {
+    const el = contentTextareaRef.current;
+    if (!el) return;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const selectedText = editedContent.substring(start, end) || 'نص هنا';
+    const newContent = editedContent.substring(0, start) + prefix + selectedText + suffix + editedContent.substring(end);
+    
+    setEditedContent(newContent);
+    recordHistory(editedTitle, editedSummary, newContent);
+
+    setTimeout(() => {
+      el.focus();
+      el.setSelectionRange(start + prefix.length, start + prefix.length + selectedText.length);
+    }, 50);
+  };
+
+  const handleUndo = () => {
+    if (historyIdx > 0) {
+      const prev = history[historyIdx - 1];
+      setEditedTitle(prev.title);
+      setEditedSummary(prev.summary);
+      setEditedContent(prev.content);
+      setHistoryIdx(historyIdx - 1);
+    }
+  };
+
+  const handleRedo = () => {
+    if (historyIdx < history.length - 1) {
+      const next = history[historyIdx + 1];
+      setEditedTitle(next.title);
+      setEditedSummary(next.summary);
+      setEditedContent(next.content);
+      setHistoryIdx(historyIdx + 1);
+    }
+  };
+
+  const handleSaveInline = async () => {
+    if (!onSaveChapter) return;
+    setIsSaving(true);
+    try {
+      await onSaveChapter({
+        ...chapter,
+        title: editedTitle.trim() || chapter.title,
+        summary: editedSummary.trim(),
+        content: editedContent.trim()
+      });
+      setSaveSuccessMsg(true);
+      setTimeout(() => {
+        setSaveSuccessMsg(false);
+        setIsInlineEditing(false);
+      }, 1000);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
@@ -1024,9 +1118,7 @@ export function ReadSection({ chapter }: ReadSectionProps) {
   };
 
   const getFontSizeClass = () => {
-    if (fontSizeLevel === 'large') return 'text-base sm:text-lg leading-relaxed';
-    if (fontSizeLevel === 'xlarge') return 'text-lg sm:text-xl leading-loose';
-    return 'text-xs sm:text-sm leading-relaxed';
+    return 'text-sm sm:text-base leading-relaxed text-slate-800';
   };
 
   return (
@@ -1076,31 +1168,6 @@ export function ReadSection({ chapter }: ReadSectionProps) {
             <span className="hidden sm:inline">{isZenMode ? 'إنهاء التركيز' : 'وضع التركيز 🧘'}</span>
           </button>
 
-          {/* FONT SIZER */}
-          <div className="flex items-center bg-white/10 p-1 rounded-2xl border border-white/10">
-            <button
-              onClick={() => setFontSizeLevel('normal')}
-              className={`px-2.5 py-1 rounded-xl text-xs font-bold transition ${fontSizeLevel === 'normal' ? 'bg-amber-400 text-slate-950' : 'text-gray-300 hover:text-white'}`}
-              title="خط عادي"
-            >
-              A
-            </button>
-            <button
-              onClick={() => setFontSizeLevel('large')}
-              className={`px-2.5 py-1 rounded-xl text-xs font-black transition ${fontSizeLevel === 'large' ? 'bg-amber-400 text-slate-950' : 'text-gray-300 hover:text-white'}`}
-              title="خط كبير"
-            >
-              A+
-            </button>
-            <button
-              onClick={() => setFontSizeLevel('xlarge')}
-              className={`px-2.5 py-1 rounded-xl text-xs font-black transition ${fontSizeLevel === 'xlarge' ? 'bg-amber-400 text-slate-950' : 'text-gray-300 hover:text-white'}`}
-              title="خط عريض جداً"
-            >
-              A++
-            </button>
-          </div>
-
           {/* MASTER AUDIO TRIGGER BUTTON */}
           <button
             onClick={handleToggleMasterAudio}
@@ -1135,39 +1202,31 @@ export function ReadSection({ chapter }: ReadSectionProps) {
 
 
       {/* 🧭 LESSON PILLARS QUICK JUMP ANCHORS BAR */}
-      <div className="sticky top-2 z-40 bg-white/95 backdrop-blur-md p-2 rounded-2xl border border-indigo-100 shadow-sm flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+      <div className="bg-slate-50 p-2 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center gap-1.5 overflow-x-auto scrollbar-none">
         <button
           onClick={() => scrollToSection('learning-objectives')}
-          className="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-xs font-black shrink-0 transition flex items-center gap-1.5"
+          className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold shrink-0 transition flex items-center gap-1.5 border border-slate-200"
         >
-          <Target className="w-3.5 h-3.5 text-indigo-600" />
+          <Target className="w-3.5 h-3.5 text-teal-600" />
           <span>🎯 نواتج التعلّم</span>
         </button>
 
         {conceptsArr.length > 0 && (
           <button
             onClick={() => scrollToSection('core-concepts')}
-            className="px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-black shrink-0 transition flex items-center gap-1.5"
+            className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold shrink-0 transition flex items-center gap-1.5 border border-slate-200"
           >
-            <Lightbulb className="w-3.5 h-3.5 text-amber-600" />
+            <Lightbulb className="w-3.5 h-3.5 text-amber-500" />
             <span>💡 المفاهيم والقواعد</span>
           </button>
         )}
 
         <button
-          onClick={() => scrollToSection('worked-examples')}
-          className="px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-900 text-xs font-black shrink-0 transition flex items-center gap-1.5"
-        >
-          <Sigma className="w-3.5 h-3.5 text-purple-600" />
-          <span>📐 الأمثلة والتطبيق</span>
-        </button>
-
-        <button
           onClick={() => scrollToSection('detailed-content')}
-          className="px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 text-xs font-black shrink-0 transition flex items-center gap-1.5"
+          className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold shrink-0 transition flex items-center gap-1.5 border border-slate-200"
         >
-          <BookOpen className="w-3.5 h-3.5 text-blue-600" />
-          <span>📖 الشرح التفصيلي</span>
+          <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
+          <span>📖 الشرح والمحتوى</span>
         </button>
 
         {normalizedOriginal && (
@@ -1176,13 +1235,260 @@ export function ReadSection({ chapter }: ReadSectionProps) {
               setShowOriginalSource(true);
               setTimeout(() => scrollToSection('original-source'), 100);
             }}
-            className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-black shrink-0 transition flex items-center gap-1.5"
+            className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold shrink-0 transition flex items-center gap-1.5 border border-slate-200"
           >
             <FileText className="w-3.5 h-3.5 text-slate-600" />
-            <span>📜 النص الأصلي للمذكرة</span>
+            <span>📜 النص الأصلي</span>
+          </button>
+        )}
+
+        {/* INLINE WORD-LIKE EDITOR BUTTON FOR INSTRUCTORS */}
+        {isInstructorOrAdmin && (
+          <button
+            onClick={() => {
+              setIsInlineEditing(!isInlineEditing);
+              if (!isInlineEditing) {
+                setEditedTitle(chapter.title);
+                setEditedSummary(chapter.summary || '');
+                setEditedContent(chapter.content || '');
+              }
+            }}
+            className={`px-3 py-1.5 rounded-xl text-xs font-black shrink-0 transition flex items-center gap-1.5 border shadow-xs cursor-pointer ${
+              isInlineEditing
+                ? 'bg-amber-400 text-slate-950 border-amber-500'
+                : 'bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-700'
+            }`}
+          >
+            <Edit3 className="w-3.5 h-3.5" />
+            <span>{isInlineEditing ? 'إغلاق التحرير' : 'تحرير الدرس فوراً (Word Editor) ✏️'}</span>
           </button>
         )}
       </div>
+
+      {/* ✏️ INLINE WORD-LIKE EDITOR (INSTRUCTORS ONLY) */}
+      {isInlineEditing && (
+        <div className="bg-white border-2 border-indigo-400 rounded-3xl p-5 sm:p-7 shadow-xl space-y-5 animate-slide-up">
+          {/* Editor Header */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-indigo-100">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold">
+                <Edit3 className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-sm font-black text-indigo-950">وضع التحرير المباشر السريع (Word Editor)</h4>
+                <p className="text-[10px] text-gray-500">عدّل نص الدرس، العنوان، أو النواتج واحفظ فوراً في المنصة</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {/* Undo / Redo */}
+              <button
+                type="button"
+                onClick={handleUndo}
+                disabled={historyIdx <= 0}
+                className="p-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-30 transition cursor-pointer"
+                title="تراجع (Ctrl+Z)"
+              >
+                <Undo className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={handleRedo}
+                disabled={historyIdx >= history.length - 1}
+                className="p-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-30 transition cursor-pointer"
+                title="إعادة (Ctrl+Y)"
+              >
+                <Redo className="w-4 h-4" />
+              </button>
+
+              {/* Edit / Preview Tabs */}
+              <div className="flex items-center bg-gray-100 p-0.5 rounded-xl text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setEditTab('editor')}
+                  className={`px-3 py-1 rounded-lg transition cursor-pointer ${editTab === 'editor' ? 'bg-white text-indigo-700 shadow-xs' : 'text-gray-600'}`}
+                >
+                  تحرير ✍️
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditTab('preview')}
+                  className={`px-3 py-1 rounded-lg transition cursor-pointer ${editTab === 'preview' ? 'bg-white text-indigo-700 shadow-xs' : 'text-gray-600'}`}
+                >
+                  معاينة 👁️
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Chapter Title & Summary fields */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="md:col-span-1 space-y-1">
+              <label className="text-[11px] font-black text-gray-700 block">عنوان الدرس / الفصل:</label>
+              <input
+                type="text"
+                value={editedTitle}
+                onChange={(e) => {
+                  setEditedTitle(e.target.value);
+                  recordHistory(e.target.value, editedSummary, editedContent);
+                }}
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm font-bold text-gray-900 focus:bg-white focus:border-indigo-500 outline-none"
+              />
+            </div>
+            <div className="md:col-span-2 space-y-1">
+              <label className="text-[11px] font-black text-gray-700 block">ملخص نواتج التعلم المستهدفة:</label>
+              <input
+                type="text"
+                value={editedSummary}
+                onChange={(e) => {
+                  setEditedSummary(e.target.value);
+                  recordHistory(editedTitle, e.target.value, editedContent);
+                }}
+                placeholder="أدخل ملخصاً سريعاً أو نواتج التعلم..."
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm text-gray-900 focus:bg-white focus:border-indigo-500 outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Word Formatting Toolbar */}
+          {editTab === 'editor' && (
+            <div className="flex flex-wrap items-center gap-1.5 p-2 bg-gray-100 rounded-2xl border border-gray-200 text-xs font-bold text-gray-700">
+              <button
+                type="button"
+                onClick={() => insertFormatting('**', '**')}
+                className="p-1.5 px-2 bg-white hover:bg-indigo-50 hover:text-indigo-600 border border-gray-200 rounded-lg transition cursor-pointer"
+                title="نص عريض (Bold)"
+              >
+                <Bold className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => insertFormatting('*', '*')}
+                className="p-1.5 px-2 bg-white hover:bg-indigo-50 hover:text-indigo-600 border border-gray-200 rounded-lg transition cursor-pointer"
+                title="نص مائل (Italic)"
+              >
+                <Italic className="w-3.5 h-3.5" />
+              </button>
+              <span className="w-px h-4 bg-gray-300 mx-0.5" />
+              <button
+                type="button"
+                onClick={() => insertFormatting('\n## ', '\n')}
+                className="p-1.5 px-2 bg-white hover:bg-indigo-50 hover:text-indigo-600 border border-gray-200 rounded-lg transition cursor-pointer"
+                title="عنوان رئيسي (H2)"
+              >
+                <Heading1 className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => insertFormatting('\n### ', '\n')}
+                className="p-1.5 px-2 bg-white hover:bg-indigo-50 hover:text-indigo-600 border border-gray-200 rounded-lg transition cursor-pointer"
+                title="عنوان فرعي (H3)"
+              >
+                <Heading2 className="w-3.5 h-3.5" />
+              </button>
+              <span className="w-px h-4 bg-gray-300 mx-0.5" />
+              <button
+                type="button"
+                onClick={() => insertFormatting('\n- ', '\n')}
+                className="p-1.5 px-2 bg-white hover:bg-indigo-50 hover:text-indigo-600 border border-gray-200 rounded-lg transition cursor-pointer"
+                title="قائمة نقطية"
+              >
+                <List className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => insertFormatting('\n1. ', '\n')}
+                className="p-1.5 px-2 bg-white hover:bg-indigo-50 hover:text-indigo-600 border border-gray-200 rounded-lg transition cursor-pointer"
+                title="قائمة رقمية"
+              >
+                <ListOrdered className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => insertFormatting('\n> ', '\n')}
+                className="p-1.5 px-2 bg-white hover:bg-indigo-50 hover:text-indigo-600 border border-gray-200 rounded-lg transition cursor-pointer"
+                title="اقتباس أو ملحوظة مهمة"
+              >
+                <Quote className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => insertFormatting('`', '`')}
+                className="p-1.5 px-2 bg-white hover:bg-indigo-50 hover:text-indigo-600 border border-gray-200 rounded-lg transition cursor-pointer"
+                title="معادلة / رمز"
+              >
+                <Code className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => insertFormatting('\n| العنصر | الشرح والتطبيق |\n| :--- | :--- |\n| مفهوم 1 | شرح وتفصيل |\n| مفهوم 2 | شرح وتفصيل |\n')}
+                className="p-1.5 px-2 bg-white hover:bg-indigo-50 hover:text-indigo-600 border border-gray-200 rounded-lg transition text-[11px] cursor-pointer"
+                title="إدراج جدول مقارنة"
+              >
+                جدول 📊
+              </button>
+              <button
+                type="button"
+                onClick={() => insertFormatting('\n> [!NOTE]\n> ملحوظة هامة للامتحان: ')}
+                className="p-1.5 px-2 bg-white hover:bg-indigo-50 hover:text-indigo-600 border border-gray-200 rounded-lg transition text-[11px] cursor-pointer"
+                title="إدراج تنبيه للامتحان"
+              >
+                تنبيه 💡
+              </button>
+            </div>
+          )}
+
+          {/* Editor Body or Preview Body */}
+          {editTab === 'editor' ? (
+            <textarea
+              ref={contentTextareaRef}
+              value={editedContent}
+              onChange={(e) => {
+                setEditedContent(e.target.value);
+                recordHistory(editedTitle, editedSummary, e.target.value);
+              }}
+              rows={14}
+              placeholder="اكتب أو عدّل محتوى الدرس والشرح هنا باستخدام ماركداون وتنسيقات وورد..."
+              className="w-full p-4 bg-slate-50 border border-gray-200 rounded-2xl text-xs sm:text-sm font-mono leading-relaxed text-slate-900 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
+            />
+          ) : (
+            <div className="p-6 bg-slate-50/50 rounded-2xl border border-gray-200 min-h-[300px] prose prose-slate max-w-none text-xs sm:text-sm">
+              <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]} components={markdownComponents}>
+                {editedContent}
+              </ReactMarkdown>
+            </div>
+          )}
+
+          {/* Action Save Buttons */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={() => setIsInlineEditing(false)}
+              className="px-4 py-2 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-xl text-xs font-bold transition cursor-pointer"
+            >
+              إلغاء التعديل ✕
+            </button>
+
+            <div className="flex items-center gap-2">
+              {saveSuccessMsg && (
+                <span className="text-xs font-bold text-emerald-600 flex items-center gap-1 animate-fade-in">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>تم حفظ التعديلات بنجاح!</span>
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={handleSaveInline}
+                disabled={isSaving}
+                className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-black shadow-md shadow-emerald-600/20 transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {isSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                <span>{isSaving ? 'جاري الحفظ...' : 'حفظ ونشر التعديلات فوراً 💾'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 🎯 2. LEARNING OBJECTIVES & QUICK SUMMARY PILL BANNER */}
       {normalizedSummary && (
@@ -1285,11 +1591,6 @@ export function ReadSection({ chapter }: ReadSectionProps) {
         </div>
       )}
 
-      {/* 🚀 4. WORKED EXAMPLE, VISUAL COMPARISON & EXAM TIPS HUB */}
-      <div id="worked-examples" className="scroll-mt-16">
-        <ChapterWorkedExampleAndComparison chapter={chapter} />
-      </div>
-
       {/* 📖 5. UNIFIED DEEP LESSON CONTENT (THE CORE READER) */}
       {normalizedContent && (
         <div id="detailed-content" className="bg-white border border-gray-100 shadow-sm rounded-3xl p-6 sm:p-8 space-y-5 scroll-mt-16">
@@ -1337,9 +1638,6 @@ export function ReadSection({ chapter }: ReadSectionProps) {
           )}
         </div>
       )}
-
-      {/* 🧠 7. CONTEXTUAL AI TUTOR */}
-      <ContextualAiTutor chapterTitle={chapter.title} />
 
     </div>
   );

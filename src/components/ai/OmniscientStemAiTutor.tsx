@@ -100,18 +100,20 @@ export const OmniscientStemAiTutor: React.FC<OmniscientStemAiTutorProps> = ({
 
   return (
     <>
-      {/* 🌟 FLOATING TOGGLE TRIGGER (Accessible across all reader views) */}
+      {/* 🌟 COMPACT SLEEK FLOATING TRIGGER */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 left-6 z-40 px-4 py-3 bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 text-white font-black text-xs rounded-2xl shadow-xl shadow-teal-500/25 flex items-center gap-2.5 transition active:scale-95 cursor-pointer border border-white/20 group"
-          title="اسأل المعلم الذكي في أي وقت عن أي نقطة في الدرس"
+          className="fixed bottom-20 sm:bottom-6 left-4 sm:left-6 z-40 group flex items-center gap-2 p-2.5 bg-slate-900/90 hover:bg-slate-900 text-white rounded-full shadow-lg border border-slate-700/80 backdrop-blur-md transition-all hover:scale-105 active:scale-95 cursor-pointer"
+          title="اسأل المعلم الذكي عن أي نقطة في الدرس 💡"
+          aria-label="اسأل المعلم الذكي"
         >
-          <div className="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center">
-            <Sparkles className="w-4 h-4 text-amber-300 animate-spin" />
+          <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-teal-500 to-indigo-600 flex items-center justify-center text-white shrink-0 shadow-xs">
+            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
           </div>
-          <span className="hidden sm:inline">اسأل المعلم الذكي 💡</span>
-          <span className="sm:hidden">المعلم الذكي</span>
+          <span className="hidden group-hover:inline-block text-xs font-bold text-slate-100 transition-all pr-0.5 pl-2 whitespace-nowrap animate-fade-in">
+            اسأل المعلم الذكي 💡
+          </span>
         </button>
       )}
 

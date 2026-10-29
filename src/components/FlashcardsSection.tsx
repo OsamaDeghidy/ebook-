@@ -18,7 +18,11 @@ import {
   Award,
   Zap,
   Check,
-  Flame
+  Flame,
+  Plus,
+  X,
+  Trash2,
+  Edit
 } from 'lucide-react';
 import { Flashcard, Chapter } from '../types';
 
@@ -60,6 +64,61 @@ export default function FlashcardsSection({ chapter, onUpdateFlashcards }: Flash
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [audioTimerSeconds, setAudioTimerSeconds] = useState(3);
   const audioTimeoutRef = useRef<any>(null);
+
+  // 📇 Stacked Tinder Swipe Gesture State
+  const [dragStartX, setDragStartX] = useState<number | null>(null);
+  const [dragOffset, setDragOffset] = useState<number>(0);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleTouchStart = (e: React.TouchEvent | React.MouseEvent) => {
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    setDragStartX(clientX);
+    setIsDragging(true);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent | React.MouseEvent) => {
+    if (!isDragging || dragStartX === null) return;
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    setDragOffset(clientX - dragStartX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    if (dragOffset > 70) {
+      // Swiped Right -> Easy (أتقنته)
+      handleRate('easy');
+    } else if (dragOffset < -70) {
+      // Swiped Left -> Hard (صعب)
+      handleRate('hard');
+    }
+    setDragOffset(0);
+    setDragStartX(null);
+  };
+
+  // ➕ Add Flashcard State
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newFront, setNewFront] = useState('');
+  const [newBack, setNewBack] = useState('');
+
+  const handleAddFlashcard = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newFront.trim() || !newBack.trim()) return;
+    const newCard: Flashcard = {
+      id: `fc-${Date.now()}`,
+      front: newFront.trim(),
+      back: newBack.trim(),
+      difficulty: 'medium'
+    };
+    const nextCards = [...cards, newCard];
+    setCards(nextCards);
+    if (onUpdateFlashcards) {
+      onUpdateFlashcards(nextCards);
+    }
+    setNewFront('');
+    setNewBack('');
+    setIsAddModalOpen(false);
+  };
 
   // Filter cards according to Leitner Boxes
   const filteredCards = cards.filter(card => {
@@ -296,14 +355,26 @@ export default function FlashcardsSection({ chapter, onUpdateFlashcards }: Flash
           )}
         </div>
 
-        <button
-          onClick={handleShuffle}
-          className="px-3 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
-          title="خلط ترتيب البطاقات"
-        >
-          <Shuffle className="w-3.5 h-3.5 text-gray-500" />
-          <span>خلط البطاقات</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {onUpdateFlashcards && (
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="px-3.5 py-2 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 rounded-xl text-xs font-black transition flex items-center gap-1.5 cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5 text-teal-600" />
+              <span>إضافة بطاقة ➕</span>
+            </button>
+          )}
+
+          <button
+            onClick={handleShuffle}
+            className="px-3 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+            title="خلط ترتيب البطاقات"
+          >
+            <Shuffle className="w-3.5 h-3.5 text-gray-500" />
+            <span>خلط البطاقات</span>
+          </button>
+        </div>
       </div>
 
       {!completed && currentCard ? (
@@ -320,58 +391,143 @@ export default function FlashcardsSection({ chapter, onUpdateFlashcards }: Flash
             />
           </div>
 
-          {/* Interactive Flipping Card */}
-          <div
-            onClick={() => setIsFlipped(!isFlipped)}
-            className="cursor-pointer group relative min-h-[340px] bg-gradient-to-br from-white via-indigo-50/10 to-gray-50 border-2 border-indigo-100 hover:border-indigo-300 rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between select-none"
-          >
-            <div className="flex items-center justify-between text-xs text-gray-400 font-bold">
-              <span className={`px-3.5 py-1 rounded-full text-xs font-black ${
-                isFlipped
-                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                  : 'bg-indigo-100 text-indigo-800 border border-indigo-200'
-              }`}>
-                {isFlipped ? '💡 الإجابة والشرح المعرفي' : '❓ المفهوم أو السؤال'}
-              </span>
+          {/* 📇 STACKED DECK CONTAINER (TINDER-STYLE SWIPE & PHYSICAL STACK) */}
+          <div className="relative min-h-[380px] w-full max-w-xl mx-auto py-2">
+            
+            {/* Background Stack Layer 2 (Bottom card) */}
+            {filteredCards[currentIndex + 2] && (
+              <div 
+                className="absolute inset-x-4 top-6 bottom-0 bg-white border border-gray-200 rounded-3xl shadow-xs pointer-events-none -z-20 transition-all"
+                style={{ transform: 'scale(0.92) translateY(14px)', opacity: 0.35 }}
+              />
+            )}
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    speakText(isFlipped ? currentCard.back : currentCard.front);
-                  }}
-                  className="p-1.5 bg-gray-100 hover:bg-indigo-100 text-gray-600 hover:text-indigo-600 rounded-lg transition"
-                  title="نطق بصوت المعلم"
-                >
-                  <Volume2 className="w-4 h-4" />
-                </button>
-                <span className="flex items-center gap-1 text-gray-400 group-hover:text-indigo-600 transition text-[11px]">
-                  <RotateCw className="w-3.5 h-3.5" />
-                  <span>انقر للقلب</span>
-                </span>
-              </div>
-            </div>
-
-            <div className="my-auto text-center py-6 px-2">
-              {isFlipped ? (
-                <div className="space-y-3 animate-fade-in">
-                  <h4 className="text-xl md:text-2xl font-black text-indigo-950 leading-relaxed font-sans">
-                    {currentCard.back}
-                  </h4>
+            {/* Background Stack Layer 1 (Middle card preview) */}
+            {filteredCards[currentIndex + 1] && (
+              <div 
+                className="absolute inset-x-2 top-3 bottom-0 bg-white border border-indigo-100 rounded-3xl shadow-sm pointer-events-none -z-10 p-6 flex flex-col justify-between transition-all"
+                style={{ transform: 'scale(0.96) translateY(7px)', opacity: 0.65 }}
+              >
+                <div className="flex items-center justify-between text-[11px] text-gray-400 font-bold">
+                  <span>البطاقة التالية 📇</span>
+                  <span>{currentIndex + 2} / {filteredCards.length}</span>
                 </div>
-              ) : (
-                <div className="space-y-3 animate-fade-in">
-                  <h4 className="text-2xl md:text-3xl font-black text-gray-900 leading-snug font-sans">
-                    {currentCard.front}
-                  </h4>
+                <h5 className="text-base font-black text-gray-400 text-center line-clamp-2 px-4">
+                  {filteredCards[currentIndex + 1].front}
+                </h5>
+                <div className="text-center text-[10px] text-gray-300">في انتظار دورها في التكرار المتباعد...</div>
+              </div>
+            )}
+
+            {/* Active Foreground Card (Draggable & Swipeable) */}
+            <div
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              onMouseDown={handleTouchStart}
+              onMouseMove={handleTouchMove}
+              onMouseUp={handleTouchEnd}
+              onMouseLeave={handleTouchEnd}
+              onClick={() => {
+                if (Math.abs(dragOffset) < 10) {
+                  setIsFlipped(!isFlipped);
+                }
+              }}
+              style={{
+                transform: `translateX(${dragOffset}px) rotate(${dragOffset * 0.05}deg)`,
+                transition: isDragging ? 'none' : 'transform 0.25s ease-out'
+              }}
+              className="cursor-pointer group relative min-h-[350px] bg-gradient-to-br from-white via-indigo-50/10 to-gray-50 border-2 border-indigo-200 hover:border-indigo-400 rounded-3xl p-7 shadow-lg hover:shadow-2xl transition-shadow duration-300 flex flex-col justify-between select-none z-10"
+            >
+              {/* Swipe Stamps */}
+              {dragOffset > 35 && (
+                <div className="absolute top-6 left-6 z-30 px-3.5 py-1.5 rounded-2xl bg-emerald-500 text-white font-black text-xs shadow-lg rotate-12 border-2 border-white animate-fade-in">
+                  أتقنته تماماً ✅
                 </div>
               )}
-            </div>
+              {dragOffset < -35 && (
+                <div className="absolute top-6 right-6 z-30 px-3.5 py-1.5 rounded-2xl bg-rose-500 text-white font-black text-xs shadow-lg -rotate-12 border-2 border-white animate-fade-in">
+                  يحتاج تركيز ❌
+                </div>
+              )}
 
-            <div className="text-center text-[11px] text-gray-400 font-medium">
-              {isFlipped ? 'قيّم استيعابك لنقل البطاقة إلى الصندوق المناسب' : 'خمّن الإجابة في ذهنك أولاً ثم انقر للاطلاع على التوضيح'}
+              <div className="flex items-center justify-between text-xs text-gray-400 font-bold">
+                <span className={`px-3.5 py-1 rounded-full text-xs font-black ${
+                  isFlipped
+                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                    : 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+                }`}>
+                  {isFlipped ? '💡 الإجابة والشرح المعرفي' : '❓ المفهوم أو السؤال'}
+                </span>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      speakText(isFlipped ? currentCard.back : currentCard.front);
+                    }}
+                    className="p-1.5 bg-gray-100 hover:bg-indigo-100 text-gray-600 hover:text-indigo-600 rounded-lg transition"
+                    title="نطق بصوت المعلم"
+                  >
+                    <Volume2 className="w-4 h-4" />
+                  </button>
+                  <span className="flex items-center gap-1 text-gray-400 group-hover:text-indigo-600 transition text-[11px]">
+                    <RotateCw className="w-3.5 h-3.5" />
+                    <span>انقر للقلب</span>
+                  </span>
+                </div>
+              </div>
+
+              <div className="my-auto text-center py-6 px-2">
+                {isFlipped ? (
+                  <div className="space-y-3 animate-fade-in">
+                    <h4 className="text-xl md:text-2xl font-black text-indigo-950 leading-relaxed font-sans">
+                      {currentCard.back}
+                    </h4>
+                  </div>
+                ) : (
+                  <div className="space-y-3 animate-fade-in">
+                    <h4 className="text-2xl md:text-3xl font-black text-gray-900 leading-snug font-sans">
+                      {currentCard.front}
+                    </h4>
+                  </div>
+                )}
+              </div>
+
+              <div className="text-center text-[11px] text-gray-400 font-medium">
+                {isFlipped ? 'قيّم استيعابك لنقل البطاقة إلى الصندوق المناسب' : '💡 انقر للقلب، أو اسحب يميناً (إتقان) ويساراً (صعب)'}
+              </div>
             </div>
+          </div>
+
+          {/* Quick Tinder Action Control Bar */}
+          <div className="flex items-center justify-center gap-4 py-2">
+            <button
+              onClick={() => handleRate('hard')}
+              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-black shadow-xs transition active:scale-95 cursor-pointer"
+              title="نقل لصندوق التركيز (سحب لليسار)"
+            >
+              <AlertCircle className="w-4 h-4 text-rose-500" />
+              <span>صعب (سحب يساراً)</span>
+            </button>
+
+            <button
+              onClick={() => setIsFlipped(!isFlipped)}
+              className="p-3.5 rounded-2xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 shadow-xs transition active:scale-95 cursor-pointer"
+              title="قلب البطاقة"
+            >
+              <RotateCw className="w-5 h-5 text-indigo-600" />
+            </button>
+
+            <button
+              onClick={() => handleRate('easy')}
+              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-black shadow-xs transition active:scale-95 cursor-pointer"
+              title="نقل لصندوق الإتقان (سحب لليمين)"
+            >
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              <span>أتقنته (سحب يميناً)</span>
+            </button>
           </div>
 
           {/* Action buttons (Leitner Rating) */}
@@ -453,6 +609,70 @@ export default function FlashcardsSection({ chapter, onUpdateFlashcards }: Flash
             >
               إعادة الكل ({cards.length})
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ➕ ADD FLASHCARD MODAL */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4" dir="rtl">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center font-bold">
+                  <Plus className="w-4 h-4" />
+                </div>
+                <h4 className="font-black text-sm text-slate-900">إضافة بطاقة استذكار جديدة</h4>
+              </div>
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                className="p-1.5 text-gray-400 hover:text-gray-700 rounded-xl hover:bg-gray-100 transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddFlashcard} className="space-y-3.5">
+              <div className="space-y-1">
+                <label className="text-[11px] font-black text-slate-700 block">وجه البطاقة الأول (السؤال أو المفهوم):</label>
+                <textarea
+                  value={newFront}
+                  onChange={(e) => setNewFront(e.target.value)}
+                  placeholder="اكتب السؤال أو المفهوم الرئيسي..."
+                  rows={3}
+                  required
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:border-teal-500 outline-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] font-black text-slate-700 block">ظهر البطاقة (الإجابة والشرح المعرفي):</label>
+                <textarea
+                  value={newBack}
+                  onChange={(e) => setNewBack(e.target.value)}
+                  placeholder="اكتب الإجابة النموذجية وشرح المفهوم..."
+                  rows={4}
+                  required
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:border-teal-500 outline-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="px-4 py-2 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl text-xs font-bold transition cursor-pointer"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-xs font-black shadow-md transition cursor-pointer"
+                >
+                  إضافة البطاقة وحفظ 💾
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

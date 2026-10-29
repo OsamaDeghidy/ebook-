@@ -37,6 +37,11 @@ export function useGlobalAudio() {
     play: (id: string, source: string | Blob | (() => Promise<string | Blob | null>), options?: any) =>
       globalAudio.play(id, source, options),
     stop: () => globalAudio.stop(),
+    pause: () => globalAudio.pause(),
+    resume: () => globalAudio.resume(),
+    togglePlayPause: () => globalAudio.togglePlayPause(),
+    seek: (seconds: number) => globalAudio.seek(seconds),
+    seekRelative: (deltaSeconds: number) => globalAudio.seekRelative(deltaSeconds),
     setPlaybackRate: (rate: number) => globalAudio.setPlaybackRate(rate)
   };
 }

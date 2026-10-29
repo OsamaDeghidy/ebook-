@@ -154,7 +154,8 @@ body {
     width: 100% !important;
   }
 
-  #printable-exam-container {
+  #printable-exam-container,
+  #printable-exam-sheet {
     display: block !important;
     width: 100% !important;
     max-width: 100% !important;

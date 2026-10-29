@@ -268,6 +268,60 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
     hasQuizFilter, searchQuery, sortBy
   ]);
 
+  // 🔍 Arabic-Friendly Fuzzy Search Algorithm for Title Typo Correction
+  const fuzzySuggestion = useMemo(() => {
+    if (!searchQuery.trim() || filteredBooks.length > 0 || books.length === 0) return null;
+
+    const normalize = (str: string) => {
+      return str
+        .toLowerCase()
+        .replace(/[\u064B-\u065F\u0670]/g, '') // strip harakat
+        .replace(/[أإآ]/g, 'ا')
+        .replace(/ة/g, 'ه')
+        .replace(/ى/g, 'ي')
+        .replace(/[^a-z0-9\u0600-\u06FF]/g, ' ')
+        .trim();
+    };
+
+    const target = normalize(searchQuery);
+    if (target.length < 3) return null;
+
+    const targetWords = target.split(/\s+/).filter(w => w.length >= 2);
+
+    let bestMatch: MarketplaceBook | null = null;
+    let highestScore = 0;
+
+    for (const b of books) {
+      const bTitle = normalize(b.title || '');
+      const bAuthor = normalize(b.author_name || '');
+      const full = `${bTitle} ${bAuthor}`;
+
+      let score = 0;
+      for (const w of targetWords) {
+        if (full.includes(w)) {
+          score += 2;
+        } else {
+          for (let len = Math.min(w.length, 4); len >= 3; len--) {
+            if (full.includes(w.substring(0, len))) {
+              score += 0.8;
+              break;
+            }
+          }
+        }
+      }
+
+      if (score > highestScore) {
+        highestScore = score;
+        bestMatch = b;
+      }
+    }
+
+    if (highestScore >= 0.8 && bestMatch) {
+      return bestMatch;
+    }
+    return null;
+  }, [searchQuery, filteredBooks.length, books]);
+
   const handleResetFilters = () => {
     setQuickFilter('all');
     setSelectedCategory('all');
@@ -290,135 +344,131 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
     <div className="space-y-8 animate-fade-in text-right" dir={dir}>
       
       {/* 🌟 MARKETING HERO & CALL TO ACTION */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-teal-950 to-indigo-950 text-white p-7 sm:p-10 border border-teal-900/50 shadow-xl">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-white p-6 sm:p-9 border border-slate-800/80 shadow-xl">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
-          <div className="space-y-4 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/15 text-teal-300 text-xs font-black backdrop-blur-md">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>المنصة الأولى عربياً للكتب والمقررات التفاعلية بالذكاء الاصطناعي</span>
+        <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 sm:gap-8">
+          <div className="space-y-3.5 max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-teal-300 text-xs font-black backdrop-blur-md">
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <span>المنصة الأولى للكتب والمذكرات التفاعلية بالذكاء الاصطناعي</span>
             </div>
 
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight leading-tight text-white">
               تعلم أسرع، استمع بذكاء، واختبر فهمك فورياً 🎧📖
             </h1>
 
-            <p className="text-sm sm:text-base text-teal-100/90 leading-relaxed font-medium">
-              حوّل أي كتاب أو مذكرة إلى تجربة تعليمية متعددة الحواس: بودكاست حواري ذكي (كريم وفرح)، تسجيلات صوتية فائقة الوضوح، خرائط مفاهيم تفاعلية، وامتحانات تجريبية موقوتة.
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-medium">
+              حوّل أي مذكرة أو كتاب دراسي إلى تجربة تعليمية حية: بودكاست حواري ذكي، تسجيلات صوتية فائقة الوضوح، خرائط مفاهيم تفاعلية، وامتحانات تجريبية موقوتة.
             </p>
 
             {/* FEATURE PILLS */}
-            <div className="flex flex-wrap items-center gap-2 pt-2 text-xs font-bold text-teal-100">
-              <div className="flex items-center gap-1.5 px-3 py-1 bg-white/10 rounded-lg border border-white/10">
+            <div className="flex flex-wrap items-center gap-2 pt-1 text-xs font-bold text-slate-200">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white/10 rounded-lg border border-white/10">
                 <Radio className="w-3.5 h-3.5 text-teal-300" />
-                <span>بودكاست كريم وفرح</span>
+                <span>بودكاست ذكي لكل درس</span>
               </div>
-              <div className="flex items-center gap-1.5 px-3 py-1 bg-white/10 rounded-lg border border-white/10">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white/10 rounded-lg border border-white/10">
                 <Clock className="w-3.5 h-3.5 text-amber-300" />
-                <span>امتحانات موقوتة</span>
+                <span>امتحانات وبنوك أسئلة</span>
               </div>
-              <div className="flex items-center gap-1.5 px-3 py-1 bg-white/10 rounded-lg border border-white/10">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white/10 rounded-lg border border-white/10">
                 <Zap className="w-3.5 h-3.5 text-emerald-300" />
-                <span>توليد فوري بالـ AI</span>
-              </div>
-              <div className="flex items-center gap-1.5 px-3 py-1 bg-white/10 rounded-lg border border-white/10">
-                <Award className="w-3.5 h-3.5 text-cyan-300" />
-                <span>شهادات إنجاز معتمدة</span>
+                <span>توليد وتصنيف ذكي فوري</span>
               </div>
             </div>
           </div>
 
           {/* ADMIN & STATS PANEL */}
-          <div className="flex flex-col gap-4 shrink-0 w-full lg:w-auto">
+          <div className="flex flex-col gap-3.5 shrink-0 w-full lg:w-auto">
             {(isAdminMode || userRole === 'instructor' || userRole === 'admin') && (
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2.5">
                 <button
                   onClick={onOpenCreateModal}
-                  className="px-5 py-3.5 bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 text-white font-black text-sm rounded-2xl flex items-center gap-2 shadow-lg shadow-teal-500/25 transition active:scale-95 cursor-pointer"
+                  className="px-5 py-3 bg-gradient-to-r from-teal-500 to-indigo-600 hover:from-teal-400 hover:to-indigo-500 text-white font-black text-xs sm:text-sm rounded-2xl flex items-center gap-2 shadow-lg shadow-teal-500/20 transition active:scale-95 cursor-pointer"
                 >
                   <Sparkles className="w-4 h-4 text-amber-300" />
-                  <span>توليد كتاب جديد بالـ AI</span>
+                  <span>توليد مقرر جديد بالـ AI</span>
                 </button>
 
                 <button
                   onClick={onOpenExternalModal}
-                  className="px-4 py-3.5 bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold text-sm rounded-2xl flex items-center gap-2 transition active:scale-95 cursor-pointer"
+                  className="px-4 py-3 bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold text-xs sm:text-sm rounded-2xl flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
                 >
                   <Plus className="w-4 h-4 text-emerald-400" />
-                  <span>إضافة مقرر تفاعلي مدمج</span>
+                  <span>إضافة مقرر مدمج</span>
                 </button>
               </div>
             )}
 
             {/* LIVE PLATFORM STATS */}
             <div className="grid grid-cols-3 gap-2 p-3 bg-white/5 border border-white/10 rounded-2xl text-center backdrop-blur-md">
-              <div className="p-2">
-                <span className="text-lg font-black text-white block">+{books.length}</span>
+              <div className="p-1.5">
+                <span className="text-base sm:text-lg font-black text-white block">+{books.length}</span>
                 <span className="text-[10px] text-teal-300 font-bold">مقرر تفاعلي</span>
               </div>
-              <div className="p-2 border-r border-l border-white/10">
-                <span className="text-lg font-black text-amber-300 block">5.0 ★</span>
+              <div className="p-1.5 border-r border-l border-white/10">
+                <span className="text-base sm:text-lg font-black text-amber-300 block">5.0 ★</span>
                 <span className="text-[10px] text-teal-300 font-bold">تقييم الطلاب</span>
               </div>
-              <div className="p-2">
-                <span className="text-lg font-black text-emerald-400 block">0ms</span>
-                <span className="text-[10px] text-teal-300 font-bold">استجابة الصوت</span>
+              <div className="p-1.5">
+                <span className="text-base sm:text-lg font-black text-emerald-400 block">100%</span>
+                <span className="text-[10px] text-teal-300 font-bold">مناهج معتمدة</span>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 🧭 MASTER TABS SWITCHER (المتجر العام vs مكتبتي الخاصة) */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-gray-200 pb-3">
-        <div className="flex flex-wrap items-center gap-3">
+      {/* 🧭 MASTER TABS SWITCHER (المكتبة العامة vs مقرراتي) */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-gray-200 pb-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
           <button
             onClick={() => setMainViewTab('marketplace')}
-            className={`px-5 py-2.5 rounded-2xl font-black text-sm flex items-center gap-2 transition ${
+            className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl font-black text-xs sm:text-sm flex items-center gap-2 transition cursor-pointer ${
               mainViewTab === 'marketplace'
-                ? 'bg-teal-600 text-white shadow-md shadow-teal-500/20'
-                : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-900 border border-gray-200'
+                ? 'bg-slate-900 text-white shadow-md'
+                : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
             }`}
           >
-            <ShoppingCart className="w-4 h-4" />
-            <span>متجر المقررات والكتب (Marketplace)</span>
-            <span className={`px-2 py-0.5 rounded-full text-xs ${mainViewTab === 'marketplace' ? 'bg-teal-700 text-white' : 'bg-gray-100 text-gray-700'}`}>
+            <BookOpen className="w-4 h-4 text-teal-400" />
+            <span>مكتبة المقررات</span>
+            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${mainViewTab === 'marketplace' ? 'bg-slate-800 text-teal-300' : 'bg-gray-100 text-gray-700'}`}>
               {books.length}
             </span>
           </button>
 
           <button
             onClick={() => setMainViewTab('my_library')}
-            className={`px-5 py-2.5 rounded-2xl font-black text-sm flex items-center gap-2 transition ${
+            className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl font-black text-xs sm:text-sm flex items-center gap-2 transition cursor-pointer ${
               mainViewTab === 'my_library'
-                ? 'bg-teal-600 text-white shadow-md shadow-teal-500/20'
-                : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-900 border border-gray-200'
+                ? 'bg-slate-900 text-white shadow-md'
+                : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
             }`}
           >
             <Bookmark className="w-4 h-4 text-amber-400" />
-            <span>مقرراتي ومكتبتي الخاصة (My Courses)</span>
-            <span className={`px-2 py-0.5 rounded-full text-xs ${mainViewTab === 'my_library' ? 'bg-teal-700 text-white' : 'bg-gray-100 text-gray-700'}`}>
+            <span>مقرراتي المشترك بها</span>
+            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${mainViewTab === 'my_library' ? 'bg-slate-800 text-amber-300' : 'bg-gray-100 text-gray-700'}`}>
               {myLibraryBooks.length}
             </span>
           </button>
 
           <Link
             to="/reels"
-            className="px-5 py-2.5 rounded-2xl font-black text-sm flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-md shadow-purple-500/20 transition active:scale-95"
+            className="px-4 py-2 sm:py-2.5 rounded-2xl font-bold text-xs sm:text-sm flex items-center gap-1.5 bg-white hover:bg-purple-50 text-purple-700 border border-purple-200 shadow-2xs transition active:scale-95"
           >
-            <Sparkles className="w-4 h-4 text-purple-200" />
-            <span>🎬 ريلز المعرفة والتيك توك ✦</span>
+            <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+            <span>فيديوهات قصيرة 🎬</span>
           </Link>
 
           {currentUser && (isAdminMode || userRole === 'admin' || userRole === 'instructor') && (
             <Link
               to={userRole === 'admin' || isAdminMode ? '/admin' : '/instructor'}
-              className="px-5 py-2.5 rounded-2xl font-black text-sm flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-amber-600 hover:from-indigo-500 hover:to-amber-500 text-white shadow-md shadow-indigo-500/20 transition active:scale-95"
+              className="px-4 py-2 sm:py-2.5 rounded-2xl font-bold text-xs sm:text-sm flex items-center gap-1.5 bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-2xs transition active:scale-95"
             >
-              <Sparkles className="w-4 h-4 text-amber-200" />
-              <span>{userRole === 'admin' || isAdminMode ? 'غرفة العمليات ولوحة الإدارة 🛡️' : 'استوديو المعلم ولوحة السنتر 👨‍🏫'}</span>
+              <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+              <span>{userRole === 'admin' || isAdminMode ? 'لوحة الإدارة ⚙️' : 'لوحة المعلم 👨‍🏫'}</span>
             </Link>
           )}
         </div>
@@ -426,30 +476,28 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
         {mainViewTab === 'my_library' && (
           <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100 inline-flex items-center gap-1.5">
             <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>جميع المقررات المملوكة والمجانية متاحة للقراءة الفورية</span>
+            <span>مقرراتك الدراسية جاهزة للقراءة الفورية</span>
           </span>
         )}
       </div>
 
-
-      {/* 🔥 QUICK FILTER & DISCOVERY BAR */}
+      {/* 🔥 CLEAN QUICK FILTER BAR */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
         {[
-          { id: 'all', label: '🌟 كل المحتويات', icon: null },
-          { id: 'trending', label: '⚡ الكتب الرائجة (Trending)', icon: TrendingUp },
-          { id: 'bestsellers', label: '🔥 الأكثر مبيعاً (Best Sellers)', icon: Flame },
-          { id: 'top_rated', label: '🏆 الأعلى تقييماً (Top Rated)', icon: Star },
-          { id: 'favorites', label: `❤️ المفضلة (${favorites.length})`, icon: Heart },
-          { id: 'read_later', label: `🔖 القراءة لاحقاً (${readLater.length})`, icon: Bookmark },
-          { id: 'free', label: '🆓 مجانية بالكامل', icon: null },
-          { id: 'paid', label: '💎 مقررات مدفوعة', icon: null },
+          { id: 'all', label: 'كل المقررات 🌟' },
+          { id: 'trending', label: 'الأكثر رواجاً ⚡' },
+          { id: 'bestsellers', label: 'الأعلى طلباً 🔥' },
+          { id: 'top_rated', label: 'الأعلى تقييماً 🏆' },
+          { id: 'favorites', label: `المفضلة (${favorites.length}) ❤️` },
+          { id: 'free', label: 'المجانية 🆓' },
+          { id: 'paid', label: 'المدفوعة 💎' },
         ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setQuickFilter(tab.id as any)}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 shrink-0 ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer shrink-0 ${
               quickFilter === tab.id
-                ? 'bg-slate-900 text-white shadow-sm font-black scale-[1.02]'
+                ? 'bg-slate-900 text-white shadow-xs font-black'
                 : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
             }`}
           >
@@ -788,6 +836,27 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
             </div>
           </div>
 
+          {/* 💡 FUZZY SEARCH DID-YOU-MEAN SUGGESTION BANNER */}
+          {fuzzySuggestion && (
+            <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs animate-slide-up">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold shrink-0">
+                  <Sparkles className="w-4 h-4 text-amber-100 animate-pulse" />
+                </div>
+                <div>
+                  <span className="text-[11px] font-bold text-amber-800">هل تقصد البحث عن مقرر:</span>
+                  <h4 className="text-sm font-black text-amber-950 font-sans">"{fuzzySuggestion.title}"؟</h4>
+                </div>
+              </div>
+              <button
+                onClick={() => setSearchQuery(fuzzySuggestion.title)}
+                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs rounded-xl shadow-xs transition active:scale-95 cursor-pointer whitespace-nowrap"
+              >
+                تطبيق هذا العنوان 🔍
+              </button>
+            </div>
+          )}
+
           {/* EMPTY STATE */}
           {filteredBooks.length === 0 ? (
             <div className="bg-white border border-gray-200 rounded-3xl p-12 text-center space-y-4">
@@ -890,7 +959,14 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
                         <span className="bg-indigo-50 px-2.5 py-0.5 rounded-md border border-indigo-100">
                           {book.category === 'digital_book' ? 'كتاب رقمي' : book.category === 'quiz_bank' ? 'بنك أسئلة' : 'مقرر تفاعلي'}
                         </span>
-                        <span className="text-gray-500">{book.author_name}</span>
+                        <Link
+                          to={`/instructor/${encodeURIComponent(book.author_name || 'instructor')}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-gray-500 hover:text-teal-600 hover:underline transition font-bold"
+                          title="عرض بروفايل المعلم والمقررات التابعة له"
+                        >
+                          {book.author_name || 'خبير المادة'}
+                        </Link>
                       </div>
 
                       <h3 className="font-black text-gray-900 text-base leading-snug line-clamp-2 hover:text-indigo-600 transition">
@@ -1036,40 +1112,57 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
                         );
                       })()}
 
-                      {(isAdminMode || userRole === 'admin' || (userRole === 'instructor' && (book.author_id === currentUser?.id || !book.author_id))) && (
-                        <div className="flex items-center justify-between pt-2 mt-2 border-t border-gray-100 text-[11px]">
-                          <button
-                            onClick={() => setEditingBook(book)}
-                            className="flex items-center gap-1 text-teal-600 hover:text-teal-800 font-bold"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                            <span>تعديل المقرر</span>
-                          </button>
+                      {(isAdminMode || userRole === 'admin' || userRole === 'instructor') && (
+                        <div className="flex flex-wrap items-center justify-between gap-2 pt-2.5 mt-2.5 border-t border-slate-100 text-[11px] bg-slate-50/80 -mx-4 -mb-4 p-3 rounded-b-2xl">
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => setEditingBook(book)}
+                              className="flex items-center gap-1 text-teal-700 hover:text-teal-900 font-black px-2 py-1 rounded-lg bg-teal-50 border border-teal-200 hover:bg-teal-100 transition cursor-pointer"
+                              title="تعديل بيانات وسعر وغلاف المقرر"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                              <span>تعديل ✏️</span>
+                            </button>
 
-                          <div className="flex items-center gap-3">
+                            <Link
+                              to={`/book/${book.id}?tab=editor`}
+                              className="flex items-center gap-1 text-indigo-700 hover:text-indigo-900 font-black px-2 py-1 rounded-lg bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition cursor-pointer"
+                              title="تعديل ورفع نصوص الفصول"
+                            >
+                              <Sparkles className="w-3.5 h-3.5" />
+                              <span>رفع الفصول 📤</span>
+                            </Link>
+                          </div>
+
+                          <div className="flex items-center gap-2">
                             <button
                               onClick={() => onTogglePublish(book.id)}
-                              className="flex items-center gap-1 text-gray-500 hover:text-gray-900"
+                              className={`flex items-center gap-1 font-bold px-2 py-1 rounded-lg border transition cursor-pointer ${
+                                book.is_published 
+                                  ? 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
+                                  : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                              }`}
+                              title="تغيير حالة النشر"
                             >
                               {book.is_published ? (
                                 <>
-                                  <EyeOff className="w-3.5 h-3.5 text-amber-500" />
+                                  <EyeOff className="w-3 h-3 text-amber-600" />
                                   <span>إخفاء</span>
                                 </>
                               ) : (
                                 <>
-                                  <Eye className="w-3.5 h-3.5 text-emerald-500" />
-                                  <span>إظهار</span>
+                                  <Eye className="w-3 h-3 text-emerald-600" />
+                                  <span>نشر</span>
                                 </>
                               )}
                             </button>
 
                             <button
                               onClick={() => onDeleteBook(book.id)}
-                              className="flex items-center gap-1 text-rose-500 hover:text-rose-600 font-bold"
+                              className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
+                              title="حذف المقرر نهائياً"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
-                              <span>حذف</span>
                             </button>
                           </div>
                         </div>

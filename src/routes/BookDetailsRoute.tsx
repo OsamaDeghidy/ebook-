@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { BookOpen, ArrowLeft, Brain, HelpCircle, Youtube, Edit, Radio, Sparkles, RefreshCw, Layers, Terminal, Volume2, Eye, EyeOff, Check, Flame, Lock, ShoppingCart, CheckCircle2, ExternalLink, X, Maximize2, Minimize2, ShieldCheck, Shield, Play, Film, Smartphone, QrCode } from 'lucide-react';
+import { useNavigate, useParams, Link } from 'react-router-dom';
+import { BookOpen, ArrowLeft, Brain, HelpCircle, Youtube, Edit, Radio, Sparkles, RefreshCw, Layers, Terminal, Volume2, Eye, EyeOff, Check, Flame, Lock, ShoppingCart, CheckCircle2, ExternalLink, X, Maximize2, Minimize2, ShieldCheck, Shield, Play, Film, Smartphone, QrCode, Trash2, Plus } from 'lucide-react';
 import { MarketplaceBook, MindMapNode, Flashcard, Chapter, UserRole, EduReel, EduReelStyle } from '../types';
 import MindMap from '../components/MindMap';
 import QuizSection from '../components/QuizSection';
@@ -11,7 +11,7 @@ import ChapterEditor from '../components/ChapterEditor';
 import FlashcardsSection from '../components/FlashcardsSection';
 import DynamicDomainSandbox from '../components/DynamicDomainSandbox';
 import FloatingAudioBar from '../components/FloatingAudioBar';
-import { RelatedBooksSection } from '../components/RelatedBooksSection';
+import { useGlobalAudio } from '../hooks/useGlobalAudio';
 import { PurchaseModal } from '../components/PurchaseModal';
 import { OmniscientStemAiTutor } from '../components/ai/OmniscientStemAiTutor';
 import { EduReelPlayer } from '../components/reels/EduReelPlayer';
@@ -22,6 +22,7 @@ import { SeoStructuredData } from '../components/seo/SeoStructuredData';
 import { InteractiveLessonExplanation } from '../components/interactive/InteractiveLessonExplanation';
 import { FullCurriculumExplanation } from '../components/interactive/FullCurriculumExplanation';
 import { BookQrCodeModal } from '../components/common/BookQrCodeModal';
+import { showToast } from '../components/common/Toast';
 import { useLanguage } from '../i18n/LanguageContext';
 
 interface BookDetailsRouteProps {
@@ -33,6 +34,332 @@ interface BookDetailsRouteProps {
   userRole?: UserRole;
   isAdminMode?: boolean;
   currentUser?: any;
+}
+
+interface ExternalBookViewerProps {
+  book: MarketplaceBook;
+  currentUser?: any;
+  isBookUnlocked: boolean;
+  navigate: (path: string) => void;
+  isPurchaseModalOpen: boolean;
+  setIsPurchaseModalOpen: (open: boolean) => void;
+  onPurchaseBook?: (book: MarketplaceBook) => Promise<void>;
+  books: MarketplaceBook[];
+}
+
+function ExternalBookViewer({
+  book,
+  currentUser,
+  isBookUnlocked,
+  navigate,
+  isPurchaseModalOpen,
+  setIsPurchaseModalOpen,
+  onPurchaseBook,
+  books
+}: ExternalBookViewerProps) {
+  const embedUrl = book.preview_video_url ? (
+    book.preview_video_url.includes('youtube.com/watch?v=')
+      ? book.preview_video_url.replace('watch?v=', 'embed/')
+      : book.preview_video_url.includes('youtu.be/')
+      ? book.preview_video_url.replace('youtu.be/', 'www.youtube.com/embed/')
+      : book.preview_video_url
+  ) : null;
+
+  const viewerContainerRef = useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      if (viewerContainerRef.current?.requestFullscreen) {
+        viewerContainerRef.current.requestFullscreen();
+      } else if ((viewerContainerRef.current as any)?.webkitRequestFullscreen) {
+        (viewerContainerRef.current as any).webkitRequestFullscreen();
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if ((document as any).webkitExitFullscreen) {
+        (document as any).webkitExitFullscreen();
+      }
+    }
+  };
+
+  const cleanViewerUrl = useMemo(() => {
+    if (!book.external_url) return '';
+    let url = book.external_url.trim();
+    
+    // Disable share, download, print, search parameters for Heyzine, FlipHTML5, AnyFlip
+    if (url.includes('heyzine.com')) {
+      const sep = url.includes('?') ? '&' : '?';
+      if (!url.includes('noshare')) url += `${sep}noshare=1&nodownload=1&noprint=1&nosearch=1`;
+    }
+    if (url.includes('fliphtml5.com')) {
+      const sep = url.includes('?') ? '&' : '?';
+      if (!url.includes('showShare')) {
+        url += `${sep}showShare=false&showDownload=false&showPrint=false&showSearch=false&showSearchButton=false&showSearchInput=false&search=0&showPrintButton=false&showShareButton=false&showDownloadButton=false`;
+      }
+    }
+    if (url.includes('anyflip.com')) {
+      const sep = url.includes('?') ? '&' : '?';
+      if (!url.includes('showShare')) {
+        url += `${sep}showShare=false&showDownload=false&showPrint=false&showSearch=false&showSearchButton=false&search=0`;
+      }
+    }
+    return url;
+  }, [book.external_url]);
+
+  return (
+    <div className="space-y-8 animate-fade-in pb-24 text-right max-w-6xl mx-auto" dir="rtl">
+      <SeoStructuredData type="book" book={book} />
+      {/* TOP NAV BAR */}
+      <div className="flex items-center justify-between pb-4 border-b border-gray-200">
+        <button
+          onClick={() => navigate('/marketplace')}
+          className="flex items-center gap-2 text-xs font-bold text-gray-600 hover:text-teal-600 transition"
+        >
+          <ArrowLeft className="w-4 h-4 rotate-180" />
+          <span>العودة لمتجر ومكتبة المقررات</span>
+        </button>
+        <span className="px-3 py-1 text-xs font-black bg-teal-50 text-teal-800 rounded-full border border-teal-100">
+          مقرر تفاعلي سحابي مدمج 🔒
+        </span>
+      </div>
+
+      {/* IF UNLOCKED: SECURE IN-PLATFORM VIEWER */}
+      {isBookUnlocked ? (
+        <div className="space-y-6">
+          {/* SECURE VIEWER FRAME */}
+          <div
+            ref={viewerContainerRef}
+            className={`bg-slate-950 rounded-3xl p-3 sm:p-5 border border-slate-800 shadow-2xl space-y-3 transition-all ${
+              isFullscreen ? 'fixed inset-0 z-50 rounded-none p-2 flex flex-col justify-between' : ''
+            }`}
+          >
+            {/* TOP VIEWER CONTROLLER BAR */}
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2.5 flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-xs sm:text-sm font-black text-white">
+                  مشغل المحتوى التفاعلي المحمي داخل المنصة (Osera Interactive Player)
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="hidden sm:inline-flex text-[11px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-800/80 px-2.5 py-1 rounded-full">
+                  محتوى مؤمّن ومرخص 🔒
+                </span>
+
+                {/* PROMINENT FULLSCREEN TOGGLE BUTTON */}
+                <button
+                  onClick={toggleFullscreen}
+                  className="px-4 py-2 bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 text-white font-black text-xs rounded-xl flex items-center gap-1.5 shadow-md transition active:scale-95 cursor-pointer"
+                  title={isFullscreen ? 'تصغير الشاشة والخروج من ملء الشاشة' : 'تكبير الشاشة بالكامل لقراءة تفاعلية مريحة'}
+                >
+                  {isFullscreen ? (
+                    <>
+                      <Minimize2 className="w-4 h-4" />
+                      <span>تصغير الشاشة (ESC)</span>
+                    </>
+                  ) : (
+                    <>
+                      <Maximize2 className="w-4 h-4" />
+                      <span>⛶ تكبير الشاشة بالكامل</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* EMBEDDED VIEWER WITH DRM MASKING SHIELDS AND FORENSIC WATERMARK */}
+            <ScreenShieldGuard>
+              <div className={`relative w-full rounded-2xl overflow-hidden bg-slate-900 shadow-inner ${
+                isFullscreen ? 'flex-1 h-full' : 'h-[80vh] min-h-[580px] max-h-[880px]'
+              }`}>
+                <iframe
+                  src={cleanViewerUrl}
+                  title={book.title}
+                  className="w-full h-full border-0 select-none"
+                  allow="fullscreen *; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+
+                {/* 🛡️ FORENSIC DYNAMIC WATERMARK (ANTI-SCREEN-CAPTURE / LEAK DETECTION) */}
+                <ForensicWatermark
+                  userId={currentUser?.id}
+                  userEmail={currentUser?.email}
+                  userName={currentUser?.user_metadata?.full_name}
+                  userPhone={currentUser?.phone || currentUser?.user_metadata?.phone}
+                />
+
+                {/* 🛡️ TOP-RIGHT SEARCH BAR MASK */}
+                <div
+                  className="absolute top-0 right-0 h-11 w-80 sm:w-96 md:w-[420px] bg-black pointer-events-auto select-none z-30 flex items-center justify-end px-4 gap-2 text-xs font-black text-teal-400 shadow-md border-b border-l border-slate-800/80 rounded-bl-2xl"
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>كتاب تفاعلي معتمد - Osera AI LMS</span>
+                </div>
+
+                {/* 🛡️ RESPONSIVE BOTTOM-RIGHT DRM SHIELD */}
+                <div
+                  className="absolute bottom-0 right-0 h-11 w-[calc(50%-120px)] bg-black border-t border-slate-800/90 flex items-center justify-end pr-4 sm:pr-6 gap-2 text-[11px] sm:text-xs font-black text-slate-300 pointer-events-auto select-none z-30 shadow-lg"
+                  title="محتوى مؤمن - النسخ والتحميل والمشاركة غير مصرح بها"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span className="truncate hidden sm:inline">🔒 محتوى محمي ضد التحميل والمشاركة</span>
+                  <span className="truncate sm:hidden">🔒 محمي</span>
+                </div>
+
+                {/* 🛡️ RESPONSIVE BOTTOM-LEFT DRM SHIELD */}
+                <div
+                  className="absolute bottom-0 left-0 h-11 w-[calc(50%-120px)] bg-black border-t border-slate-800/90 flex items-center justify-start pl-4 sm:pl-6 gap-2 text-[11px] sm:text-xs font-black text-teal-400 pointer-events-auto select-none z-30 shadow-lg"
+                >
+                  <span className="truncate font-black">Osera AI LMS ✦</span>
+                </div>
+              </div>
+            </ScreenShieldGuard>
+          </div>
+
+          {/* COURSE INFO & DETAILS */}
+          <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded-md bg-teal-50 text-teal-800 text-xs font-bold">
+                {book.subcategory || 'مقرر عام'}
+              </span>
+              {book.grade_level && (
+                <span className="px-2.5 py-0.5 rounded-md bg-gray-100 text-gray-700 text-xs font-bold">
+                  {book.grade_level}
+                </span>
+              )}
+            </div>
+            <h1 className="text-2xl font-black text-gray-900 leading-snug">
+              {book.title}
+            </h1>
+            <p className="text-xs text-gray-500 font-medium">
+              المحاضر / المؤلف: <span className="font-bold text-gray-800">{book.author_name || 'خبير المحتوى'}</span>
+            </p>
+            <div className="text-xs sm:text-sm text-gray-600 leading-relaxed bg-gray-50 p-4 rounded-2xl border border-gray-100">
+              {book.description || 'مقرر تفاعلي سحابي متكامل يتيح التعلم التفاعلي والأنشطة التطبيقية مباشرة داخل المنصة.'}
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* IF LOCKED: COURSE PREVIEW & IN-PLATFORM CHECKOUT PAYWALL */
+        <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
+          {/* COVER & PURCHASE ACTION */}
+          <div className="space-y-4">
+            <div className="relative rounded-2xl overflow-hidden shadow-md aspect-[3/4] bg-slate-900">
+              <img
+                src={book.thumbnail_url || 'https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=800&q=80'}
+                alt={book.title}
+                className="w-full h-full object-cover"
+              />
+              <span className="absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-black shadow-md bg-amber-400 text-amber-950">
+                {book.price} ج.م
+              </span>
+            </div>
+
+            {/* ACTION / PAYWALL */}
+            <div className="space-y-3 p-5 bg-gradient-to-b from-amber-50/90 to-amber-100/60 border border-amber-200 rounded-2xl text-center">
+              <div className="flex items-center justify-center gap-1.5 text-xs font-black text-amber-900">
+                <Lock className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>مقرر تفاعلي مغلق</span>
+              </div>
+              <p className="text-[11px] text-amber-800 font-medium leading-relaxed">
+                اشترك الآن لفتح المحتوى التفاعلي والدراسة مباشرة داخل المنصة دون مغادرة الموقع.
+              </p>
+              <button
+                onClick={() => setIsPurchaseModalOpen(true)}
+                className="w-full py-3.5 px-4 bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 text-white font-black text-xs rounded-xl flex items-center justify-center gap-2 shadow-md transition active:scale-95 shadow-teal-500/20"
+              >
+                <ShoppingCart className="w-4 h-4" />
+                <span>شراء المقرر وفتح المحتوى ({book.price} ج.م)</span>
+              </button>
+            </div>
+          </div>
+
+          {/* DETAILS & DEMO VIDEO */}
+          <div className="md:col-span-2 space-y-6">
+            <div>
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <span className="px-2.5 py-0.5 rounded-md bg-teal-50 text-teal-800 text-xs font-bold">
+                  {book.subcategory || 'مقرر عام'}
+                </span>
+                {book.grade_level && (
+                  <span className="px-2.5 py-0.5 rounded-md bg-gray-100 text-gray-700 text-xs font-bold">
+                    {book.grade_level}
+                  </span>
+                )}
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-black text-gray-900 leading-snug">
+                {book.title}
+              </h1>
+              <p className="text-xs text-gray-500 mt-1 font-medium">
+                المؤلف / المحاضر: <span className="font-bold text-gray-800">{book.author_name || 'خبير المحتوى'}</span>
+              </p>
+            </div>
+
+            {/* VIDEO EXPLANATION EMBED */}
+            {embedUrl ? (
+              <div className="space-y-2">
+                <h3 className="text-xs font-black text-gray-700 flex items-center gap-1.5">
+                  <Youtube className="w-4 h-4 text-rose-600" />
+                  <span>فيديو تعريفي وتوضيحي عن المقرر (شاهد قبل الشراء)</span>
+                </h3>
+                <div className="aspect-video w-full rounded-2xl overflow-hidden border border-gray-200 shadow-sm bg-black">
+                  <iframe
+                    src={embedUrl}
+                    title="Explanatory Video"
+                    className="w-full h-full border-0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+              </div>
+            ) : null}
+
+            {/* DESCRIPTION */}
+            <div className="space-y-2">
+              <h3 className="text-xs font-black text-gray-700">نبذة وتفاصيل المقرر:</h3>
+              <p className="text-xs sm:text-sm text-gray-600 leading-relaxed bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                {book.description || 'يقدم هذا المرجع محتوى تعليمياً وتطبيقياً متخصصاً يغطي المفاهيم الأساسية والأمثلة العملية عبر بيئة تفاعلية مؤمنة.'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PURCHASE MODAL */}
+      {isPurchaseModalOpen && onPurchaseBook && (
+        <PurchaseModal
+          isOpen={isPurchaseModalOpen}
+          book={book}
+          onClose={() => setIsPurchaseModalOpen(false)}
+          onConfirmPurchase={onPurchaseBook}
+        />
+      )}
+
+      {/* 🌟 OMNISCIENT ACADEMIC AI TUTOR (FLOATING CHAT) */}
+      <OmniscientStemAiTutor
+        bookId={book.id}
+        bookTitle={book.title}
+        currentChapterTitle={book.chapters?.[0]?.title || 'المقدمة والتمهيد'}
+        chapterContent={book.chapters?.[0]?.content || book.description || ''}
+        bookCategory={book.category || ''}
+      />
+    </div>
+  );
 }
 
 export default function BookDetailsRoute({
@@ -57,8 +384,32 @@ export default function BookDetailsRoute({
   const [isGeneratingAiQuestions, setIsGeneratingAiQuestions] = useState(false);
   const [isExpandingChapters, setIsExpandingChapters] = useState(false);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
   const [isMobileChaptersOpen, setIsMobileChaptersOpen] = useState(false);
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const { play: playGlobalAudio } = useGlobalAudio();
+
+  // Student Chapter Progress Tracker
+  const [completedChapterIds, setCompletedChapterIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(`completed_chapters_${id}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const toggleChapterCompleted = (chapterId: string) => {
+    setCompletedChapterIds(prev => {
+      const next = prev.includes(chapterId)
+        ? prev.filter(c => c !== chapterId)
+        : [...prev, chapterId];
+      try {
+        localStorage.setItem(`completed_chapters_${id}`, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
 
   // Reels Studio in-book states
   const [bookReels, setBookReels] = useState<EduReel[]>([]);
@@ -155,10 +506,10 @@ export default function BookDetailsRoute({
         await fetchBookReels();
         setTimeout(() => setReelStatusMsg(null), 4000);
       } else {
-        alert(data.error || data.message || "فشل توليد الريل");
+        showToast(data.error || data.message || "فشل توليد الريل", "error");
       }
     } catch (e) {
-      alert("حدث خطأ أثناء توليد الريل");
+      showToast("حدث خطأ أثناء توليد الريل", "error");
     } finally {
       setIsGeneratingReel(false);
     }
@@ -187,10 +538,10 @@ export default function BookDetailsRoute({
         await fetchBookReels();
         setTimeout(() => setReelStatusMsg(null), 5000);
       } else {
-        alert(data.error || data.message || "فشل توليد ريلز المذكرة");
+        showToast(data.error || data.message || "فشل توليد ريلز المذكرة", "error");
       }
     } catch (e) {
-      alert("حدث خطأ أثناء التوليد");
+      showToast("حدث خطأ أثناء التوليد", "error");
     } finally {
       setIsGeneratingReel(false);
     }
@@ -206,6 +557,63 @@ export default function BookDetailsRoute({
   }
 
   const activeChapter = book.chapters?.find(c => c.id === activeChapterId) || book.chapters?.[0];
+  const isInstructorOrAdmin = Boolean(
+    isAdminMode || 
+    userRole === 'admin' || 
+    userRole === 'instructor' || 
+    (currentUser?.id && (book.author_id === currentUser.id || (book as any).user_id === currentUser.id))
+  );
+
+  const handleAddChapter = async () => {
+    if (!book) return;
+    const newChapter: Chapter = {
+      id: `ch-${Date.now()}`,
+      title: `فصل جديد ${(book.chapters || []).length + 1}`,
+      content: '# محتوى الفصل الجديد\n\nاكتب تفاصيل وشرح الفصل هنا أو استخدم محرر وورد السريع بالضغط على "تعديل الدرس المباشر"...',
+      summary: 'ملخص الفصل الجديد ونواتج التعلم المستهدفة',
+      videos: [],
+      quiz: [],
+      mindMap: []
+    };
+    const updated = [...(book.chapters || []), newChapter];
+    setEbooks(prev => prev.map(b => b.id === book.id ? { ...b, chapters: updated } : b));
+    setActiveChapterId(newChapter.id);
+    try {
+      await fetch(`/api/ebooks/${book.id}/chapters/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chapters: updated })
+      });
+      await supabase.from('books').update({ chapters: updated }).eq('id', book.id);
+    } catch (e) {
+      console.warn("Backend add chapter sync notice:", e);
+    }
+  };
+
+  const handleTriggerPlayActiveChapter = () => {
+    if (!activeChapter) return;
+    const cleanText = `${activeChapter.title}. ${(activeChapter.summary || '')}. ${(activeChapter.content || '')}`
+      .replace(/[*#_`~>|\\\[\]()]/g, ' ')
+      .replace(/[:؛;]/g, ' ، ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (!cleanText) return;
+
+    playGlobalAudio(`master-read-${activeChapter.id}`, async () => {
+      const res = await fetch('/api/tts/stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: cleanText, speaker: 'male' })
+      });
+
+      if (!res.ok) {
+        throw new Error('فشل تحميل البث الصوتي');
+      }
+
+      return await res.blob();
+    });
+  };
 
   const handleTogglePublish = async () => {
     if (!book) return;
@@ -311,9 +719,39 @@ export default function BookDetailsRoute({
         } catch (e) {}
       }
     } catch (err: any) {
-      alert('حدث خطأ أثناء استكمال الفصول: ' + err.message);
+      showToast('حدث خطأ أثناء استكمال الفصول: ' + err.message, 'error');
     } finally {
       setIsExpandingChapters(false);
+    }
+  };
+
+  const handleDeleteChapter = async (chapterId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!book || (book.chapters || []).length <= 1) {
+      showToast("لا يمكن حذف الفصل الوحيد المتبقي في المقرر", "warning");
+      return;
+    }
+    const targetChapter = (book.chapters || []).find(c => c.id === chapterId);
+    if (!window.confirm(`هل أنت متأكد من حذف فصل "${targetChapter?.title || 'المحدد'}"؟`)) {
+      return;
+    }
+
+    const updated = (book.chapters || []).filter(c => c.id !== chapterId);
+    setEbooks(prev => prev.map(b => b.id === book.id ? { ...b, chapters: updated } : b));
+    if (activeChapterId === chapterId) {
+      setActiveChapterId(updated[0]?.id || null);
+    }
+    showToast("تم حذف الفصل بنجاح", "success");
+
+    try {
+      await fetch(`/api/ebooks/${book.id}/chapters/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chapters: updated })
+      });
+      await supabase.from('books').update({ chapters: updated }).eq('id', book.id);
+    } catch (err) {
+      console.warn("Delete chapter sync error:", err);
     }
   };
 
@@ -378,320 +816,17 @@ export default function BookDetailsRoute({
   const isBookUnlocked = isFree || isPurchased || isAdminMode;
 
   if (book.is_external) {
-    const embedUrl = book.preview_video_url ? (
-      book.preview_video_url.includes('youtube.com/watch?v=')
-        ? book.preview_video_url.replace('watch?v=', 'embed/')
-        : book.preview_video_url.includes('youtu.be/')
-        ? book.preview_video_url.replace('youtu.be/', 'www.youtube.com/embed/')
-        : book.preview_video_url
-    ) : null;
-
-    const viewerContainerRef = useRef<HTMLDivElement>(null);
-    const [isFullscreen, setIsFullscreen] = useState(false);
-
-    useEffect(() => {
-      const handleFullscreenChange = () => {
-        setIsFullscreen(!!document.fullscreenElement);
-      };
-      document.addEventListener('fullscreenchange', handleFullscreenChange);
-      document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-      return () => {
-        document.removeEventListener('fullscreenchange', handleFullscreenChange);
-        document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
-      };
-    }, []);
-
-    const toggleFullscreen = () => {
-      if (!document.fullscreenElement) {
-        if (viewerContainerRef.current?.requestFullscreen) {
-          viewerContainerRef.current.requestFullscreen();
-        } else if ((viewerContainerRef.current as any)?.webkitRequestFullscreen) {
-          (viewerContainerRef.current as any).webkitRequestFullscreen();
-        }
-      } else {
-        if (document.exitFullscreen) {
-          document.exitFullscreen();
-        } else if ((document as any).webkitExitFullscreen) {
-          (document as any).webkitExitFullscreen();
-        }
-      }
-    };
-
-    const cleanViewerUrl = useMemo(() => {
-      if (!book.external_url) return '';
-      let url = book.external_url.trim();
-      
-      // Disable share, download, print, search parameters for Heyzine, FlipHTML5, AnyFlip
-      if (url.includes('heyzine.com')) {
-        const sep = url.includes('?') ? '&' : '?';
-        if (!url.includes('noshare')) url += `${sep}noshare=1&nodownload=1&noprint=1&nosearch=1`;
-      }
-      if (url.includes('fliphtml5.com')) {
-        const sep = url.includes('?') ? '&' : '?';
-        if (!url.includes('showShare')) {
-          url += `${sep}showShare=false&showDownload=false&showPrint=false&showSearch=false&showSearchButton=false&showSearchInput=false&search=0&showPrintButton=false&showShareButton=false&showDownloadButton=false`;
-        }
-      }
-      if (url.includes('anyflip.com')) {
-        const sep = url.includes('?') ? '&' : '?';
-        if (!url.includes('showShare')) {
-          url += `${sep}showShare=false&showDownload=false&showPrint=false&showSearch=false&showSearchButton=false&search=0`;
-        }
-      }
-      return url;
-    }, [book.external_url]);
-
     return (
-      <div className="space-y-8 animate-fade-in pb-24 text-right max-w-6xl mx-auto" dir="rtl">
-        <SeoStructuredData type="book" book={book} />
-        {/* TOP NAV BAR */}
-        <div className="flex items-center justify-between pb-4 border-b border-gray-200">
-          <button
-            onClick={() => navigate('/marketplace')}
-            className="flex items-center gap-2 text-xs font-bold text-gray-600 hover:text-teal-600 transition"
-          >
-            <ArrowLeft className="w-4 h-4 rotate-180" />
-            <span>العودة لمتجر ومكتبة المقررات</span>
-          </button>
-          <span className="px-3 py-1 text-xs font-black bg-teal-50 text-teal-800 rounded-full border border-teal-100">
-            مقرر تفاعلي سحابي مدمج 🔒
-          </span>
-        </div>
-
-        {/* IF UNLOCKED: SECURE IN-PLATFORM VIEWER */}
-        {isBookUnlocked ? (
-          <div className="space-y-6">
-            {/* SECURE VIEWER FRAME */}
-            <div
-              ref={viewerContainerRef}
-              className={`bg-slate-950 rounded-3xl p-3 sm:p-5 border border-slate-800 shadow-2xl space-y-3 transition-all ${
-                isFullscreen ? 'fixed inset-0 z-50 rounded-none p-2 flex flex-col justify-between' : ''
-              }`}
-            >
-              {/* TOP VIEWER CONTROLLER BAR */}
-              <div className="flex items-center justify-between border-b border-slate-800 pb-2.5 flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-xs sm:text-sm font-black text-white">
-                    مشغل المحتوى التفاعلي المحمي داخل المنصة (Osera Interactive Player)
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="hidden sm:inline-flex text-[11px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-800/80 px-2.5 py-1 rounded-full">
-                    محتوى مؤمّن ومرخص 🔒
-                  </span>
-
-                  {/* PROMINENT FULLSCREEN TOGGLE BUTTON */}
-                  <button
-                    onClick={toggleFullscreen}
-                    className="px-4 py-2 bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 text-white font-black text-xs rounded-xl flex items-center gap-1.5 shadow-md transition active:scale-95 cursor-pointer"
-                    title={isFullscreen ? 'تصغير الشاشة والخروج من ملء الشاشة' : 'تكبير الشاشة بالكامل لقراءة تفاعلية مريحة'}
-                  >
-                    {isFullscreen ? (
-                      <>
-                        <Minimize2 className="w-4 h-4" />
-                        <span>تصغير الشاشة (ESC)</span>
-                      </>
-                    ) : (
-                      <>
-                        <Maximize2 className="w-4 h-4" />
-                        <span>⛶ تكبير الشاشة بالكامل</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* EMBEDDED VIEWER WITH DRM MASKING SHIELDS AND FORENSIC WATERMARK */}
-              <ScreenShieldGuard>
-                <div className={`relative w-full rounded-2xl overflow-hidden bg-slate-900 shadow-inner ${
-                  isFullscreen ? 'flex-1 h-full' : 'h-[80vh] min-h-[580px] max-h-[880px]'
-                }`}>
-                  <iframe
-                    src={cleanViewerUrl}
-                    title={book.title}
-                    className="w-full h-full border-0 select-none"
-                    allow="fullscreen *; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowFullScreen
-                  />
-
-                  {/* 🛡️ FORENSIC DYNAMIC WATERMARK (ANTI-SCREEN-CAPTURE / LEAK DETECTION) */}
-                  <ForensicWatermark
-                    userId={currentUser?.id}
-                    userEmail={currentUser?.email}
-                    userName={currentUser?.user_metadata?.full_name}
-                    userPhone={currentUser?.phone || currentUser?.user_metadata?.phone}
-                  />
-
-                  {/* 🛡️ TOP-RIGHT SEARCH BAR MASK (COMPLETELY BLOCKS SEARCH BAR & LENS ICON FROM RIGHT-0) */}
-                  <div
-                    className="absolute top-0 right-0 h-11 w-80 sm:w-96 md:w-[420px] bg-black pointer-events-auto select-none z-30 flex items-center justify-end px-4 gap-2 text-xs font-black text-teal-400 shadow-md border-b border-l border-slate-800/80 rounded-bl-2xl"
-                  >
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>كتاب تفاعلي معتمد - Osera AI LMS</span>
-                  </div>
-
-                  {/* 🛡️ RESPONSIVE BOTTOM-RIGHT DRM SHIELD (COVERS 100% OF SHARE/PRINT/DOWNLOAD/NOTES ON ANY SCREEN SIZE) */}
-                  <div
-                    className="absolute bottom-0 right-0 h-11 w-[calc(50%-120px)] bg-black border-t border-slate-800/90 flex items-center justify-end pr-4 sm:pr-6 gap-2 text-[11px] sm:text-xs font-black text-slate-300 pointer-events-auto select-none z-30 shadow-lg"
-                    title="محتوى مؤمن - النسخ والتحميل والمشاركة غير مصرح بها"
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span className="truncate hidden sm:inline">🔒 محتوى محمي ضد التحميل والمشاركة</span>
-                    <span className="truncate sm:hidden">🔒 محمي</span>
-                  </div>
-
-                  {/* 🛡️ RESPONSIVE BOTTOM-LEFT DRM SHIELD (COVERS 100% OF BOOKMARK/GRID/SLIDESHOW ON ANY SCREEN SIZE) */}
-                  <div
-                    className="absolute bottom-0 left-0 h-11 w-[calc(50%-120px)] bg-black border-t border-slate-800/90 flex items-center justify-start pl-4 sm:pl-6 gap-2 text-[11px] sm:text-xs font-black text-teal-400 pointer-events-auto select-none z-30 shadow-lg"
-                  >
-                    <span className="truncate font-black">Osera AI LMS ✦</span>
-                  </div>
-                </div>
-              </ScreenShieldGuard>
-            </div>
-
-            {/* COURSE INFO & DETAILS */}
-            <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-md bg-teal-50 text-teal-800 text-xs font-bold">
-                  {book.subcategory || 'مقرر عام'}
-                </span>
-                {book.grade_level && (
-                  <span className="px-2.5 py-0.5 rounded-md bg-gray-100 text-gray-700 text-xs font-bold">
-                    {book.grade_level}
-                  </span>
-                )}
-              </div>
-              <h1 className="text-2xl font-black text-gray-900 leading-snug">
-                {book.title}
-              </h1>
-              <p className="text-xs text-gray-500 font-medium">
-                المحاضر / المؤلف: <span className="font-bold text-gray-800">{book.author_name || 'خبير المحتوى'}</span>
-              </p>
-              <div className="text-xs sm:text-sm text-gray-600 leading-relaxed bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                {book.description || 'مقرر تفاعلي سحابي متكامل يتيح التعلم التفاعلي والأنشطة التطبيقية مباشرة داخل المنصة.'}
-              </div>
-            </div>
-          </div>
-        ) : (
-          /* IF LOCKED: COURSE PREVIEW & IN-PLATFORM CHECKOUT PAYWALL */
-          <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
-            {/* COVER & PURCHASE ACTION */}
-            <div className="space-y-4">
-              <div className="relative rounded-2xl overflow-hidden shadow-md aspect-[3/4] bg-slate-900">
-                <img
-                  src={book.thumbnail_url || 'https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=800&q=80'}
-                  alt={book.title}
-                  className="w-full h-full object-cover"
-                />
-                <span className="absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-black shadow-md bg-amber-400 text-amber-950">
-                  {book.price} ج.م
-                </span>
-              </div>
-
-              {/* ACTION / PAYWALL */}
-              <div className="space-y-3 p-5 bg-gradient-to-b from-amber-50/90 to-amber-100/60 border border-amber-200 rounded-2xl text-center">
-                <div className="flex items-center justify-center gap-1.5 text-xs font-black text-amber-900">
-                  <Lock className="w-4 h-4 text-amber-600 shrink-0" />
-                  <span>مقرر تفاعلي مغلق</span>
-                </div>
-                <p className="text-[11px] text-amber-800 font-medium leading-relaxed">
-                  اشترك الآن لفتح المحتوى التفاعلي والدراسة مباشرة داخل المنصة دون مغادرة الموقع.
-                </p>
-                <button
-                  onClick={() => setIsPurchaseModalOpen(true)}
-                  className="w-full py-3.5 px-4 bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 text-white font-black text-xs rounded-xl flex items-center justify-center gap-2 shadow-md transition active:scale-95 shadow-teal-500/20"
-                >
-                  <ShoppingCart className="w-4 h-4" />
-                  <span>شراء المقرر وفتح المحتوى ({book.price} ج.م)</span>
-                </button>
-              </div>
-            </div>
-
-            {/* DETAILS & DEMO VIDEO */}
-            <div className="md:col-span-2 space-y-6">
-              <div>
-                <div className="flex flex-wrap items-center gap-2 mb-2">
-                  <span className="px-2.5 py-0.5 rounded-md bg-teal-50 text-teal-800 text-xs font-bold">
-                    {book.subcategory || 'مقرر عام'}
-                  </span>
-                  {book.grade_level && (
-                    <span className="px-2.5 py-0.5 rounded-md bg-gray-100 text-gray-700 text-xs font-bold">
-                      {book.grade_level}
-                    </span>
-                  )}
-                </div>
-                <h1 className="text-2xl sm:text-3xl font-black text-gray-900 leading-snug">
-                  {book.title}
-                </h1>
-                <p className="text-xs text-gray-500 mt-1 font-medium">
-                  المؤلف / المحاضر: <span className="font-bold text-gray-800">{book.author_name || 'خبير المحتوى'}</span>
-                </p>
-              </div>
-
-              {/* VIDEO EXPLANATION EMBED */}
-              {embedUrl ? (
-                <div className="space-y-2">
-                  <h3 className="text-xs font-black text-gray-700 flex items-center gap-1.5">
-                    <Youtube className="w-4 h-4 text-rose-600" />
-                    <span>فيديو تعريفي وتوضيحي عن المقرر (شاهد قبل الشراء)</span>
-                  </h3>
-                  <div className="aspect-video w-full rounded-2xl overflow-hidden border border-gray-200 shadow-sm bg-black">
-                    <iframe
-                      src={embedUrl}
-                      title="Explanatory Video"
-                      className="w-full h-full border-0"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
-                  </div>
-                </div>
-              ) : null}
-
-              {/* DESCRIPTION */}
-              <div className="space-y-2">
-                <h3 className="text-xs font-black text-gray-700">نبذة وتفاصيل المقرر:</h3>
-                <p className="text-xs sm:text-sm text-gray-600 leading-relaxed bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                  {book.description || 'يقدم هذا المرجع محتوى تعليمياً وتطبيقياً متخصصاً يغطي المفاهيم الأساسية والأمثلة العملية عبر بيئة تفاعلية مؤمنة.'}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 📚 RELATED COURSES & BOOKS SECTION (AT THE FULL-WIDTH BOTTOM) */}
-        <div className="w-full pt-8 border-t border-gray-200">
-          <RelatedBooksSection
-            currentBook={book}
-            allBooks={books}
-            onOpenBook={(bId) => {
-              navigate(`/book/${bId}`);
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-          />
-        </div>
-
-        {/* PURCHASE MODAL */}
-        {isPurchaseModalOpen && onPurchaseBook && (
-          <PurchaseModal
-            isOpen={isPurchaseModalOpen}
-            book={book}
-            onClose={() => setIsPurchaseModalOpen(false)}
-            onConfirmPurchase={onPurchaseBook}
-          />
-        )}
-
-        {/* 🌟 OMNISCIENT ACADEMIC AI TUTOR (FLOATING CHAT) */}
-        <OmniscientStemAiTutor
-          bookId={book.id}
-          bookTitle={book.title}
-          currentChapterTitle={book.chapters?.[0]?.title || 'المقدمة والتمهيد'}
-          chapterContent={book.chapters?.[0]?.content || book.description || ''}
-          bookCategory={book.category || ''}
-        />
-      </div>
+      <ExternalBookViewer
+        book={book}
+        currentUser={currentUser}
+        isBookUnlocked={isBookUnlocked}
+        navigate={navigate}
+        isPurchaseModalOpen={isPurchaseModalOpen}
+        setIsPurchaseModalOpen={setIsPurchaseModalOpen}
+        onPurchaseBook={onPurchaseBook}
+        books={books}
+      />
     );
   }
 
@@ -722,6 +857,15 @@ export default function BookDetailsRoute({
           <span className="text-gray-300">|</span>
           <div className="flex items-center gap-2 max-w-[200px] sm:max-w-md">
             <h2 className="text-xs sm:text-sm font-black text-gray-900 truncate">{book.title}</h2>
+            {book.author_name && (
+              <Link
+                to={`/instructor/${encodeURIComponent(book.author_name)}`}
+                className="hidden md:inline-flex items-center gap-1 text-[11px] text-teal-700 bg-teal-50 hover:bg-teal-100 px-2 py-0.5 rounded-full border border-teal-200 font-bold transition shrink-0"
+                title="زيارة بروفايل المعلم"
+              >
+                <span>👨‍🏫 {book.author_name}</span>
+              </Link>
+            )}
             {book.language && book.language !== 'ar' && (
               <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-sky-50 text-sky-700 border border-sky-200 shrink-0">
                 {book.language === 'en' && '🇬🇧 EN'}
@@ -751,125 +895,272 @@ export default function BookDetailsRoute({
           </button>
 
 
-          {/* TOGGLE CHAPTERS SIDEBAR BUTTON */}
+          {/* TOGGLE CHAPTERS SIDEBAR BUTTON (DESKTOP & MOBILE) */}
           <button
-            onClick={() => setIsMobileChaptersOpen(!isMobileChaptersOpen)}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition border ${
-              isMobileChaptersOpen
-                ? 'bg-teal-600 text-white border-teal-600 shadow-sm'
-                : 'bg-teal-50 text-teal-800 border-teal-200 hover:bg-teal-100'
+            onClick={() => setIsDesktopSidebarOpen(!isDesktopSidebarOpen)}
+            className={`hidden lg:flex px-3.5 py-1.5 rounded-xl text-xs font-bold items-center gap-1.5 transition border cursor-pointer ${
+              isDesktopSidebarOpen
+                ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
             }`}
-            title="عرض أو إخفاء فهرس الفصول"
+            title="إظهار / إخفاء الفهرس"
           >
             <Layers className="w-3.5 h-3.5" />
             <span>
-              {isMobileChaptersOpen
-                ? 'إخفاء الفهرس (شاشة كاملة)'
+              {isDesktopSidebarOpen
+                ? 'إخفاء الفهرس'
                 : `فهرس الفصول (${(book.chapters || []).findIndex(c => c.id === activeChapterId) + 1}/${book.chapters?.length || 0}) 📑`}
             </span>
+          </button>
+
+          <button
+            onClick={() => setIsMobileChaptersOpen(true)}
+            className="lg:hidden px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 bg-teal-50 text-teal-800 border border-teal-200 cursor-pointer"
+          >
+            <Layers className="w-3.5 h-3.5 text-teal-600" />
+            <span>فهرس الفصول ({(book.chapters || []).findIndex(c => c.id === activeChapterId) + 1}/{book.chapters?.length || 0})</span>
           </button>
 
           {/* QR CODE GENERATOR BUTTON */}
           <button
             onClick={() => setIsQrModalOpen(true)}
-            className="px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-black flex items-center gap-1.5 transition shadow-sm bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-700 border border-indigo-200 hover:from-indigo-100 hover:to-purple-100 cursor-pointer"
+            className="px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold flex items-center gap-1.5 transition shadow-xs bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 cursor-pointer"
             title={t('book.qr_code', 'كود QR للكتاب 📲')}
           >
             <QrCode className="w-3.5 h-3.5 text-indigo-600" />
-            <span>{t('book.qr_code', 'كود QR للكتاب 📲')}</span>
+            <span className="hidden sm:inline">{t('book.qr_code', 'رمز QR')}</span>
           </button>
 
-          {/* PUBLISH / DRAFT TOGGLE BADGE */}
-          <button
-            onClick={handleTogglePublish}
-            className={`px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-black flex items-center gap-1.5 transition shadow-sm ${
-              book.is_published
-                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
-                : 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
-            }`}
-            title="تغيير حالة النشر للطلاب"
-          >
-            {book.is_published ? (
-              <>
-                <Eye className="w-3.5 h-3.5 text-emerald-600" />
-                <span>{t('book.published', 'منشور للطلاب')}</span>
-              </>
-            ) : (
-              <>
-                <EyeOff className="w-3.5 h-3.5 text-amber-600" />
-                <span>{t('book.draft', 'مسودة خاصة (مخفي)')}</span>
-              </>
-            )}
-          </button>
+          {/* PUBLISH / DRAFT TOGGLE BADGE (FOR INSTRUCTORS & ADMINS ONLY) */}
+          {(isAdminMode || userRole === 'admin' || userRole === 'instructor') && (
+            <button
+              onClick={handleTogglePublish}
+              className={`px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold flex items-center gap-1.5 transition shadow-xs cursor-pointer ${
+                book.is_published
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                  : 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
+              }`}
+              title="تغيير حالة النشر للطلاب"
+            >
+              {book.is_published ? (
+                <>
+                  <Eye className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>{t('book.published', 'منشور للطلاب')}</span>
+                </>
+              ) : (
+                <>
+                  <EyeOff className="w-3.5 h-3.5 text-amber-600" />
+                  <span>{t('book.draft', 'مسودة خاصة')}</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
-      {/* TAB NAVIGATION BAR */}
-      <div className="flex items-center gap-1.5 border-b border-gray-200 pb-2 overflow-x-auto scrollbar-none -mx-2 px-2 sm:mx-0 sm:px-0">
-        {[
-          { id: 'read', label: t('book.read', 'قراءة المقرر'), icon: BookOpen, enabled: true },
-          { id: 'interactive_lesson', label: t('book.interactive_lesson', '✨ [جديد] شرح الدرس تفاعلي'), icon: Brain, enabled: true, isNew: true },
-          { id: 'interactive_curriculum', label: t('book.interactive_curriculum', '🚀 [جديد] شرح المنهج كامل'), icon: Sparkles, enabled: true, isNew: true },
-          { id: 'reels', label: t('book.reels_tab', 'ريلز وتيك توك الفصل 🎬'), icon: Film, enabled: true },
-          { id: 'flashcards', label: t('book.flashcards', 'بطاقات المراجعة'), icon: Layers, enabled: book.feature_toggles?.show_flashcards !== false },
-          { id: 'sandbox', label: t('book.sandbox', 'المختبر والتطبيق'), icon: Terminal, enabled: book.feature_toggles?.show_sandbox !== false },
-          { id: 'quiz', label: t('book.quiz', 'بنك الأسئلة'), icon: HelpCircle, enabled: book.feature_toggles?.show_quiz !== false },
-          { id: 'videos', label: t('book.videos', 'المقاطع المرئية'), icon: Youtube, enabled: book.feature_toggles?.show_videos !== false },
-          { id: 'editor', label: t('book.editor', 'محرر النصوص'), icon: Edit, enabled: true }
-        ].filter(tab => tab.enabled).map(tab => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
+      {/* 🛠️ INSTRUCTOR & ADMIN QUICK CONTROL BAR */}
+      {isInstructorOrAdmin && (
+        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-900/60 rounded-2xl p-3 text-white shadow-md flex flex-wrap items-center justify-between gap-3 animate-fade-in" dir="rtl">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-teal-500/20 text-teal-300 flex items-center justify-center font-bold text-sm border border-teal-500/30 shrink-0">
+              ⚡
+            </div>
+            <div>
+              <span className="text-xs font-black text-white block">أدوات تعديل وإدارة المقرر (خاص بالمعلم والمشرف)</span>
+              <span className="text-[10px] text-teal-300">أضف فصولاً جديدة، ارفع مذكرات واستكمل بالـ AI، أو ولّد أسئلة وريلز للفصل</span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
             <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`px-3.5 py-2.5 rounded-2xl text-xs font-black flex items-center gap-2 shrink-0 transition relative ${
-                isActive
-                  ? tab.isNew 
-                    ? 'bg-gradient-to-r from-teal-600 to-indigo-600 text-white shadow-md shadow-indigo-500/25'
-                    : 'bg-teal-600 text-white shadow-md shadow-teal-500/20'
-                  : tab.isNew
-                  ? 'bg-gradient-to-r from-teal-50 to-indigo-50 border border-teal-200/80 text-teal-900 hover:border-teal-300'
-                  : 'bg-white border border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              onClick={handleAddChapter}
+              className="px-3 py-1.5 bg-teal-500 hover:bg-teal-400 text-slate-950 rounded-xl text-xs font-black flex items-center gap-1.5 transition shadow-xs active:scale-95 cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>إضافة فصل جديد ➕</span>
+            </button>
+
+            <button
+              onClick={() => setIsExpandingChapters(true)}
+              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black flex items-center gap-1.5 transition shadow-xs active:scale-95 cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <span>رفع واستكمال بالـ AI 📤</span>
+            </button>
+
+            <button
+              onClick={() => handleGenerateAiQuestions()}
+              disabled={isGeneratingAiQuestions}
+              className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white border border-white/15 rounded-xl text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer disabled:opacity-50"
+            >
+              <HelpCircle className="w-3.5 h-3.5 text-amber-300" />
+              <span>{isGeneratingAiQuestions ? 'جاري التوليد...' : 'توليد أسئلة للفصل ❓'}</span>
+            </button>
+
+            <button
+              onClick={handleGenerateCurrentChapterReel}
+              disabled={isGeneratingReel}
+              className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white border border-white/15 rounded-xl text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer disabled:opacity-50"
+            >
+              <Film className="w-3.5 h-3.5 text-purple-300" />
+              <span>{isGeneratingReel ? 'جاري التجهيز...' : 'توليد ريلز فيديو 🎬'}</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('editor')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition shadow-xs cursor-pointer ${
+                activeTab === 'editor' ? 'bg-amber-400 text-slate-950' : 'bg-amber-400/20 text-amber-300 hover:bg-amber-400/30 border border-amber-400/40'
               }`}
             >
-              <Icon className={`w-4 h-4 ${tab.isNew && !isActive ? 'text-teal-600' : ''}`} />
-              <span>{tab.label}</span>
-              {tab.isNew && !isActive && (
-                <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
-              )}
+              <Edit className="w-3.5 h-3.5" />
+              <span>محرر الفصول الشامل ✏️</span>
             </button>
-          );
-        })}
+          </div>
+        </div>
+      )}
+
+      {/* 🧭 STICKY COMPACT TABS BAR */}
+      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl p-2 shadow-xs">
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto scrollbar-none pb-0.5">
+          {/* GROUP 1: STUDY */}
+          {[
+            { id: 'read', label: t('book.read', 'قراءة الدرس 📖'), icon: BookOpen },
+            { id: 'interactive_lesson', label: t('book.interactive_lesson', 'شرح الدرس 💡'), icon: Brain },
+            { id: 'interactive_curriculum', label: t('book.interactive_curriculum', 'خريطة المنهج 🗺️'), icon: Sparkles }
+          ].map(tab => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shrink-0 cursor-pointer ${
+                  isActive ? 'bg-teal-600 text-white font-black shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+
+          <div className="h-5 w-px bg-slate-200 shrink-0 mx-0.5" />
+
+          {/* GROUP 2: PRACTICE */}
+          {[
+            { id: 'quiz', label: t('book.quiz', 'اختبارات وتمارين 📝'), icon: HelpCircle, enabled: book.feature_toggles?.show_quiz !== false },
+            { id: 'flashcards', label: t('book.flashcards', 'بطاقات استذكار 📇'), icon: Layers, enabled: book.feature_toggles?.show_flashcards !== false },
+            { id: 'sandbox', label: t('book.sandbox', 'أنشطة وتطبيقات 🧪'), icon: Terminal, enabled: book.feature_toggles?.show_sandbox !== false }
+          ].filter(t => t.enabled).map(tab => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shrink-0 cursor-pointer ${
+                  isActive ? 'bg-indigo-600 text-white font-black shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+
+          <div className="h-5 w-px bg-slate-200 shrink-0 mx-0.5" />
+
+          {/* GROUP 3: MEDIA */}
+          {[
+            { id: 'reels', label: t('book.reels_tab', 'فيديوهات قصيرة 🎬'), icon: Film },
+            { id: 'videos', label: t('book.videos', 'فيديوهات الشرح 🎥'), icon: Youtube, enabled: book.feature_toggles?.show_videos !== false }
+          ].filter(t => t.enabled !== false).map(tab => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shrink-0 cursor-pointer ${
+                  isActive ? 'bg-purple-600 text-white font-black shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+
+          {/* INSTRUCTOR EDIT TAB (FOR INSTRUCTORS ONLY) */}
+          {(isAdminMode || userRole === 'admin' || userRole === 'instructor' || (currentUser?.id && book.author_id === currentUser.id)) && (
+            <>
+              <div className="h-5 w-px bg-slate-200 shrink-0 mx-0.5" />
+              <button
+                onClick={() => setActiveTab('editor')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shrink-0 transition cursor-pointer border ${
+                  activeTab === 'editor'
+                    ? 'bg-amber-500 text-slate-950 font-black border-amber-600 shadow-xs'
+                    : 'bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100'
+                }`}
+              >
+                <Edit className="w-3.5 h-3.5" />
+                <span>{t('book.editor', 'تعديل المحتوى ✏️')}</span>
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* 2-COLUMN MAIN CONTENT (TOGGLEABLE SIDEBAR + ACTIVE TAB AREA) */}
       <div className="flex flex-col lg:flex-row gap-6 items-start">
         
-        {/* DESKTOP TOGGLEABLE SIDEBAR */}
-        {isMobileChaptersOpen && (
+        {/* DESKTOP TOGGLEABLE SIDEBAR (OPEN BY DEFAULT ON DESKTOP) */}
+        {isDesktopSidebarOpen && (
           <div className="hidden lg:block w-80 shrink-0 space-y-4 animate-in fade-in duration-200">
             <div className="bg-white border border-gray-200 rounded-3xl p-5 shadow-sm space-y-4 sticky top-20">
               <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-                <h3 className="font-black text-gray-900 text-sm flex items-center gap-2">
+                <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">
                   <Layers className="w-4 h-4 text-teal-600" />
                   <span>فهرس فصول الكتاب</span>
                 </h3>
-                <span className="text-[11px] font-extrabold px-2.5 py-0.5 bg-teal-50 text-teal-700 rounded-full">
-                  {book.chapters?.length || 0} فصول
+                <span className="text-[11px] font-bold px-2.5 py-0.5 bg-teal-50 text-teal-700 rounded-full">
+                  {completedChapterIds.length}/{book.chapters?.length || 0} مكتمل
                 </span>
               </div>
 
               <div className="space-y-1.5 max-h-[420px] overflow-y-auto pr-1 custom-scrollbar">
+                {/* INSTRUCTOR QUICK CHAPTER ACTIONS */}
+                {isInstructorOrAdmin && (
+                  <div className="flex items-center gap-1.5 pb-2.5 mb-1.5 border-b border-slate-100">
+                    <button
+                      onClick={handleAddChapter}
+                      className="flex-1 py-1.5 px-2 bg-teal-50 hover:bg-teal-100 text-teal-800 rounded-xl text-[11px] font-black transition flex items-center justify-center gap-1 border border-teal-200 cursor-pointer"
+                      title="إضافة فصل جديد للكتاب"
+                    >
+                      <Plus className="w-3.5 h-3.5 text-teal-600" />
+                      <span>إضافة فصل ➕</span>
+                    </button>
+                    <button
+                      onClick={() => setIsExpandingChapters(true)}
+                      className="py-1.5 px-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 rounded-xl text-[11px] font-black transition flex items-center justify-center gap-1 border border-indigo-200 cursor-pointer"
+                      title="رفع واستكمال فصول بالذكاء الاصطناعي"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>استكمال بالـ AI 📤</span>
+                    </button>
+                  </div>
+                )}
+
                 {(book.chapters || []).map((chapter, idx) => {
                   const isPurchased = purchasedBookIds.includes(book.id);
                   const isFree = !book.price || book.price === 0;
                   const isBookUnlocked = isFree || isPurchased || isAdminMode;
                   const isChapterLocked = !isBookUnlocked && idx > 0;
                   const isSelected = activeChapterId === chapter.id;
+                  const isCompleted = completedChapterIds.includes(chapter.id);
 
                   return (
-                    <button
+                    <div
                       key={chapter.id}
                       onClick={() => {
                         if (isChapterLocked) {
@@ -878,15 +1169,29 @@ export default function BookDetailsRoute({
                           setActiveChapterId(chapter.id);
                         }
                       }}
-                      className={`w-full text-right p-3 rounded-2xl text-xs font-bold transition flex items-center justify-between ${
+                      className={`w-full text-right p-3 rounded-2xl text-xs font-semibold transition flex items-center justify-between cursor-pointer ${
                         isSelected
-                          ? 'bg-teal-600 text-white shadow-md'
+                          ? 'bg-teal-600 text-white shadow-sm'
                           : isChapterLocked
                           ? 'text-gray-400 bg-gray-50/70 hover:bg-gray-100 hover:text-gray-700 border border-gray-100'
                           : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 border border-transparent hover:border-gray-200'
                       }`}
                     >
                       <div className="flex items-center gap-2 truncate">
+                        {/* Progress Check Icon */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleChapterCompleted(chapter.id);
+                          }}
+                          className={`p-0.5 rounded-full transition ${
+                            isCompleted ? (isSelected ? 'text-white' : 'text-emerald-600') : (isSelected ? 'text-teal-200' : 'text-slate-300 hover:text-slate-500')
+                          }`}
+                          title={isCompleted ? 'فصل مكتمل ✓' : 'تحديد كمكتمل'}
+                        >
+                          <CheckCircle2 className={`w-4 h-4 ${isCompleted ? 'fill-current' : ''}`} />
+                        </button>
+
                         {isChapterLocked ? (
                           <Lock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                         ) : idx === 0 && !isBookUnlocked ? (
@@ -894,68 +1199,67 @@ export default function BookDetailsRoute({
                         ) : null}
                         <span className="truncate">{chapter.title}</span>
                       </div>
-                      <span className={`text-[10px] shrink-0 mr-2 ${isSelected ? 'text-teal-100' : 'text-gray-400'}`}>
-                        {idx + 1}
-                      </span>
-                    </button>
+                      <div className="flex items-center gap-1.5 shrink-0 mr-2">
+                        {(isAdminMode || userRole === 'admin' || userRole === 'instructor') && (book.chapters || []).length > 1 && (
+                          <button
+                            onClick={(e) => handleDeleteChapter(chapter.id, e)}
+                            className={`p-1 rounded-lg transition ${
+                              isSelected ? 'text-teal-200 hover:text-white hover:bg-teal-700' : 'text-slate-400 hover:text-rose-600 hover:bg-slate-100'
+                            }`}
+                            title="حذف هذا الفصل"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        <span className={`text-[10px] ${isSelected ? 'text-teal-100' : 'text-gray-400'}`}>
+                          {idx + 1}
+                        </span>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
 
-              {/* ADMIN 1-CLICK BATCH ASSET PRE-GENERATION */}
-              <div className="pt-2 border-t border-gray-100 space-y-2">
-                <button
-                  onClick={handlePregenerateAllAssets}
-                  disabled={isPregenerating}
-                  className="w-full p-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-slate-950 font-black rounded-2xl text-xs flex items-center justify-center gap-2 shadow-sm transition active:scale-95 disabled:opacity-60"
-                >
-                  {isPregenerating ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>جاري تجهيز كافة الأصوات...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Volume2 className="w-4 h-4 text-slate-950" />
-                      <span>⚡ تجهيز كافة الأصوات والبودكاست</span>
-                    </>
-                  )}
-                </button>
+              {/* ADMIN ONLY: 1-CLICK BATCH ASSET PRE-GENERATION & EXPAND */}
+              {(isAdminMode || userRole === 'admin' || userRole === 'instructor') && (
+                <div className="pt-2 border-t border-gray-100 space-y-2">
+                  <button
+                    onClick={handlePregenerateAllAssets}
+                    disabled={isPregenerating}
+                    className="w-full p-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-xs transition active:scale-95 disabled:opacity-60 cursor-pointer"
+                  >
+                    {isPregenerating ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin text-teal-400" />
+                        <span>جاري تجهيز كافة الأصوات...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Volume2 className="w-4 h-4 text-teal-400" />
+                        <span>تجهيز الأصوات والبودكاست</span>
+                      </>
+                    )}
+                  </button>
 
-                {isPregenerating && (
-                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl space-y-1.5 text-right">
-                    <div className="flex items-center justify-between text-[11px] font-bold text-emerald-900">
-                      <span className="truncate">{pregenStep}</span>
-                      <span>{pregenPercent}%</span>
-                    </div>
-                    <div className="h-1.5 bg-emerald-200 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-emerald-600 rounded-full transition-all duration-300"
-                        style={{ width: `${pregenPercent}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* AI INCREMENTAL EXPAND BUTTON */}
-              <button
-                onClick={handleExpandChapters}
-                disabled={isExpandingChapters}
-                className="w-full p-3 bg-gradient-to-r from-teal-50 via-indigo-50 to-purple-50 border border-teal-200 hover:border-teal-300 text-teal-900 rounded-2xl text-xs font-black flex items-center justify-center gap-2 transition shadow-sm hover:shadow active:scale-95 disabled:opacity-60"
-              >
-                {isExpandingChapters ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin text-teal-600" />
-                    <span>جاري استكمال وتوليد بقية الفصول...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 text-teal-600" />
-                    <span>+ استكمال الفصول المتبقية بالـ AI</span>
-                  </>
-                )}
-              </button>
+                  <button
+                    onClick={handleExpandChapters}
+                    disabled={isExpandingChapters}
+                    className="w-full p-2.5 bg-teal-50 border border-teal-200 hover:border-teal-300 text-teal-900 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition active:scale-95 disabled:opacity-60 cursor-pointer"
+                  >
+                    {isExpandingChapters ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin text-teal-600" />
+                        <span>جاري استكمال الفصول...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 text-teal-600" />
+                        <span>استكمال الفصول بالـ AI</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -978,6 +1282,32 @@ export default function BookDetailsRoute({
               </div>
 
               <div className="space-y-1.5 max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
+                {/* INSTRUCTOR QUICK CHAPTER ACTIONS (MOBILE) */}
+                {isInstructorOrAdmin && (
+                  <div className="flex items-center gap-2 pb-3 mb-2 border-b border-slate-100">
+                    <button
+                      onClick={() => {
+                        setIsMobileChaptersOpen(false);
+                        handleAddChapter();
+                      }}
+                      className="flex-1 py-2 px-2.5 bg-teal-50 hover:bg-teal-100 text-teal-800 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 border border-teal-200 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5 text-teal-600" />
+                      <span>إضافة فصل ➕</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsMobileChaptersOpen(false);
+                        setIsExpandingChapters(true);
+                      }}
+                      className="py-2 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 border border-indigo-200 cursor-pointer"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>استكمال بالـ AI 📤</span>
+                    </button>
+                  </div>
+                )}
+
                 {(book.chapters || []).map((chapter, idx) => {
                   const isPurchased = purchasedBookIds.includes(book.id);
                   const isFree = !book.price || book.price === 0;
@@ -986,7 +1316,7 @@ export default function BookDetailsRoute({
                   const isSelected = activeChapterId === chapter.id;
 
                   return (
-                    <button
+                    <div
                       key={chapter.id}
                       onClick={() => {
                         if (isChapterLocked) {
@@ -996,7 +1326,7 @@ export default function BookDetailsRoute({
                           setIsMobileChaptersOpen(false);
                         }
                       }}
-                      className={`w-full text-right p-3.5 rounded-2xl text-xs font-bold transition flex items-center justify-between ${
+                      className={`w-full text-right p-3.5 rounded-2xl text-xs font-bold transition flex items-center justify-between cursor-pointer ${
                         isSelected
                           ? 'bg-teal-600 text-white shadow-md'
                           : isChapterLocked
@@ -1012,13 +1342,67 @@ export default function BookDetailsRoute({
                         ) : null}
                         <span className="truncate">{chapter.title}</span>
                       </div>
-                      <span className={`text-[10px] shrink-0 mr-2 ${isSelected ? 'text-teal-100' : 'text-gray-400'}`}>
-                        {idx + 1}
-                      </span>
-                    </button>
+                      <div className="flex items-center gap-1.5 shrink-0 mr-2">
+                        {(isAdminMode || userRole === 'admin' || userRole === 'instructor') && (book.chapters || []).length > 1 && (
+                          <button
+                            onClick={(e) => handleDeleteChapter(chapter.id, e)}
+                            className={`p-1 rounded-lg transition ${
+                              isSelected ? 'text-teal-200 hover:text-white hover:bg-teal-700' : 'text-slate-400 hover:text-rose-600 hover:bg-slate-100'
+                            }`}
+                            title="حذف هذا الفصل"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        <span className={`text-[10px] ${isSelected ? 'text-teal-100' : 'text-gray-400'}`}>
+                          {idx + 1}
+                        </span>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
+
+              {/* ADMIN ONLY ON MOBILE: BATCH GENERATION & EXPAND */}
+              {(isAdminMode || userRole === 'admin' || userRole === 'instructor') && (
+                <div className="pt-2 border-t border-gray-100 space-y-2">
+                  <button
+                    onClick={handlePregenerateAllAssets}
+                    disabled={isPregenerating}
+                    className="w-full p-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-xs transition active:scale-95 disabled:opacity-60 cursor-pointer"
+                  >
+                    {isPregenerating ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin text-teal-400" />
+                        <span>جاري تجهيز كافة الأصوات...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Volume2 className="w-4 h-4 text-teal-400" />
+                        <span>تجهيز الأصوات والبودكاست</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={handleExpandChapters}
+                    disabled={isExpandingChapters}
+                    className="w-full p-2.5 bg-teal-50 border border-teal-200 hover:border-teal-300 text-teal-900 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition active:scale-95 disabled:opacity-60 cursor-pointer"
+                  >
+                    {isExpandingChapters ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin text-teal-600" />
+                        <span>جاري استكمال الفصول...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 text-teal-600" />
+                        <span>استكمال الفصول بالـ AI</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
 
               <button
                 onClick={() => setIsMobileChaptersOpen(false)}
@@ -1042,7 +1426,11 @@ export default function BookDetailsRoute({
                 userName={currentUser?.user_metadata?.full_name}
                 userPhone={currentUser?.phone || currentUser?.user_metadata?.phone}
               />
-              <ReadSection chapter={activeChapter} />
+              <ReadSection 
+                chapter={activeChapter} 
+                isInstructorOrAdmin={isInstructorOrAdmin}
+                onSaveChapter={handleSaveChapter}
+              />
             </div>
           </ScreenShieldGuard>
         )}
@@ -1486,20 +1874,11 @@ export default function BookDetailsRoute({
         </div>
       </div>
 
-      {/* 📚 RELATED COURSES & BOOKS SECTION (AT THE FULL-WIDTH BOTTOM) */}
-      <div className="w-full">
-        <RelatedBooksSection
-          currentBook={book}
-          allBooks={books}
-          onOpenBook={(bId) => {
-            navigate(`/book/${bId}`);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-        />
-      </div>
-
       {/* PERSISTENT FLOATING AUDIO BAR */}
-      <FloatingAudioBar />
+      <FloatingAudioBar 
+        chapterTitle={activeChapter?.title} 
+        onTriggerPlay={activeTab === 'read' ? handleTriggerPlayActiveChapter : undefined}
+      />
 
       {/* PURCHASE MODAL */}
       {isPurchaseModalOpen && onPurchaseBook && (
@@ -1527,6 +1906,50 @@ export default function BookDetailsRoute({
         book={book}
         isOwned={isBookUnlocked}
       />
+
+      {/* 📱 MOBILE STICKY BOTTOM QUICK BAR (Easy Thumb Navigation) */}
+      <div 
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 py-2.5 flex items-center justify-around shadow-lg print:hidden"
+        dir="rtl"
+      >
+        <button
+          onClick={() => setActiveTab('read')}
+          className={`flex flex-col items-center gap-1 text-[11px] font-bold transition cursor-pointer ${
+            activeTab === 'read' ? 'text-teal-600 font-black' : 'text-slate-500 hover:text-slate-900'
+          }`}
+        >
+          <BookOpen className="w-4 h-4" />
+          <span>قراءة</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('interactive_lesson')}
+          className={`flex flex-col items-center gap-1 text-[11px] font-bold transition cursor-pointer ${
+            activeTab === 'interactive_lesson' ? 'text-teal-600 font-black' : 'text-slate-500 hover:text-slate-900'
+          }`}
+        >
+          <Brain className="w-4 h-4" />
+          <span>شرح الدرس</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('quiz')}
+          className={`flex flex-col items-center gap-1 text-[11px] font-bold transition cursor-pointer ${
+            activeTab === 'quiz' ? 'text-teal-600 font-black' : 'text-slate-500 hover:text-slate-900'
+          }`}
+        >
+          <HelpCircle className="w-4 h-4" />
+          <span>اختبارات</span>
+        </button>
+
+        <button
+          onClick={() => setIsMobileChaptersOpen(true)}
+          className="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-500 hover:text-slate-900 cursor-pointer"
+        >
+          <Layers className="w-4 h-4" />
+          <span>الفهرس</span>
+        </button>
+      </div>
     </div>
   );
 }

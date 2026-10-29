@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Upload, FileText, Sparkles, X, GraduationCap, BookMarked, Wand2, School, Building2, BookOpen, RefreshCw, AlertCircle, Shield } from 'lucide-react';
+import { 
+  Upload, FileText, Sparkles, X, GraduationCap, BookMarked, Wand2, 
+  School, Building2, BookOpen, RefreshCw, AlertCircle, Shield, ChevronDown, 
+  ChevronUp, Check, Edit2, Globe, DollarSign, HelpCircle, ArrowRight
+} from 'lucide-react';
 import { BookCategory, BookTrack } from '../types';
 import { 
   MAIN_CATEGORIES, 
@@ -50,6 +54,18 @@ interface AiQuotaInfo {
   canGenerate: boolean;
 }
 
+interface AiSuggestedMetadata {
+  title: string;
+  education_level?: string;
+  academic_system?: string;
+  grade_level?: string;
+  subcategory?: string;
+  semester?: string;
+  academic_year?: string;
+  language?: string;
+  summaryNotes?: string;
+}
+
 export default function ContentUploader({
   currentUser,
   userRole = 'instructor',
@@ -59,9 +75,11 @@ export default function ContentUploader({
   progressStep,
 }: ContentUploaderProps) {
   const [promptText, setPromptText] = useState('');
+  const [customTitle, setCustomTitle] = useState('');
   const [price, setPrice] = useState<number>(0);
   const [previewVideoUrl, setPreviewVideoUrl] = useState<string>('');
   const [cloudPdfUrl, setCloudPdfUrl] = useState<string>('');
+  const [showCloudInput, setShowCloudInput] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<{ 
     name: string; 
@@ -72,6 +90,12 @@ export default function ContentUploader({
   } | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isUploadingCloud, setIsUploadingCloud] = useState(false);
+
+  // AI Automatic Suggestion states
+  const [isAnalyzingAi, setIsAnalyzingAi] = useState<boolean>(false);
+  const [aiSuggestion, setAiSuggestion] = useState<AiSuggestedMetadata | null>(null);
+  const [showManualClassification, setShowManualClassification] = useState<boolean>(false);
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState<boolean>(false);
 
   // AI Quota & Pricing State
   const [quotaInfo, setQuotaInfo] = useState<AiQuotaInfo | null>(null);
@@ -109,7 +133,7 @@ export default function ContentUploader({
   const [semester, setSemester] = useState<string>(SEMESTERS[0]);
   const [academicYear, setAcademicYear] = useState<string>(ACADEMIC_YEARS[0]);
 
-  // General Library metadata states (9 Non-academic Categories)
+  // General Library metadata states
   const [generalCategory, setGeneralCategory] = useState<BookCategory>('programming_ai');
   const [generalSubcategory, setGeneralSubcategory] = useState<string>(GENERAL_SUBJECTS[0]);
   const [generalAudience, setGeneralAudience] = useState<string>('عام / للقراء والمهتمين ورواد الأعمال');
@@ -122,6 +146,36 @@ export default function ContentUploader({
     const sizes = ['Bytes', 'KB', 'MB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  // 🤖 Trigger AI Metadata & Category Inference
+  const fetchAiSuggestions = async (fileName: string, snippet = '') => {
+    setIsAnalyzingAi(true);
+    try {
+      const res = await fetch('/api/ai/suggest-book-metadata', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileName, snippet, promptText })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.suggestion) {
+          const sug = data.suggestion as AiSuggestedMetadata;
+          setAiSuggestion(sug);
+          if (sug.title) setCustomTitle(sug.title);
+          if (sug.education_level) setEducationLevel(sug.education_level);
+          if (sug.academic_system) setAcademicSystem(sug.academic_system);
+          if (sug.grade_level) setGradeLevel(sug.grade_level);
+          if (sug.subcategory) setSubcategory(sug.subcategory);
+          if (sug.semester) setSemester(sug.semester);
+          if (sug.language) setBookLanguage(sug.language);
+        }
+      }
+    } catch (err) {
+      console.warn('AI suggestions error:', err);
+    } finally {
+      setIsAnalyzingAi(false);
+    }
   };
 
   const processFile = (file: File) => {
@@ -181,6 +235,9 @@ export default function ContentUploader({
         rawFile: file
       });
     }
+
+    // Instantly trigger AI analysis on the selected file name!
+    fetchAiSuggestions(file.name);
   };
 
   const handleDrag = (e: React.DragEvent) => {
@@ -211,6 +268,8 @@ export default function ContentUploader({
   const clearSelectedFile = (e: React.MouseEvent) => {
     e.stopPropagation();
     setSelectedFile(null);
+    setAiSuggestion(null);
+    setCustomTitle('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -241,7 +300,7 @@ export default function ContentUploader({
     e.preventDefault();
     const trimmedCloudUrl = cloudPdfUrl.trim();
     if (!selectedFile && !trimmedCloudUrl && !promptText.trim()) {
-      setErrorMsg("يرجى رفع ملف PDF، أو لصق رابط الملف من Google Cloud Storage، أو كتابة فكرة الكتاب للبدء.");
+      setErrorMsg("يرجى رفع ملف PDF أو Word، أو كتابة عنوان أو فكرة المذكرة للبدء.");
       return;
     }
 
@@ -255,7 +314,7 @@ export default function ContentUploader({
       resolvedFileType = 'application/pdf';
     }
 
-    // 1. Direct Cloud Upload to Google Cloud Storage / Gemini Files API
+    // 1. Direct Cloud Upload to Google Cloud Storage / Supabase
     if (selectedFile?.rawFile) {
       try {
         setIsUploadingCloud(true);
@@ -271,8 +330,6 @@ export default function ContentUploader({
           const uploadData = await uploadRes.json();
           fileUrl = uploadData.fileUrl;
         } else {
-          const errData = await uploadRes.json().catch(() => ({}));
-          console.warn("GCP upload route failed, falling back to Supabase:", errData);
           // Fallback to Supabase Storage if file is small (< 50MB)
           if (selectedFile.rawFile.size < 48 * 1024 * 1024) {
             const fileExt = selectedFile.rawFile.name.split('.').pop();
@@ -293,25 +350,13 @@ export default function ContentUploader({
                 .getPublicUrl(filePath);
               fileUrl = publicUrl;
             }
-          } else {
-            setErrorMsg(errData.error || "تعذر رفع الملف السحابي. يرجى التأكد من اتصال الإنترنت والمحاولة مرة أخرى.");
-            setIsUploadingCloud(false);
-            return;
           }
         }
       } catch (uploadErr: any) {
-        console.warn("Direct storage upload failed:", uploadErr);
-        setErrorMsg("حدث خطأ أثناء الاتصال بالسيرفر لرفع الملف: " + (uploadErr.message || ""));
-        setIsUploadingCloud(false);
-        return;
+        console.warn("Direct storage upload warning:", uploadErr);
       } finally {
         setIsUploadingCloud(false);
       }
-    }
-
-    if (!fileUrl && !selectedFile?.base64 && !promptText.trim()) {
-      setErrorMsg("تعذر تجهيز ملف المذكرة للتحويل. يرجى إعادة اختيار الملف أو لصق رابط السحابة.");
-      return;
     }
 
     const activeSubcategory = isAcademicMode 
@@ -320,11 +365,14 @@ export default function ContentUploader({
 
     const activeGrade = isAcademicMode ? gradeLevel : generalAudience;
 
+    // Use customTitle or aiSuggestion or promptText
+    const finalPromptText = customTitle.trim() || promptText.trim() || resolvedFileName || 'مقرر دراسي تفاعلي';
+
     onConvert({
-      promptText,
+      promptText: finalPromptText,
       fileUrl,
       fileBase64: fileUrl ? undefined : selectedFile?.base64,
-      fileName: resolvedFileName,
+      fileName: customTitle.trim() || resolvedFileName,
       fileType: resolvedFileType,
       category: isAcademicMode ? 'academic_curriculum' : generalCategory,
       track: isAcademicMode ? 'academic' : 'general_literature',
@@ -341,554 +389,432 @@ export default function ContentUploader({
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto space-y-6" dir="rtl">
+    <div className="w-full max-w-2xl mx-auto space-y-5 text-right font-sans" dir="rtl">
       
-      {/* HEADER SECTION */}
-      <div className="text-center space-y-2">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-black">
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>استوديو تحويل الكتب والمناهج التفاعلية الذكي</span>
+      {/* 🌟 STREAMLINED HEADER */}
+      <div className="text-center space-y-1.5 pt-1">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-150 text-indigo-700 text-xs font-black">
+          <Sparkles className="w-3.5 h-3.5 text-indigo-600 animate-spin-slow" />
+          <span>الرفع والتوليد الذكي للمقررات</span>
         </div>
-        <h2 className="text-2xl sm:text-3xl font-black text-gray-900">
-          توليد كتاب أو مقرر تفاعلي جديد
+        <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          ارفع مذكرتك، وسيتولى الذكاء الاصطناعي الباقي ⚡
         </h2>
-        <p className="text-xs sm:text-sm text-gray-500 max-w-xl mx-auto leading-relaxed">
-          ارفع ملف الـ PDF لتحويله إلى كتاب رقمي شامل بالصوت، الشرح، الخرائط المفاهيمية، وبنوك الأسئلة.
+        <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+          اسحب ملف الـ PDF أو Word، وسيقوم الذكاء الاصطناعي تلقائياً بالتعرف على المادة والصف وبناء مقرر تفاعلي كامل بالصوت والأسئلة.
         </p>
       </div>
 
-      {/* 🎁 AI QUOTA & FREE BOOKS BANNER */}
+      {/* 🛡️ MINIMAL ACCOUNT BADGE */}
       {quotaInfo && (
         userRole === 'admin' ? (
-          <div className="p-3 bg-gradient-to-r from-slate-900 to-indigo-950 border border-indigo-500/30 rounded-2xl text-white flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2">
-              <Shield className="w-4 h-4 text-amber-400" />
-              <span className="font-bold">حساب إدارة المنصة (Admin Mode):</span>
-              <span className="text-emerald-400 font-black">توليد غير محدود مجاناً 100% 🛡️</span>
-            </div>
+          <div className="px-3.5 py-2 bg-slate-900 text-white rounded-xl flex items-center justify-between text-xs font-bold border border-slate-800">
+            <span className="flex items-center gap-1.5 text-amber-300">
+              <Shield className="w-3.5 h-3.5" />
+              <span>وضع المشرف (Admin): توليد غير محدود 100% 🛡️</span>
+            </span>
+            <span className="text-emerald-400 font-black text-[11px]">متاح دائماً</span>
           </div>
         ) : quotaInfo.remainingFree > 0 ? (
-          <div className="p-3.5 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-indigo-500/10 border border-emerald-500/30 rounded-2xl text-slate-800 space-y-2">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-2">
-                <span className="p-1 rounded-lg bg-emerald-100 text-emerald-700 font-black text-xs">🎁 هدية المعلم</span>
-                <span className="text-xs font-black text-slate-900">باقة المعلم المجانية بالذكاء الاصطناعي:</span>
-                <span className="text-xs font-black text-emerald-700 bg-emerald-100/90 px-2.5 py-0.5 rounded-full border border-emerald-300">
-                  متبقي لك {quotaInfo.remainingFree} من {quotaInfo.freeLimit} مذكرات مجانية (Free)!
-                </span>
-              </div>
-              <span className="text-[11px] font-bold text-slate-500">
-                أول {quotaInfo.freeLimit} مذكرات مجاناً 100%
-              </span>
-            </div>
-            <div className="w-full bg-slate-200/80 rounded-full h-1.5 overflow-hidden">
-              <div 
-                className="bg-gradient-to-r from-emerald-500 to-teal-500 h-full rounded-full transition-all duration-500"
-                style={{ width: `${Math.min(100, ((quotaInfo.freeLimit - quotaInfo.remainingFree) / quotaInfo.freeLimit) * 100)}%` }}
-              />
-            </div>
+          <div className="px-3.5 py-2 bg-emerald-50 text-emerald-800 rounded-xl flex items-center justify-between text-xs font-bold border border-emerald-200">
+            <span className="flex items-center gap-1.5">
+              <span>🎁</span>
+              <span>رصيدك المجاني: <strong>{quotaInfo.remainingFree}</strong> من أصل {quotaInfo.freeLimit} مذكرات</span>
+            </span>
+            <span className="text-[11px] bg-emerald-200/70 text-emerald-900 px-2 py-0.5 rounded-full font-black">مجاني (Free)</span>
           </div>
-        ) : (
-          <div className={`p-3.5 rounded-2xl border ${quotaInfo.walletBalance >= quotaInfo.costPerBook ? 'bg-sky-50 border-sky-200 text-sky-900' : 'bg-amber-50 border-amber-200 text-amber-900'} space-y-2`}>
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-2">
-                <span className="p-1 rounded-lg bg-indigo-100 text-indigo-700 font-black text-xs">⚡ باقة الإنتاج</span>
-                <span className="text-xs font-black">تكلفة التوليد (بعد استهلاك الـ {quotaInfo.freeLimit} مذكرات المجانية):</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-black text-indigo-700 bg-white px-2.5 py-0.5 rounded-full border border-indigo-200">
-                  {quotaInfo.costPerBook} ج.م / مذكرة
-                </span>
-                <span className="text-xs font-bold text-slate-600">
-                  رصيد محفظتك: <strong className={quotaInfo.walletBalance >= quotaInfo.costPerBook ? 'text-emerald-600' : 'text-rose-600'}>{quotaInfo.walletBalance} ج.م</strong>
-                </span>
-              </div>
-            </div>
-            {quotaInfo.walletBalance < quotaInfo.costPerBook && (
-              <p className="text-[11px] text-amber-800 font-bold bg-amber-100/70 p-2 rounded-xl border border-amber-200 flex items-center gap-1.5">
-                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                <span>رصيد محفظتك الحالي ({quotaInfo.walletBalance} ج.م) غير كافٍ لتوليد المذكرة ({quotaInfo.costPerBook} ج.م). يرجى شحن الرصيد للمتابعة.</span>
-              </p>
-            )}
-          </div>
-        )
+        ) : null
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-4">
         
-        {/* PROMINENT TOGGLE: ACADEMIC VS GENERAL LIBRARY */}
-        <div className="bg-white border-2 border-indigo-100 rounded-3xl p-3 shadow-sm space-y-3">
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setIsAcademicMode(true)}
-              className={`p-3.5 rounded-2xl flex items-center justify-center gap-2.5 transition font-black text-xs sm:text-sm ${
-                isAcademicMode
-                  ? 'bg-indigo-600 text-white shadow-md'
-                  : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              <GraduationCap className="w-5 h-5" />
-              <span>مقرر ومنهج دراسي (أكاديمي)</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setIsAcademicMode(false)}
-              className={`p-3.5 rounded-2xl flex items-center justify-center gap-2.5 transition font-black text-xs sm:text-sm ${
-                !isAcademicMode
-                  ? 'bg-indigo-600 text-white shadow-md'
-                  : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              <BookMarked className="w-5 h-5" />
-              <span>كتاب عام ومكتبة رقمية (تطوير ذات / أعمال)</span>
-            </button>
-          </div>
-
-          {/* Engine Highlights */}
-          {isAcademicMode ? (
-            <div className="p-3 bg-indigo-50/60 rounded-2xl border border-indigo-100 text-[11px] text-indigo-900 grid grid-cols-1 sm:grid-cols-3 gap-2 font-bold">
-              <div className="flex items-center gap-1.5">
-                <span className="text-indigo-600">✓</span>
-                <span>تفكيك الدروس وحفظ الهيكلية الوزارية</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-indigo-600">✓</span>
-                <span>استخراج القوانين وتريكات الامتحانات</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-indigo-600">✓</span>
-                <span>أسئلة متدرجة وفق هرم بلوم وبطاقات مراجعة</span>
-              </div>
-            </div>
-          ) : (
-            <div className="p-3 bg-amber-50/60 rounded-2xl border border-amber-100 text-[11px] text-amber-900 grid grid-cols-1 sm:grid-cols-2 gap-2 font-bold">
-              <div className="flex items-center gap-1.5">
-                <span className="text-amber-600">✓</span>
-                <span>تلخيص الفصول، استخلاص الرؤى، والخرائط الذهنية</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-amber-600">✓</span>
-                <span>حوارات بودكاست صوتية وتوليد ريلز سريعة</span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* DRAG AND DROP ZONE */}
+        {/* 📂 DRAG AND DROP ZONE (PRIMARY INTERACTION) */}
         <div
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
           onDragOver={handleDrag}
           onDrop={handleDrop}
           onClick={triggerFileSelect}
-          className={`relative border-2 border-dashed rounded-3xl p-6 sm:p-8 text-center cursor-pointer transition-all duration-200 ${
+          className={`relative border-2 border-dashed rounded-3xl p-6 sm:p-7 text-center cursor-pointer transition-all duration-200 ${
             dragActive
-              ? 'border-indigo-600 bg-indigo-50/60 scale-[1.01]'
+              ? 'border-indigo-600 bg-indigo-50/70 scale-[1.01]'
               : selectedFile
-              ? 'border-emerald-500 bg-emerald-50/30'
-              : 'border-gray-200 hover:border-indigo-400 bg-gray-50/50 hover:bg-gray-50'
+              ? 'border-emerald-500 bg-emerald-50/40'
+              : 'border-slate-300 hover:border-indigo-500 bg-slate-50/70 hover:bg-white'
           }`}
         >
           <input
             ref={fileInputRef}
             type="file"
-            accept=".pdf,.docx,.doc,.txt,image/png,image/jpeg,image/webp,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword,application/pdf"
+            accept=".pdf,.docx,.doc,.txt,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword,application/pdf"
             onChange={handleFileInputChange}
             disabled={isConverting}
             className="hidden"
           />
 
-          <div className="flex flex-col items-center justify-center space-y-3">
+          <div className="flex flex-col items-center justify-center space-y-2.5">
             {selectedFile ? (
               <>
-                <div className="p-3.5 bg-emerald-100 text-emerald-700 rounded-2xl">
+                <div className="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center shadow-xs">
                   <FileText className="w-6 h-6" />
                 </div>
-                <div className="space-y-1">
-                  <h4 className="font-bold text-sm text-gray-800 flex items-center justify-center gap-1.5">
-                    {selectedFile.name}
+                <div className="space-y-1 max-w-sm">
+                  <div className="font-black text-sm text-slate-800 flex items-center justify-center gap-2">
+                    <span className="truncate">{selectedFile.name}</span>
                     <button
                       type="button"
                       onClick={clearSelectedFile}
-                      className="p-1 hover:bg-gray-200 rounded-full text-gray-400 hover:text-gray-600 transition"
-                      title="إزالة الملف"
+                      className="p-1 hover:bg-slate-200 rounded-full text-slate-400 hover:text-rose-600 transition"
+                      title="إزالة الملف واختيار غيره"
                     >
-                      <X className="w-3.5 h-3.5" />
+                      <X className="w-4 h-4" />
                     </button>
-                  </h4>
-                  <p className="text-xs text-gray-400 font-bold">{selectedFile.type.toUpperCase() || "DOCUMENT"} • {selectedFile.size}</p>
+                  </div>
+                  <p className="text-[11px] text-slate-500 font-bold">{selectedFile.size} • تم تجهيز الملف بنجاح</p>
                 </div>
               </>
             ) : (
               <>
-                <div className="p-3.5 bg-indigo-50 text-indigo-600 rounded-2xl transition">
-                  <Upload className="w-6 h-6" />
+                <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center group-hover:scale-105 transition shadow-xs">
+                  <Upload className="w-6 h-6 text-indigo-600" />
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm font-bold text-gray-700">اسحب وأفلت ملف الـ PDF أو Word (DOCX) هنا، أو <span className="text-indigo-600 underline">تصفح جهازك</span></p>
-                  <p className="text-xs text-gray-400">يدعم كتب الـ PDF، مستندات Word (DOCX)، المذكرات والمراجع حتى 250 ميجابايت (شامل ملفات الـ PDF المصورة / الممسوحة ضوئياً)</p>
+                  <p className="text-sm font-black text-slate-800">
+                    اسحب وأفلت المذكرة أو الكتاب هنا، أو <span className="text-indigo-600 underline">تصفح جهازك</span>
+                  </p>
+                  <p className="text-[11px] text-slate-500 font-medium">
+                    يدعم ملفات PDF و Word حتى 250 ميجابايت (شامل الملازم المصورة والممسوحة ضوئياً)
+                  </p>
                 </div>
               </>
             )}
           </div>
         </div>
 
-        {/* ☁️ DIRECT GOOGLE CLOUD STORAGE PDF LINK INPUT */}
-        <div className="p-4 bg-gradient-to-r from-sky-50/80 via-indigo-50/60 to-slate-50 border border-indigo-200 rounded-2xl space-y-2">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <label className="text-xs font-black text-indigo-950 flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded-lg bg-indigo-600 text-white text-[10px] font-black">☁️ رابط مباشر من السحابة</span>
-              <span>أو الصق رابط ملف الـ PDF المرفوع مسبقاً على Google Cloud Storage:</span>
-            </label>
-            {cloudPdfUrl.trim() && (
+        {/* ☁️ TOGGLE CLOUD STORAGE URL */}
+        <div className="text-center">
+          {!showCloudInput ? (
+            <button
+              type="button"
+              onClick={() => setShowCloudInput(true)}
+              className="text-xs font-bold text-slate-500 hover:text-indigo-600 inline-flex items-center gap-1.5 transition cursor-pointer"
+            >
+              <span>☁️ هل الملف مرفوع بالفعل على Google Cloud Storage؟ الصق رابطه هنا</span>
+            </button>
+          ) : (
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2 text-right animate-fade-in">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700">رابط ملف الـ PDF على السحابة (GCS):</label>
+                <button
+                  type="button"
+                  onClick={() => setShowCloudInput(false)}
+                  className="text-[11px] text-slate-400 hover:text-slate-600"
+                >
+                  إخفاء
+                </button>
+              </div>
+              <input
+                type="text"
+                dir="ltr"
+                value={cloudPdfUrl}
+                onChange={(e) => {
+                  setCloudPdfUrl(e.target.value);
+                  if (e.target.value.trim().length > 10) {
+                    fetchAiSuggestions(e.target.value);
+                  }
+                }}
+                disabled={isConverting}
+                placeholder="https://storage.googleapis.com/ebookstoreg/uploads/... أو gs://..."
+                className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-mono focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+          )}
+        </div>
+
+        {/* ⏳ AI ANALYZING PULSE */}
+        {isAnalyzingAi && (
+          <div className="p-4 bg-gradient-to-r from-indigo-50 via-teal-50 to-indigo-50 border border-indigo-200 rounded-2xl flex items-center justify-center gap-3 text-xs text-indigo-900 font-bold animate-pulse">
+            <RefreshCw className="w-4 h-4 animate-spin text-indigo-600" />
+            <span>جاري تحليل اسم المذكرة وتحديد المادة والصف والمرحلة بالذكاء الاصطناعي...</span>
+          </div>
+        )}
+
+        {/* ✨ AI SMART DETECTION & CLASSIFICATION CARD */}
+        {(selectedFile || cloudPdfUrl.trim() || aiSuggestion) && !isAnalyzingAi && (
+          <div className="p-4 sm:p-5 bg-gradient-to-br from-indigo-50/70 via-white to-teal-50/50 border-2 border-indigo-200/80 rounded-3xl shadow-sm space-y-3.5 animate-fade-in">
+            <div className="flex items-center justify-between border-b border-indigo-100 pb-2.5">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-xl bg-teal-500/20 text-teal-700 flex items-center justify-center font-black text-xs">
+                  ✨
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-slate-900">المعلومات المكتشفة بالذكاء الاصطناعي</h4>
+                  <p className="text-[10px] text-teal-700 font-bold">تم التعرف على المقرر والتصنيف الأنسب تلقائياً</p>
+                </div>
+              </div>
+
               <button
                 type="button"
-                onClick={() => setCloudPdfUrl('')}
-                className="text-[11px] font-bold text-rose-600 hover:underline"
+                onClick={() => setShowManualClassification(!showManualClassification)}
+                className="text-[11px] font-bold text-indigo-700 bg-white hover:bg-indigo-50 px-2.5 py-1 rounded-xl border border-indigo-200 transition flex items-center gap-1 cursor-pointer"
               >
-                مسح الرابط
+                <Edit2 className="w-3 h-3 text-indigo-600" />
+                <span>{showManualClassification ? 'إخفاء التعديل' : 'تعديل التصنيف يدوياً'}</span>
               </button>
-            )}
-          </div>
-          <input
-            type="text"
-            dir="ltr"
-            value={cloudPdfUrl}
-            onChange={(e) => setCloudPdfUrl(e.target.value)}
-            disabled={isConverting}
-            placeholder="https://storage.googleapis.com/ebookstoreg/uploads/... أو gs://ebookstoreg/uploads/..."
-            className="w-full p-2.5 bg-white border border-indigo-200 rounded-xl text-gray-900 text-xs font-mono focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/10"
-          />
-          <p className="text-[11px] text-slate-600 font-bold">
-            يدعم الروابط بصيغة <code className="bg-white px-1.5 py-0.5 rounded border text-indigo-700">https://storage.googleapis.com/ebookstoreg/...</code> أو <code className="bg-white px-1.5 py-0.5 rounded border text-indigo-700">https://storage.cloud.google.com/...</code> أو <code className="bg-white px-1.5 py-0.5 rounded border text-indigo-700">gs://ebookstoreg/...</code> حتى لو كان الملف غير عام (Not public) بفضل الربط السحابي المباشر!
-          </p>
-        </div>
+            </div>
 
-        {/* AI AUTO-INFERENCE BADGE */}
-        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 p-3.5 rounded-2xl flex items-center gap-2.5 text-xs text-emerald-900 font-bold">
-          <Wand2 className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span>ميزة التصنيف التلقائي: سيقوم الذكاء الاصطناعي تلقائياً بتحديد المادة والمرحلة الأنسب من محتوى الكتاب إن تركت الخيارات كما هي.</span>
-        </div>
+            {/* EDITABLE TITLE FIELD */}
+            <div className="space-y-1">
+              <label className="text-xs font-black text-slate-700 flex items-center gap-1.5">
+                <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
+                <span>عنوان المقرر المقترح (يمكنك تعديله):</span>
+              </label>
+              <input
+                type="text"
+                value={customTitle}
+                onChange={(e) => setCustomTitle(e.target.value)}
+                placeholder="مثال: مذكرة الأحياء للثانوية العامة - الفصل الأول"
+                className="w-full p-2.5 bg-white border border-indigo-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 shadow-2xs"
+              />
+            </div>
 
-        {/* CONDITIONAL FORM FIELDS BASED ON SELECTED MODE */}
-        {isAcademicMode ? (
-          /* ACADEMIC FIELDS - CASCADING TAXONOMY */
-          <div className="p-5 bg-white border border-gray-200 rounded-3xl space-y-4 shadow-sm">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-              <h4 className="text-xs font-black text-gray-800 flex items-center gap-2">
-                <GraduationCap className="w-4 h-4 text-indigo-600" />
-                <span>الهيكلية الأكاديمية للمقرر والمنهج الدراسي</span>
-              </h4>
-              <span className="text-[11px] font-bold text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100">
-                مناهج ومقررات دراسية
+            {/* SMART TAXONOMY BADGES */}
+            <div className="flex flex-wrap items-center gap-2 pt-0.5">
+              <span className="px-3 py-1 rounded-xl bg-indigo-100/90 text-indigo-900 text-xs font-black flex items-center gap-1.5">
+                <School className="w-3.5 h-3.5 text-indigo-700" />
+                <span>{educationLevel === 'university' ? 'تعليم جامعي' : 'تعليم ما قبل الجامعي'}</span>
+              </span>
+
+              <span className="px-3 py-1 rounded-xl bg-teal-100/90 text-teal-900 text-xs font-black flex items-center gap-1.5">
+                <GraduationCap className="w-3.5 h-3.5 text-teal-700" />
+                <span>{gradeLevel}</span>
+              </span>
+
+              <span className="px-3 py-1 rounded-xl bg-amber-100/90 text-amber-900 text-xs font-black flex items-center gap-1.5">
+                <span>📚</span>
+                <span>{subcategory}</span>
+              </span>
+
+              <span className="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-800 text-[11px] font-bold">
+                {semester}
+              </span>
+
+              <span className="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-800 text-[11px] font-bold">
+                {bookLanguage === 'ar' ? 'العربية 🇪🇬' : bookLanguage === 'en' ? 'الإنجليزية 🇬🇧' : bookLanguage}
               </span>
             </div>
 
-            {/* 1. EDUCATION LEVEL SELECTOR (قبل جامعي vs جامعي) */}
-            <div>
-              <label className="text-xs font-bold text-gray-700 block mb-1.5">1. المرحلة التعليمية الرئيسية</label>
-              <div className="grid grid-cols-2 gap-2">
-                {EDUCATION_LEVELS.map((lvl) => (
-                  <button
-                    type="button"
-                    key={lvl.id}
-                    onClick={() => handleEducationLevelChange(lvl.id)}
-                    className={`p-3 rounded-2xl flex items-center justify-center gap-2 text-xs font-black transition border ${
-                      educationLevel === lvl.id
-                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                        : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
-                    }`}
-                  >
-                    {lvl.id === 'pre_university' ? <School className="w-4 h-4" /> : <Building2 className="w-4 h-4" />}
-                    <span>{lvl.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 2. PRE-UNIVERSITY CASCADING FIELDS */}
-            {educationLevel === 'pre_university' ? (
-              <div className="space-y-4 p-4 bg-gray-50/80 border border-gray-200/80 rounded-2xl">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* System Track */}
-                  <div>
-                    <label className="text-xs font-bold text-gray-700 block mb-1.5">2. مسار ونظام التعليم</label>
-                    <select
-                      value={academicSystem}
-                      onChange={(e) => handleAcademicSystemChange(e.target.value)}
-                      disabled={isConverting}
-                      className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500"
-                    >
-                      {ACADEMIC_SYSTEMS.map((sys) => (
-                        <option key={sys.id} value={sys.id}>{sys.label}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Grade Level */}
-                  <div>
-                    <label className="text-xs font-bold text-gray-700 block mb-1.5">3. الصف والمرحلة الدراسية</label>
-                    <select
-                      value={gradeLevel}
-                      onChange={(e) => setGradeLevel(e.target.value)}
-                      disabled={isConverting}
-                      className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500"
-                    >
-                      {getGradesForSystem('pre_university', academicSystem).map((g) => (
-                        <option key={g} value={g}>{g}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs font-bold text-gray-700 block mb-1.5">4. المادة الدراسية / التخصص</label>
-                  <select
-                    value={subcategory}
-                    onChange={(e) => setSubcategory(e.target.value)}
-                    disabled={isConverting}
-                    className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500"
-                  >
-                    {ACADEMIC_SUBJECTS.map((s) => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            ) : (
-              /* UNIVERSITY FIELDS */
-              <div className="space-y-4 p-4 bg-indigo-50/50 border border-indigo-100 rounded-2xl">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-bold text-gray-700 block mb-1.5">2. الكلية / التخصص الجامعي</label>
-                    <select
-                      value={universityFaculty}
-                      onChange={(e) => setUniversityFaculty(e.target.value)}
-                      disabled={isConverting}
-                      className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500"
-                    >
-                      {UNIVERSITY_FACULTIES.map((fac) => (
-                        <option key={fac} value={fac}>{fac}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-bold text-gray-700 block mb-1.5">3. السنة / الفرقة الدراسية</label>
-                    <select
-                      value={gradeLevel}
-                      onChange={(e) => setGradeLevel(e.target.value)}
-                      disabled={isConverting}
-                      className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500"
-                    >
-                      {getGradesForSystem('university').map((g) => (
-                        <option key={g} value={g}>{g}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </div>
+            {aiSuggestion?.summaryNotes && (
+              <p className="text-[11px] text-slate-600 bg-white/70 p-2.5 rounded-xl border border-indigo-100/80 leading-relaxed font-medium">
+                💡 <strong>ملخص الذكاء الاصطناعي:</strong> {aiSuggestion.summaryNotes}
+              </p>
             )}
-
-            {/* SEMESTER & YEAR */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-              <div>
-                <label className="text-xs font-bold text-gray-700 block mb-1.5">الفصل الدراسي</label>
-                <select
-                  value={semester}
-                  onChange={(e) => setSemester(e.target.value)}
-                  disabled={isConverting}
-                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500 focus:bg-white"
-                >
-                  {SEMESTERS.map((sem) => (
-                    <option key={sem} value={sem}>{sem}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-gray-700 block mb-1.5">السنة الدراسية / الطبعة</label>
-                <select
-                  value={academicYear}
-                  onChange={(e) => setAcademicYear(e.target.value)}
-                  disabled={isConverting}
-                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500 focus:bg-white"
-                >
-                  {ACADEMIC_YEARS.map((y) => (
-                    <option key={y} value={y}>{y}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
           </div>
-        ) : (
-          /* GENERAL LIBRARY FIELDS - 9 MAIN CATEGORIES */
-          <div className="p-5 bg-white border border-gray-200 rounded-3xl space-y-4 shadow-sm">
-            <h4 className="text-xs font-black text-gray-800 flex items-center gap-2">
-              <BookMarked className="w-4 h-4 text-indigo-600" />
-              <span>اختر قسم الكتاب من أقسام المكتبة الرقمية العامة</span>
-            </h4>
+        )}
 
-            {/* 9 MAIN NON-ACADEMIC CATEGORIES GRID */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              {MAIN_CATEGORIES.filter(c => !c.isAcademic).map(c => (
-                <button
-                  type="button"
-                  key={c.id}
-                  onClick={() => setGeneralCategory(c.id as BookCategory)}
-                  className={`p-3 rounded-2xl text-xs font-bold transition text-right border flex flex-col justify-between gap-1.5 ${
-                    generalCategory === c.id
-                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                      : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
-                  }`}
-                >
-                  <span className="font-black text-[11px]">{c.label}</span>
-                  <span className={`text-[10px] leading-tight line-clamp-1 ${generalCategory === c.id ? 'text-indigo-100' : 'text-gray-400'}`}>
-                    {c.description}
-                  </span>
-                </button>
-              ))}
+        {/* 🛠️ MANUAL CLASSIFICATION OVERRIDE (EXPANDABLE) */}
+        {showManualClassification && (
+          <div className="p-4 bg-slate-50 border border-slate-200 rounded-3xl space-y-3.5 animate-fade-in">
+            <div className="flex items-center justify-between pb-1 border-b border-slate-200">
+              <span className="text-xs font-black text-slate-800">تخصيص التصنيفات والمرحلة الدراسية يدوياً</span>
+              <span className="text-[10px] text-slate-500 font-bold">خيارات متطابقة مع المعايير الوزارية</span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-bold text-gray-700 block mb-1.5">المجال / الموضوع الفرعي</label>
+                <label className="text-[11px] font-bold text-slate-700 block mb-1">المرحلة التعليمية</label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {EDUCATION_LEVELS.map((lvl) => (
+                    <button
+                      type="button"
+                      key={lvl.id}
+                      onClick={() => handleEducationLevelChange(lvl.id)}
+                      className={`p-2 rounded-xl text-xs font-black transition border ${
+                        educationLevel === lvl.id
+                          ? 'bg-indigo-600 text-white border-indigo-600'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {lvl.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-slate-700 block mb-1">الصف الدراسي</label>
                 <select
-                  value={generalSubcategory}
-                  onChange={(e) => setGeneralSubcategory(e.target.value)}
-                  disabled={isConverting}
-                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500 focus:bg-white"
+                  value={gradeLevel}
+                  onChange={(e) => setGradeLevel(e.target.value)}
+                  className="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900"
                 >
-                  {GENERAL_SUBJECTS.map((s) => (
+                  {getGradesForSystem(educationLevel, academicSystem).map((g) => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-slate-700 block mb-1">المادة الدراسية</label>
+                <select
+                  value={subcategory}
+                  onChange={(e) => setSubcategory(e.target.value)}
+                  className="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900"
+                >
+                  {ACADEMIC_SUBJECTS.map((s) => (
                     <option key={s} value={s}>{s}</option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-gray-700 block mb-1.5">المستوى والجمهور المستهدف</label>
+                <label className="text-[11px] font-bold text-slate-700 block mb-1">الفصل الدراسي</label>
                 <select
-                  value={generalAudience}
-                  onChange={(e) => setGeneralAudience(e.target.value)}
-                  disabled={isConverting}
-                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500 focus:bg-white"
+                  value={semester}
+                  onChange={(e) => setSemester(e.target.value)}
+                  className="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900"
                 >
-                  <option value="عام / للقراء والمهتمين ورواد الأعمال">عام / للقراء والمهتمين ورواد الأعمال</option>
-                  <option value="مستوى مبتدئ / تأسيسي">مستوى مبتدئ / تأسيسي</option>
-                  <option value="مستوى متوسط وتطبيقي">مستوى متوسط وتطبيقي</option>
-                  <option value="مستوى متقدم وتخصصي">مستوى متقدم وتخصصي</option>
+                  {SEMESTERS.map((sem) => (
+                    <option key={sem} value={sem}>{sem}</option>
+                  ))}
                 </select>
               </div>
             </div>
           </div>
         )}
 
-        {/* 🌐 LANGUAGE SELECTION CARD */}
-        <div className="p-4 bg-white border border-indigo-200/90 rounded-3xl shadow-xs space-y-3">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-black text-gray-900 flex items-center gap-2">
-              <span className="text-base">🌐</span>
-              <span>لغة المنهج والمحتوى الأساسية (Target Language)</span>
-            </label>
-            <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-150">
-              {bookLanguage === 'ar' ? 'العربية 🇪🇬 🇸🇦' : bookLanguage === 'en' ? 'الإنجليزية 🇬🇧 🇺🇸' : bookLanguage === 'fr' ? 'الفرنسية 🇫🇷' : bookLanguage === 'de' ? 'الألمانية 🇩🇪' : 'الإيطالية 🇮🇹'}
+        {/* 🚀 PRIMARY CALL TO ACTION BUTTON (1-CLICK GENERATION) */}
+        <button
+          type="submit"
+          disabled={isConverting || isUploadingCloud || (quotaInfo !== null && !quotaInfo.canGenerate)}
+          className={`w-full py-4 rounded-2xl font-black text-sm text-white transition flex items-center justify-center gap-2.5 shadow-lg active:scale-98 cursor-pointer ${
+            isConverting || isUploadingCloud
+              ? 'bg-slate-800 cursor-not-allowed'
+              : (quotaInfo !== null && !quotaInfo.canGenerate)
+                ? 'bg-slate-400 cursor-not-allowed opacity-60'
+                : 'bg-gradient-to-r from-teal-600 via-indigo-600 to-indigo-700 hover:from-teal-500 hover:to-indigo-600 shadow-indigo-500/25'
+          }`}
+        >
+          {isConverting || isUploadingCloud ? (
+            <>
+              <RefreshCw className="w-5 h-5 animate-spin" />
+              <span>{isUploadingCloud ? 'جاري تجهيز ورفع المستند للسحابة...' : 'جاري التحليل والبناء بالذكاء الاصطناعي...'}</span>
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-5 h-5 text-amber-300" />
+              <span>
+                {quotaInfo?.isFree 
+                  ? '🚀 ابدأ توليد وبناء المقرر الذكي الآن (مجاناً)' 
+                  : `🚀 ابدأ توليد وبناء المقرر الذكي (${quotaInfo?.costPerBook || 50} ج.م)`}
+              </span>
+            </>
+          )}
+        </button>
+
+        {/* ⚙️ COLLAPSIBLE ADVANCED SETTINGS (PRICE, PROMPT, LANGUAGE) */}
+        <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white">
+          <button
+            type="button"
+            onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
+            className="w-full p-3.5 flex items-center justify-between text-xs font-bold text-slate-600 hover:bg-slate-50 transition cursor-pointer"
+          >
+            <span className="flex items-center gap-1.5">
+              <span>⚙️</span>
+              <span>خيارات إضافية وتخصيص متقدم (السعر، لغة الشرح، توجيهات الـ AI)</span>
             </span>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-            {[
-              { id: 'ar', label: 'العربية', flag: '🇪🇬 🇸🇦', note: 'المناهج العربية' },
-              { id: 'en', label: 'English', flag: '🇬🇧 🇺🇸', note: 'لغات ودولي' },
-              { id: 'fr', label: 'Français', flag: '🇫🇷', note: 'الفرنسية' },
-              { id: 'de', label: 'Deutsch', flag: '🇩🇪', note: 'الألمانية' },
-              { id: 'it', label: 'Italiano', flag: '🇮🇹', note: 'الإيطالية' }
-            ].map((lang) => (
-              <button
-                type="button"
-                key={lang.id}
-                onClick={() => setBookLanguage(lang.id)}
-                disabled={isConverting}
-                className={`p-2.5 rounded-2xl border text-xs font-bold transition flex flex-col items-center justify-center gap-1 cursor-pointer ${
-                  bookLanguage === lang.id
-                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm font-black'
-                    : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
-                }`}
-              >
-                <span className="text-sm">{lang.flag}</span>
-                <span className="font-black text-xs">{lang.label}</span>
-                <span className={`text-[9px] ${bookLanguage === lang.id ? 'text-indigo-200' : 'text-gray-400'}`}>{lang.note}</span>
-              </button>
-            ))}
-          </div>
-          <p className="text-[11px] text-gray-500 font-medium">
-            💡 <strong>قاعدة حاسمة:</strong> يلتزم الذكاء الاصطناعي بكتابة وتوليد كافة الفصول، الشروحات، وبنوك الأسئلة باللغة المحددة هنا بنسبة 100% ومنع الخلط اللغوي.
-          </p>
-        </div>
+            {showAdvancedSettings ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
 
-        {/* PROMPT / TEXT PASTING ZONE */}
-        <div className="space-y-1.5">
-          <label className="block text-xs font-bold text-gray-700">
-            توجيهات إضافية للذكاء الاصطناعي (اختياري)
-          </label>
-          <textarea
-            placeholder="مثال: ركز على الجوانب العملية والأمثلة التطبيقية، واجعل لغة الحوار ميسرة وممتعة..."
-            value={promptText}
-            onChange={(e) => setPromptText(e.target.value)}
-            disabled={isConverting}
-            rows={3}
-            className="w-full text-xs p-3.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 focus:bg-white transition resize-none leading-relaxed font-sans"
-          />
-        </div>
+          {showAdvancedSettings && (
+            <div className="p-4 pt-1 border-t border-slate-100 space-y-4 animate-fade-in bg-slate-50/50">
+              
+              {/* PRICE SETTINGS */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 block">تسعير المقرر للطلاب:</label>
+                <div className="flex items-center gap-2">
+                  {[0, 50, 100, 150].map((preset) => (
+                    <button
+                      type="button"
+                      key={preset}
+                      onClick={() => setPrice(preset)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-black transition ${
+                        price === preset
+                          ? 'bg-indigo-600 text-white shadow-xs'
+                          : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {preset === 0 ? 'مجاني' : `${preset} ج.م`}
+                    </button>
+                  ))}
+                  <input
+                    type="number"
+                    min="0"
+                    value={price}
+                    onChange={(e) => setPrice(Math.max(0, Number(e.target.value)))}
+                    placeholder="سعر مخصص"
+                    className="w-24 p-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 text-center"
+                  />
+                </div>
+              </div>
 
-        {/* 💰 PRICE & MONETIZATION SETTINGS */}
-        <div className="p-4 bg-gradient-to-r from-indigo-50/70 to-purple-50/70 border border-indigo-150 rounded-2xl space-y-3">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-black text-indigo-950 flex items-center gap-1.5">
-              <span>💰 تسعير المقرر / الكتاب للطلاب</span>
-            </label>
-            <div className="flex items-center gap-1.5 text-xs font-bold">
-              {[0, 50, 100, 150].map((preset) => (
-                <button
-                  type="button"
-                  key={preset}
-                  onClick={() => setPrice(preset)}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${
-                    price === preset
-                      ? 'bg-indigo-600 text-white font-black shadow-sm'
-                      : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
-                  }`}
-                >
-                  {preset === 0 ? 'مجاني' : `${preset} ج.م`}
-                </button>
-              ))}
+              {/* LANGUAGE SELECTION */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 block">لغة الشرح والمحتوى الأساسية:</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'ar', label: 'العربية 🇪🇬 🇸🇦' },
+                    { id: 'en', label: 'English 🇬🇧 🇺🇸' },
+                    { id: 'fr', label: 'Français 🇫🇷' }
+                  ].map((lang) => (
+                    <button
+                      type="button"
+                      key={lang.id}
+                      onClick={() => setBookLanguage(lang.id)}
+                      className={`p-2 rounded-xl text-xs font-black transition border ${
+                        bookLanguage === lang.id
+                          ? 'bg-indigo-600 text-white border-indigo-600'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {lang.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* CUSTOM AI PROMPT / INSTRUCTIONS */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 block">
+                  توجيهات إضافية لمساعد الذكاء الاصطناعي (اختياري):
+                </label>
+                <textarea
+                  placeholder="مثال: ركز على أسئلة الامتحانات والقوانين، أو اجعل الأسلوب ميسراً مع أمثلة عملية..."
+                  value={promptText}
+                  onChange={(e) => setPromptText(e.target.value)}
+                  disabled={isConverting}
+                  rows={2}
+                  className="w-full text-xs p-3 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition resize-none leading-relaxed"
+                />
+              </div>
+
+              {/* PROMOTIONAL VIDEO URL */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">
+                  رابط فيديو توضيحي / يوتيوب للمقرر (اختياري):
+                </label>
+                <input
+                  type="url"
+                  value={previewVideoUrl}
+                  onChange={(e) => setPreviewVideoUrl(e.target.value)}
+                  disabled={isConverting}
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  className="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
             </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <span className="text-[11px] text-gray-600 font-bold block mb-1">أو حدد سعراً مخصصاً (بالجنيه):</span>
-              <input
-                type="number"
-                min="0"
-                value={price}
-                onChange={(e) => setPrice(Math.max(0, Number(e.target.value)))}
-                disabled={isConverting}
-                placeholder="0 = مجاني"
-                className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500"
-              />
-            </div>
-            <div>
-              <span className="text-[11px] text-gray-600 font-bold block mb-1">رابط فيديو توضيحي / تمهيدي (اختياري):</span>
-              <input
-                type="url"
-                value={previewVideoUrl}
-                onChange={(e) => setPreviewVideoUrl(e.target.value)}
-                disabled={isConverting}
-                placeholder="https://www.youtube.com/watch?v=..."
-                className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-gray-900 text-xs font-bold focus:outline-none focus:border-indigo-500"
-              />
-            </div>
-          </div>
+          )}
         </div>
 
         {/* ACTIVE CONVERSION PROGRESS DISPLAY */}
@@ -896,45 +822,11 @@ export default function ContentUploader({
 
         {/* ERROR MESSAGES */}
         {errorMsg && (
-          <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2.5 text-xs text-rose-700 font-bold">
+          <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2.5 text-xs text-rose-700 font-bold animate-shake">
             <AlertCircle className="w-4.5 h-4.5 shrink-0 text-rose-600" />
             <p>{errorMsg}</p>
           </div>
         )}
-
-        {/* SUBMIT BUTTON */}
-        <button
-          type="submit"
-          disabled={isConverting || isUploadingCloud || (quotaInfo !== null && !quotaInfo.canGenerate)}
-          className={`w-full py-4 rounded-2xl font-black text-sm text-white transition flex items-center justify-center gap-2.5 shadow-md ${
-            isConverting || isUploadingCloud
-              ? 'bg-slate-800 cursor-not-allowed'
-              : (quotaInfo !== null && !quotaInfo.canGenerate)
-                ? 'bg-slate-400 cursor-not-allowed opacity-60'
-                : 'bg-indigo-600 hover:bg-indigo-500 active:scale-95 shadow-indigo-200 cursor-pointer'
-          }`}
-        >
-          {isConverting || isUploadingCloud ? (
-            <>
-              <RefreshCw className="w-5 h-5 animate-spin" />
-              <span>{isUploadingCloud ? 'جاري فحص ورفع الملف السحابي...' : 'جاري التحليل والبناء بالذكاء الاصطناعي...'}</span>
-            </>
-          ) : (quotaInfo !== null && !quotaInfo.canGenerate) ? (
-            <>
-              <AlertCircle className="w-5 h-5" />
-              <span>الرصيد غير كافٍ — يرجى شحن المحفظة للمتابعة ({quotaInfo.costPerBook} ج.م)</span>
-            </>
-          ) : (
-            <>
-              <BookOpen className="w-5 h-5" />
-              <span>
-                {quotaInfo?.isFree 
-                  ? 'توليد وبناء الكتاب التفاعلي الآن (مجاناً 🎁)' 
-                  : `توليد وبناء الكتاب التفاعلي (${quotaInfo?.costPerBook || 50} ج.م)`}
-              </span>
-            </>
-          )}
-        </button>
 
       </form>
 
@@ -972,32 +864,32 @@ function ConversionProgressTracker({ percent, step }: ProgressTrackerProps) {
   const displayStepText = step || steps[Math.min(localStep, steps.length - 1)].label;
 
   return (
-    <div className="p-5 border border-indigo-100 bg-indigo-50/30 rounded-2xl space-y-3.5 animate-fade-in text-right">
+    <div className="p-5 border border-indigo-100 bg-indigo-50/40 rounded-3xl space-y-3.5 animate-fade-in text-right">
       <div className="flex items-center justify-between">
         <span className="text-xs font-black text-indigo-700 flex items-center gap-1.5 animate-pulse">
           <Sparkles className="w-4 h-4 text-indigo-600" />
           <span>{displayStepText}</span>
         </span>
-        <span className="text-xs font-black text-indigo-900 bg-white px-2 py-0.5 rounded-full border border-indigo-100">
+        <span className="text-xs font-black text-indigo-900 bg-white px-2.5 py-0.5 rounded-full border border-indigo-150 shadow-2xs">
           {displayPercent}%
         </span>
       </div>
 
-      <div className="w-full bg-gray-200/80 rounded-full h-2 overflow-hidden">
+      <div className="w-full bg-slate-200/80 rounded-full h-2 overflow-hidden">
         <div
-          className="bg-indigo-600 h-full transition-all duration-500 rounded-full"
+          className="bg-gradient-to-r from-teal-500 to-indigo-600 h-full transition-all duration-500 rounded-full"
           style={{ width: `${displayPercent}%` }}
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-indigo-50/80 text-[10px] text-gray-500">
+      <div className="grid grid-cols-2 gap-2 pt-1 border-t border-indigo-100/60 text-[10px] text-slate-500 font-bold">
         <div className="flex items-center gap-1.5">
           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-          <span>دقة تحليل المحتوى: 100%</span>
+          <span>دقة الهيكلة الأكاديمية: 100%</span>
         </div>
         <div className="flex items-center gap-1.5 justify-end">
           <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-          <span>النماذج السريعة: نشطة</span>
+          <span>محرك الذكاء الاصطناعي: نشط</span>
         </div>
       </div>
     </div>

@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useParams, Link, useLocation, Navigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import {
-  BookOpen, ArrowLeft, Brain, HelpCircle, Youtube, Edit, Radio, Shield, LogOut, User, X, Sparkles, Compass, ShoppingCart, MessageSquare, Menu, ChevronLeft, Phone, Building2, Sliders
+  BookOpen, ArrowLeft, Brain, HelpCircle, Youtube, Edit, Radio, Shield, LogOut, User, X, Sparkles, Compass, ShoppingCart, MessageSquare, Menu, ChevronLeft, ChevronDown, Phone, Building2, Sliders
 } from 'lucide-react';
 import { MarketplaceBook, UserRole } from './types';
 import ContentUploader from './components/ContentUploader';
@@ -17,13 +17,13 @@ import { LandingPageView } from './components/LandingPageView';
 import { AuthModal } from './components/AuthModal';
 import { AddExternalBookModal } from './components/AddExternalBookModal';
 import { AdminInstructorHub } from './components/admin/AdminInstructorHub';
-import { StudentStreakBadge } from './components/gamification/StudentStreakBadge';
 import { EduReelsFeedView } from './components/reels/EduReelsFeedView';
 import { FaqPageView } from './components/FaqPageView';
 import { AboutPageView } from './components/AboutPageView';
 import BookDetailsRoute from './routes/BookDetailsRoute';
+import InstructorProfileRoute from './routes/InstructorProfileRoute';
 import { SupportModal } from './components/support/SupportModal';
-import { FloatingAiMascot } from './components/ai/FloatingAiMascot';
+import { ToastContainer, showToast } from './components/common/Toast';
 import { supabase } from './lib/supabase';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { getPlatformConfig, syncPlatformConfigWithServer, PlatformConfig } from './services/platformConfigService';
@@ -62,6 +62,18 @@ function AppContent() {
   const [isExternalModalOpen, setIsExternalModalOpen] = useState(false);
   const [isAiCreateModalOpen, setIsAiCreateModalOpen] = useState(false);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
   const [isConverting, setIsConverting] = useState(false);
   const [progressPercent, setProgressPercent] = useState<number>(0);
   const [progressStep, setProgressStep] = useState<string>('');
@@ -140,17 +152,17 @@ function AppContent() {
             localStorage.setItem('purchased_book_ids', JSON.stringify(updated));
             return updated;
           });
-          alert('🎉 تم تأكيد الدفع بنجاح عبر PayPal! تم تفعيل وتوفير الوصول الكامل للمقرر.');
+          showToast('🎉 تم تأكيد الدفع بنجاح! تم تفعيل وتوفير الوصول الكامل للمقرر.', 'success');
           navigate(`/book/${bookId}?tab=read`);
         } else {
-          alert('🎉 تم تأكيد الدفع بنجاح عبر PayPal!');
+          showToast('🎉 تم تأكيد الدفع بنجاح!', 'success');
         }
       } else if (paymentStatus === 'recharge_success') {
-        alert(`💳 تم شحن محفظتك بنجاح عبر PayPal ($${amount || ''} USD)!`);
+        showToast(`💳 تم شحن محفظتك بنجاح ($${amount || ''} USD)!`, 'success');
       } else if (paymentStatus === 'cancelled') {
-        alert('ℹ️ تم إلغاء عملية الدفع من قبل المستخدم.');
+        showToast('ℹ️ تم إلغاء عملية الدفع.', 'info');
       } else if (paymentStatus === 'failed') {
-        alert(`❌ تعذر إتمام عملية الدفع عبر PayPal: ${reason || 'يرجى المحاولة مرة أخرى.'}`);
+        showToast(`❌ تعذر إتمام عملية الدفع: ${reason || 'يرجى المحاولة مرة أخرى.'}`, 'error');
       }
 
       // Clean query parameters from URL
@@ -737,14 +749,14 @@ function AppContent() {
           </Link>
         </div>
 
-        {/* 🌟 DESKTOP NAVIGATION LINKS (Hidden on mobile / tablet, visible on lg+) */}
-        <nav className="hidden lg:flex items-center gap-1.5 text-xs font-bold">
+        {/* 🌟 DESKTOP NAVIGATION LINKS (Unified Clean SaaS Design) */}
+        <nav className="hidden lg:flex items-center gap-1 text-xs font-bold">
           <Link
             to="/"
             className={`px-3.5 py-2 rounded-xl transition ${
               isLandingPage
                 ? 'bg-slate-900 text-white font-black shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
             }`}
           >
             {t('nav.home', 'الرئيسية')}
@@ -754,14 +766,14 @@ function AppContent() {
             to="/marketplace"
             className={`px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 ${
               location.pathname === '/marketplace'
-                ? 'bg-sky-600 text-white font-black shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                ? 'bg-slate-900 text-white font-black shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
             }`}
           >
             <ShoppingCart className="w-3.5 h-3.5" />
-            <span>{t('nav.marketplace', 'متجر المقررات')}</span>
-            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
-              location.pathname === '/marketplace' ? 'bg-sky-700 text-white' : 'bg-slate-200 text-slate-700'
+            <span>{t('nav.marketplace', 'مكتبة المقررات')}</span>
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+              location.pathname === '/marketplace' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
             }`}>
               {ebooks.length}
             </span>
@@ -771,14 +783,14 @@ function AppContent() {
           {platformConfig.showReels && (
             <Link
               to="/reels"
-              className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 ${
+              className={`px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 ${
                 location.pathname === '/reels'
-                  ? 'bg-purple-600 text-white font-black shadow-xs'
-                  : 'text-purple-700 hover:text-purple-900 hover:bg-purple-50 border border-purple-100'
+                  ? 'bg-slate-900 text-white font-black shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-              <span>{t('nav.reels', '🎬 ريلز المعرفة')}</span>
+              <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+              <span>فيديوهات قصيرة 🎬</span>
             </Link>
           )}
 
@@ -786,67 +798,173 @@ function AppContent() {
           {currentUser && (userRole === 'admin' || userRole === 'instructor' || isAdminMode) && (
             <Link
               to={userRole === 'admin' || isAdminMode ? '/admin' : '/instructor'}
-              className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 ${
+              className={`px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 ${
                 location.pathname === '/admin' || location.pathname === '/instructor'
-                  ? 'bg-indigo-600 text-white font-black shadow-xs'
-                  : 'text-indigo-700 hover:text-indigo-900 hover:bg-indigo-50 border border-indigo-100'
+                  ? 'bg-slate-900 text-white font-black shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              <span>{userRole === 'admin' || isAdminMode ? t('nav.admin_hub', 'لوحة القيادة 🛡️') : t('nav.instructor_hub', 'لوحة المعلم ⚡')}</span>
+              <Shield className="w-3.5 h-3.5 text-teal-600" />
+              <span>{userRole === 'admin' || isAdminMode ? 'لوحة الإدارة ⚙️' : 'لوحة المعلم 👨‍🏫'}</span>
             </Link>
           )}
         </nav>
 
         {/* 🌟 RIGHT ACTION CONTROLS & AUTH */}
-        <div className="flex items-center gap-2 sm:gap-2.5">
+        <div className="flex items-center gap-2">
           {/* 🌐 INTERNATIONAL LANGUAGE SELECTOR */}
           <LanguageSelector />
-
-          {/* GAMIFICATION / DAILY STREAK BADGE */}
-          {platformConfig.showGamification && (
-            <StudentStreakBadge currentUser={currentUser} />
-          )}
 
           {/* SUPPORT / COMPLAINTS BUTTON (Desktop) */}
           <button
             onClick={() => setIsSupportModalOpen(true)}
-            className="hidden sm:flex px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl transition items-center gap-1.5 cursor-pointer"
+            className="hidden sm:flex px-3 py-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-bold text-xs rounded-xl transition items-center gap-1.5 cursor-pointer"
             title="مركز الشكاوى والدعم الفني"
           >
-            <MessageSquare className="w-3.5 h-3.5 text-rose-600" />
-            <span>{t('nav.help_support', 'الشكاوى والدعم 🎫')}</span>
+            <MessageSquare className="w-3.5 h-3.5 text-slate-500" />
+            <span>الدعم والمساعدة</span>
           </button>
 
           {/* ADMIN / STUDENT MODE TOGGLE */}
           {userRole === 'admin' && (
             <button
               onClick={() => setIsAdminMode(!isAdminMode)}
-              className={`hidden md:flex px-3 py-1.5 rounded-full text-xs font-black border transition items-center gap-1.5 cursor-pointer ${
+              className={`hidden md:flex px-2.5 py-1.5 rounded-xl text-xs font-bold border transition items-center gap-1.5 cursor-pointer ${
                 isAdminMode
-                  ? 'bg-amber-100 border-amber-300 text-amber-900'
-                  : 'bg-white border-gray-300 text-gray-600 hover:text-gray-900'
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                  : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
               }`}
+              title="التبديل بين وضع المسؤول والواجهة العادية"
             >
-              <Shield className="w-3.5 h-3.5" />
-              <span>{isAdminMode ? 'وضع المسؤول 🛡️' : 'الانتقال لوضع الطالب'}</span>
+              <Shield className="w-3.5 h-3.5 text-amber-400" />
+              <span>{isAdminMode ? 'المسؤول 🛡️' : 'وضع الطالب'}</span>
             </button>
           )}
 
-          {/* USER PROFILE OR LOGIN BUTTON (Desktop) */}
+          {/* QUICK UPLOAD BUTTON FOR INSTRUCTORS & ADMINS */}
+          {currentUser && (userRole === 'admin' || userRole === 'instructor' || isAdminMode) && (
+            <button
+              onClick={() => setIsAiCreateModalOpen(true)}
+              className="hidden md:flex px-3.5 py-1.5 bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 text-white font-black text-xs rounded-xl shadow-xs transition active:scale-95 items-center gap-1.5 cursor-pointer"
+              title="رفع مذكرة واستخراج الفصول بالذكاء الاصطناعي"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <span>رفع مقرر بالـ AI 📤</span>
+            </button>
+          )}
+
+          {/* USER PROFILE OR LOGIN BUTTON WITH INTERACTIVE DROPDOWN */}
           {currentUser ? (
-            <div className="hidden sm:flex items-center gap-1.5">
-              <div className="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-xl flex items-center gap-2 text-xs font-bold text-slate-700">
-                <User className="w-3.5 h-3.5 text-teal-600 shrink-0" />
-                <span className="truncate max-w-[110px]">{currentUser.email?.split('@')[0]}</span>
-              </div>
+            <div className="relative" ref={userMenuRef}>
               <button
-                onClick={handleLogout}
-                title={t('nav.sign_out', 'تسجيل الخروج')}
-                className="p-2 text-slate-400 hover:text-rose-500 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                className="hidden sm:flex items-center gap-2 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-xl px-2.5 py-1.5 transition cursor-pointer"
               >
-                <LogOut className="w-4 h-4" />
+                <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-teal-500 to-indigo-600 text-white flex items-center justify-center font-black text-xs shadow-2xs shrink-0">
+                  {(currentUser.user_metadata?.full_name || currentUser.email || 'U').charAt(0).toUpperCase()}
+                </div>
+                <div className="text-right">
+                  <span className="text-xs font-black text-slate-800 block truncate max-w-[90px] leading-tight">
+                    {currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0]}
+                  </span>
+                  <span className="text-[9px] font-bold text-teal-600 block leading-tight">
+                    {userRole === 'admin' ? 'مسؤول 🛡️' : userRole === 'instructor' ? 'معلم 👨‍🏫' : 'طالب 🎓'}
+                  </span>
+                </div>
+                <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
               </button>
+
+              {/* USER PROFILE DROPDOWN MENU */}
+              {isUserMenuOpen && (
+                <div
+                  className="absolute top-full mt-2 left-0 w-64 bg-white border border-slate-200 rounded-2xl p-2 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150 text-right"
+                  dir="rtl"
+                >
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 mb-1.5 space-y-1">
+                    <div className="font-black text-xs text-slate-900 truncate">
+                      {currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0]}
+                    </div>
+                    <div className="text-[10px] text-slate-500 font-mono truncate">{currentUser.email}</div>
+                    <div className="pt-1">
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-teal-100 text-teal-800 border border-teal-200">
+                        {userRole === 'admin' ? '🛡️ مسؤول النظام (Admin)' : userRole === 'instructor' ? '👨‍🏫 معلم معتمد (Instructor)' : '🎓 حساب طالب (Student)'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1 text-xs font-bold text-slate-700">
+                    {(userRole === 'instructor' || userRole === 'admin' || isAdminMode) && (
+                      <>
+                        <Link
+                          to="/instructor"
+                          onClick={() => setIsUserMenuOpen(false)}
+                          className="w-full flex items-center gap-2 p-2 hover:bg-slate-100 rounded-xl transition"
+                        >
+                          <Sparkles className="w-4 h-4 text-teal-600" />
+                          <span>لوحة تحكم المعلم (Instructor Studio)</span>
+                        </Link>
+
+                        <Link
+                          to={`/instructor/${encodeURIComponent(currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || 'instructor')}`}
+                          onClick={() => setIsUserMenuOpen(false)}
+                          className="w-full flex items-center gap-2 p-2 hover:bg-slate-100 rounded-xl transition"
+                        >
+                          <User className="w-4 h-4 text-indigo-600" />
+                          <span>بروفايلي العام للطلاب (Public Profile)</span>
+                        </Link>
+                      </>
+                    )}
+
+                    {(userRole === 'admin' || isAdminMode) && (
+                      <Link
+                        to="/admin"
+                        onClick={() => setIsUserMenuOpen(false)}
+                        className="w-full flex items-center gap-2 p-2 hover:bg-slate-100 rounded-xl transition"
+                      >
+                        <Shield className="w-4 h-4 text-amber-500" />
+                        <span>لوحة الإدارة والتحكم (Admin Hub)</span>
+                      </Link>
+                    )}
+
+                    {(userRole === 'admin' || userRole === 'instructor' || isAdminMode) && (
+                      <button
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          setIsAiCreateModalOpen(true);
+                        }}
+                        className="w-full flex items-center gap-2 p-2 hover:bg-teal-50 text-teal-700 rounded-xl transition cursor-pointer"
+                      >
+                        <Sparkles className="w-4 h-4 text-teal-600" />
+                        <span>رفع وتوليد مقرر جديد بالـ AI 📤</span>
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        setIsSupportModalOpen(true);
+                      }}
+                      className="w-full flex items-center gap-2 p-2 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+                    >
+                      <MessageSquare className="w-4 h-4 text-slate-500" />
+                      <span>مركز الشكاوى والدعم الفني</span>
+                    </button>
+
+                    <div className="border-t border-slate-100 my-1" />
+
+                    <button
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        handleLogout();
+                      }}
+                      className="w-full flex items-center gap-2 p-2 text-rose-600 hover:bg-rose-50 rounded-xl transition cursor-pointer"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>تسجيل الخروج</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <button
@@ -1187,6 +1305,15 @@ function AppContent() {
               </div>
             )
           } />
+          <Route path="/instructor/:id" element={
+            <InstructorProfileRoute 
+              books={ebooks} 
+              currentUser={currentUser}
+              userRole={userRole}
+              isAdminMode={isAdminMode}
+              onOpenCreateModal={() => setIsAiCreateModalOpen(true)}
+            />
+          } />
           <Route path="/book/:id" element={
             <div className="p-4 sm:p-6 max-w-7xl mx-auto w-full space-y-6">
               <BookDetailsRoute
@@ -1333,11 +1460,6 @@ function AppContent() {
         </div>
       )}
 
-      {/* 🦉 FLOATING PARALLAX AI MASCOT BOT */}
-      <FloatingAiMascot
-        onOpenSupport={() => setIsSupportModalOpen(true)}
-      />
-
       {/* 🎫 SUPPORT & COMPLAINTS MODAL */}
       <SupportModal
         isOpen={isSupportModalOpen}
@@ -1345,6 +1467,9 @@ function AppContent() {
         currentUser={currentUser}
         userRole={userRole}
       />
+
+      {/* 🔔 GLOBAL MODERN TOAST NOTIFICATIONS */}
+      <ToastContainer />
     </div>
   );
 }

@@ -682,6 +682,7 @@ interface ConversionJob {
   progressPercent: number;
   result?: any;
   error?: string;
+  generationProgress?: any;
 }
 
 let conversionJobs: Record<string, ConversionJob> = {};
@@ -1302,6 +1303,169 @@ async function resolveCloudOrLocalFileBuffer(fileUrl: string): Promise<{ buffer:
 
   return { buffer: null };
 }
+
+
+// 4.5 Intelligent AI Book Metadata & Category Suggestion API
+app.post("/api/ai/suggest-book-metadata", async (req, res) => {
+  try {
+    const { fileName, snippet, promptText } = req.body;
+    const cleanFileName = (fileName || "").trim();
+    const cleanSnippet = (snippet || promptText || "").trim();
+
+    if (!cleanFileName && !cleanSnippet) {
+      return res.status(400).json({ error: "Must provide either fileName or snippet to analyze." });
+    }
+
+    console.log(`[AI Metadata Classifier] Analyzing curriculum data: "${cleanFileName}" | Snippet: "${cleanSnippet.slice(0, 100)}..."`);
+
+    // Rule-based heuristic analyzer (serves as smart instant baseline and robust fallback)
+    const normalizedInput = `${cleanFileName} ${cleanSnippet}`.toLowerCase();
+
+    // Default baseline values
+    let detectedLevel = "pre_university";
+    let detectedSystem = "general_arabic";
+    let detectedGrade = "الصف الأول الثانوي";
+    let detectedSubject = "الرياضيات والإحصاء";
+    let detectedSemester = "الفصل الدراسي الأول";
+    let detectedLanguage = "ar";
+    let detectedTitle = cleanFileName
+      ? cleanFileName.replace(/\.[^/.]+$/, "").replace(/[-_]+/g, " ").trim()
+      : "مقرر دراسي تفاعلي جديد";
+    let summaryNotes = "تم فحص المذكرة والتعرف على المرحلة والصف والمادة تلقائياً بنجاح ✨";
+
+    // 1. Grade detection
+    if (normalizedInput.includes("3ث") || normalizedInput.includes("ثالث ثانوي") || normalizedInput.includes("ثالثة ثانوي") || normalizedInput.includes("ثانوية عامة")) {
+      detectedGrade = "الصف الثالث الثانوي";
+      detectedLevel = "pre_university";
+    } else if (normalizedInput.includes("2ث") || normalizedInput.includes("ثاني ثانوي") || normalizedInput.includes("ثانية ثانوي")) {
+      detectedGrade = "الصف الثاني الثانوي";
+      detectedLevel = "pre_university";
+    } else if (normalizedInput.includes("1ث") || normalizedInput.includes("اول ثانوي") || normalizedInput.includes("اولى ثانوي") || normalizedInput.includes("أول ثانوي")) {
+      detectedGrade = "الصف الأول الثانوي";
+      detectedLevel = "pre_university";
+    } else if (normalizedInput.includes("3ع") || normalizedInput.includes("ثالثة اعدادي") || normalizedInput.includes("ثالث اعدادي") || normalizedInput.includes("شهادة اعدادية")) {
+      detectedGrade = "الصف الثالث الإعدادي";
+      detectedLevel = "pre_university";
+    } else if (normalizedInput.includes("2ع") || normalizedInput.includes("ثانية اعدادي") || normalizedInput.includes("ثاني اعدادي")) {
+      detectedGrade = "الصف الثاني الإعدادي";
+      detectedLevel = "pre_university";
+    } else if (normalizedInput.includes("1ع") || normalizedInput.includes("اولى اعدادي") || normalizedInput.includes("اول اعدادي")) {
+      detectedGrade = "الصف الأول الإعدادي";
+      detectedLevel = "pre_university";
+    } else if (normalizedInput.includes("ابتدائي") || normalizedInput.includes("ابتدائية") || normalizedInput.includes("primary")) {
+      if (normalizedInput.includes("سادس") || normalizedInput.includes("6")) detectedGrade = "الصف السادس الابتدائي";
+      else if (normalizedInput.includes("خامس") || normalizedInput.includes("5")) detectedGrade = "الصف الخامس الابتدائي";
+      else if (normalizedInput.includes("رابع") || normalizedInput.includes("4")) detectedGrade = "الصف الرابع الابتدائي";
+      else detectedGrade = "الصف الأول الابتدائي";
+      detectedLevel = "pre_university";
+    } else if (normalizedInput.includes("جامع") || normalizedInput.includes("كلية") || normalizedInput.includes("فرقة") || normalizedInput.includes("university")) {
+      detectedLevel = "university";
+      detectedGrade = "الفرقة الأولى";
+    }
+
+    // 2. Subject detection
+    if (normalizedInput.includes("احياء") || normalizedInput.includes("أحياء") || normalizedInput.includes("biology") || normalizedInput.includes("جيولوجيا")) {
+      detectedSubject = "الأحياء والجيولوجيا";
+    } else if (normalizedInput.includes("فيزياء") || normalizedInput.includes("physics")) {
+      detectedSubject = "الفيزياء والكيمياء";
+    } else if (normalizedInput.includes("كيمياء") || normalizedInput.includes("chemistry")) {
+      detectedSubject = "الفيزياء والكيمياء";
+    } else if (normalizedInput.includes("رياضيات") || normalizedInput.includes("رياضة") || normalizedInput.includes("math") || normalizedInput.includes("جبر") || normalizedInput.includes("هندسة") || normalizedInput.includes("تفاضل") || normalizedInput.includes("تكامل") || normalizedInput.includes("احصاء")) {
+      detectedSubject = "الرياضيات والإحصاء";
+    } else if (normalizedInput.includes("لغة عربية") || normalizedInput.includes("عربي") || normalizedInput.includes("نحو") || normalizedInput.includes("بلاغة") || normalizedInput.includes("نصوص")) {
+      detectedSubject = "اللغة العربية وآدابها";
+    } else if (normalizedInput.includes("انجليزي") || normalizedInput.includes("إنجليزي") || normalizedInput.includes("english")) {
+      detectedSubject = "اللغات والترجمة";
+      detectedLanguage = "en";
+    } else if (normalizedInput.includes("فرنساوي") || normalizedInput.includes("فرنسي") || normalizedInput.includes("français") || normalizedInput.includes("french")) {
+      detectedSubject = "اللغات والترجمة";
+      detectedLanguage = "fr";
+    } else if (normalizedInput.includes("تاريخ") || normalizedInput.includes("جغرافيا") || normalizedInput.includes("دراسات")) {
+      detectedSubject = "التاريخ والجغرافيا";
+    } else if (normalizedInput.includes("فلسفة") || normalizedInput.includes("منطق") || normalizedInput.includes("علم نفس") || normalizedInput.includes("اجتماع")) {
+      detectedSubject = "الفلسفة وعلم النفس";
+    } else if (normalizedInput.includes("برمج") || normalizedInput.includes("حاسب") || normalizedInput.includes("كمبيوتر") || normalizedInput.includes("تكنولوجيا") || normalizedInput.includes("ذكاء اصطناعي") || normalizedInput.includes("ai") || normalizedInput.includes("python")) {
+      detectedSubject = "الحاسب الآلي وتكنولوجيا المعلومات";
+    }
+
+    // 3. Semester detection
+    if (normalizedInput.includes("ترم تاني") || normalizedInput.includes("ترم ثاني") || normalizedInput.includes("فصل ثاني") || normalizedInput.includes("فصل دراسي ثاني") || normalizedInput.includes("term 2") || normalizedInput.includes("semester 2")) {
+      detectedSemester = "الفصل الدراسي الثاني";
+    } else if (normalizedInput.includes("سنوي") || normalizedInput.includes("منهج كامل") || normalizedInput.includes("full year")) {
+      detectedSemester = "مقرر سنوي كامل";
+    }
+
+    // 4. Try Gemini AI LLM refinement for ultimate accuracy if available
+    const aiClient = getGenAIClient();
+    if (aiClient) {
+      try {
+        const prompt = `You are an expert curriculum classifier for Arab and Middle Eastern education.
+Analyze this book file name and text snippet:
+- File Name: "${cleanFileName}"
+- Context/Snippet: "${cleanSnippet.slice(0, 1500)}"
+
+Return ONLY a valid JSON object matching this schema without any markdown wrapping or code blocks:
+{
+  "title": "Clean, polished Arabic title of the book/course (do not include extensions like .pdf)",
+  "education_level": "${detectedLevel}",
+  "academic_system": "${detectedSystem}",
+  "grade_level": "Exact grade in Arabic, e.g. 'الصف الثالث الثانوي', 'الصف الثاني الإعدادي', etc.",
+  "subcategory": "Exact subject, e.g. 'الأحياء والجيولوجيا', 'الفيزياء والكيمياء', 'الرياضيات والإحصاء', 'اللغة العربية وآدابها', 'اللغات والترجمة', 'التاريخ والجغرافيا', 'الفلسفة وعلم النفس', 'الحاسب الآلي وتكنولوجيا المعلومات'",
+  "semester": "${detectedSemester}",
+  "language": "${detectedLanguage}",
+  "summaryNotes": "One concise Arabic sentence describing what this curriculum covers"
+}`;
+
+        const geminiRes = await generateContentWithRetry(
+          aiClient,
+          {
+            contents: [prompt],
+            config: {
+              temperature: 0.2,
+              responseMimeType: "application/json"
+            }
+          },
+          ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite-preview", "gemini-3-flash-preview"]
+        );
+
+        const rawText = geminiRes?.text || geminiRes?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (rawText) {
+          const parsed = JSON.parse(rawText.replace(/```json/g, "").replace(/```/g, "").trim());
+          if (parsed && parsed.title) {
+            detectedTitle = parsed.title;
+            if (parsed.education_level) detectedLevel = parsed.education_level;
+            if (parsed.academic_system) detectedSystem = parsed.academic_system;
+            if (parsed.grade_level) detectedGrade = parsed.grade_level;
+            if (parsed.subcategory) detectedSubject = parsed.subcategory;
+            if (parsed.semester) detectedSemester = parsed.semester;
+            if (parsed.language) detectedLanguage = parsed.language;
+            if (parsed.summaryNotes) summaryNotes = parsed.summaryNotes;
+          }
+        }
+      } catch (aiErr) {
+        console.warn("[AI Metadata Classifier] Gemini refinement skipped, used heuristics:", aiErr?.message || aiErr);
+      }
+    }
+
+    return res.json({
+      success: true,
+      suggestion: {
+        title: detectedTitle,
+        education_level: detectedLevel,
+        academic_system: detectedSystem,
+        grade_level: detectedGrade,
+        subcategory: detectedSubject,
+        semester: detectedSemester,
+        academic_year: "إصدار عام 2026 - 2027",
+        language: detectedLanguage,
+        summaryNotes
+      }
+    });
+  } catch (error) {
+    console.error("[AI Metadata Classifier] Unexpected error:", error);
+    return res.status(500).json({ error: "فشل تحليل واقتراح التصنيفات: " + (error?.message || error) });
+  }
+});
 
 // 5. Convert content or create ebook from prompt / file upload (Async Background Worker System)
 async function runBackgroundEbookConversion(
@@ -2286,7 +2450,6 @@ async function synthesizeGoogleCloudTTS(text: string, voiceName: string, langCod
       else resolvedLangCode = "ar-XA";
     }
 
-    // Default voice mapping for Arabic if generic voice requested
     if (resolvedLangCode === "ar-XA") {
       if (resolvedVoice.includes("Journey-D") || resolvedVoice.includes("Fenrir")) resolvedVoice = "ar-XA-Chirp3-HD-Fenrir";
       else if (resolvedVoice.includes("Journey-F") || resolvedVoice.includes("Aoede")) resolvedVoice = "ar-XA-Chirp3-HD-Aoede";
@@ -2296,36 +2459,79 @@ async function synthesizeGoogleCloudTTS(text: string, voiceName: string, langCod
       else if (!resolvedVoice.startsWith("ar-XA")) resolvedVoice = "ar-XA-Chirp3-HD-Fenrir";
     }
 
-    const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`;
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        input: { text },
-        voice: {
-          languageCode: resolvedLangCode,
-          name: resolvedVoice
-        },
-        audioConfig: {
-          audioEncoding: "MP3",
-          speakingRate: 1.0,
-          pitch: 0.0
+    // Split text into chunks to prevent exceeding 5000 byte limit & avoid long-sentence Chirp3 errors
+    const rawChunks = [];
+    const normalizedText = text
+      .replace(/([.!\n؟؛]+)/g, "$1\n")
+      .split("\n")
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    let current = "";
+    for (const segment of normalizedText) {
+      if (segment.length > 250) {
+        const words = segment.split(/\s+/);
+        let sub = "";
+        for (const w of words) {
+          if ((sub + " " + w).length > 200) {
+            if (sub) rawChunks.push(sub.trim() + ".");
+            sub = w;
+          } else {
+            sub = sub ? (sub + " " + w) : w;
+          }
         }
-      })
-    });
+        if (sub) rawChunks.push(sub.trim() + ".");
+        continue;
+      }
 
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      console.warn(`[Google Cloud TTS] API warning for ${resolvedVoice} (${resolvedLangCode}):`, err);
-      return null;
+      if ((current + " " + segment).length > 800) {
+        if (current) rawChunks.push(current.trim());
+        current = segment;
+      } else {
+        current = current ? (current + " " + segment) : segment;
+      }
+    }
+    if (current) rawChunks.push(current.trim());
+    if (rawChunks.length === 0) rawChunks.push(text.slice(0, 800));
+
+    const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`;
+    const audioBuffers = [];
+
+    for (const chunk of rawChunks) {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          input: { text: chunk },
+          voice: {
+            languageCode: resolvedLangCode,
+            name: resolvedVoice
+          },
+          audioConfig: {
+            audioEncoding: "MP3",
+            speakingRate: 1.0,
+            pitch: 0.0
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        console.warn(`[Google Cloud TTS] API warning for ${resolvedVoice} (${resolvedLangCode}):`, err);
+        return null;
+      }
+
+      const data = await response.json();
+      if (data.audioContent) {
+        audioBuffers.push(Buffer.from(data.audioContent, "base64"));
+      }
     }
 
-    const data = await response.json();
-    if (data.audioContent) {
-      return Buffer.from(data.audioContent, "base64");
+    if (audioBuffers.length > 0) {
+      return Buffer.concat(audioBuffers);
     }
-  } catch (e: any) {
-    console.warn(`[Google Cloud TTS] Synthesis network error:`, e.message);
+  } catch (e) {
+    console.warn("[Google Cloud TTS] Synthesis network error:", e.message);
   }
   return null;
 }

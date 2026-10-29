@@ -78,6 +78,47 @@ class GlobalAudioManager {
     return this.isLoading && this.activeId === id;
   }
 
+  public pause(): void {
+    if (this.currentAudio && this.isPlaying) {
+      this.currentAudio.pause();
+      this.isPlaying = false;
+      this.notify();
+    }
+  }
+
+  public resume(): void {
+    if (this.currentAudio && !this.isPlaying) {
+      this.currentAudio.play().then(() => {
+        this.isPlaying = true;
+        this.notify();
+      }).catch(console.warn);
+    }
+  }
+
+  public togglePlayPause(): void {
+    if (this.isPlaying) {
+      this.pause();
+    } else {
+      this.resume();
+    }
+  }
+
+  public seek(seconds: number): void {
+    if (this.currentAudio) {
+      const dur = this.currentAudio.duration || 0;
+      const clamped = Math.max(0, dur ? Math.min(seconds, dur) : seconds);
+      this.currentAudio.currentTime = clamped;
+      this.currentTime = clamped;
+      this.notifyTime(clamped, dur);
+    }
+  }
+
+  public seekRelative(deltaSeconds: number): void {
+    if (this.currentAudio) {
+      this.seek(this.currentAudio.currentTime + deltaSeconds);
+    }
+  }
+
   public stop(): void {
     this.currentPlayId++; // Invalidate any pending async audio fetches
     if (this.currentAudio) {

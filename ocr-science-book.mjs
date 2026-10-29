@@ -59,7 +59,7 @@ async function main() {
       const text = response.text || '';
       fullText += `\n--- صفحة ${pageNum} ---\n${text}\n`;
       console.log(`    ✓ ${text.length} chars extracted`);
-    } catch (e: any) {
+    } catch (e) {
       console.error(`    ✗ Failed: ${e.message}`);
       fullText += `\n--- صفحة ${pageNum} --- [فشل في القراءة]\n`;
     }

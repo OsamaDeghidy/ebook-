@@ -2073,7 +2073,60 @@ export const AdminInstructorHub: React.FC<AdminInstructorHubProps> = ({
                   </div>
                 ) : (
                   <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white">
-                    <div className="overflow-x-auto">
+                    {/* 📱 MOBILE STACKED CARDS VIEW */}
+                    <div className="md:hidden divide-y divide-slate-100">
+                      {withdrawalsList.map((w: any) => {
+                        const isPending = w.status === 'pending' || w.status === 'processing';
+                        const isApproved = w.status === 'completed' || w.status === 'approved';
+                        const isRejected = w.status === 'rejected';
+
+                        return (
+                          <div key={w.id} className="p-4 space-y-2.5">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-xs text-slate-900">
+                                {w.profiles?.full_name || w.user_name || w.user_email || 'معلم'}
+                              </span>
+                              <span className="font-mono font-black text-emerald-600 text-sm">
+                                {w.amount} ج.م
+                              </span>
+                            </div>
+
+                            <div className="text-[11px] text-slate-600 flex items-center justify-between">
+                              <span>{w.payout_method === 'vodafone_cash' ? '📱 فودافون كاش' : (w.payout_method === 'instapay' ? '⚡ إنستاباي' : '🏛️ تحويل بنكي')}</span>
+                              <span className="font-mono bg-slate-50 px-2 py-0.5 rounded border border-slate-200">{w.payout_details}</span>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-1">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                isApproved ? 'bg-emerald-100 text-emerald-800' : (isRejected ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800')
+                              }`}>
+                                {isApproved ? '✓ تم التحويل' : (isRejected ? '✕ مرفوض' : '⏳ قيد المراجعة')}
+                              </span>
+
+                              {isPending && (
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    onClick={() => handleApproveWithdrawal(w.id)}
+                                    className="px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-xs font-bold"
+                                  >
+                                    اعتماد ✓
+                                  </button>
+                                  <button
+                                    onClick={() => handleRejectWithdrawal(w.id)}
+                                    className="px-2 py-1 bg-rose-50 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold"
+                                  >
+                                    رفض
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* 💻 DESKTOP TABLE VIEW */}
+                    <div className="hidden md:block overflow-x-auto">
                       <table className="w-full text-right text-xs">
                         <thead className="bg-slate-50 text-slate-600 font-black border-b border-slate-200">
                           <tr>

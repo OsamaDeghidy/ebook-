@@ -40,19 +40,16 @@ export const RelatedBooksSection: React.FC<RelatedBooksSectionProps> = ({
     <div className="mt-12 pt-8 border-t border-gray-200/80 space-y-6" dir="rtl">
       <div className="flex items-center justify-between">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 border border-indigo-100 rounded-full text-indigo-700 text-xs font-black mb-1.5">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>مقترحات مخصصة لك</span>
-          </div>
-          <h3 className="text-xl font-black text-gray-900">
-            مقررات وكتب مشابهة قد تهمك
+          <h3 className="text-lg sm:text-xl font-black text-slate-900 flex items-center gap-2">
+            <span>مقررات قد تهمك</span>
+            <span className="text-xs font-bold text-slate-500 font-normal hidden sm:inline">مقترحات مختارة لمتابعة دراستك</span>
           </h3>
         </div>
         <button
-          onClick={() => navigate('/')}
-          className="text-xs font-black text-indigo-600 hover:text-indigo-700 flex items-center gap-1 hover:underline"
+          onClick={() => navigate('/marketplace')}
+          className="text-xs font-black text-teal-600 hover:text-teal-700 flex items-center gap-1 hover:underline cursor-pointer"
         >
-          <span>تصفح كل المتجر</span>
+          <span>تصفح كل المقررات</span>
           <ArrowLeft className="w-3.5 h-3.5" />
         </button>
       </div>
