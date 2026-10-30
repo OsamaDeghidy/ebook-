@@ -735,10 +735,10 @@ function AppContent() {
 
             <div className="text-right">
               <div className="flex items-center gap-1.5">
-                <span className="font-black text-base sm:text-lg text-slate-900 tracking-tight leading-none line-clamp-1 max-w-[130px] sm:max-w-[200px] md:max-w-none">
+                <span className="font-black text-sm sm:text-lg text-slate-900 tracking-tight leading-none line-clamp-1 max-w-[140px] sm:max-w-[200px] md:max-w-none">
                   {platformConfig.brandName}
                 </span>
-                <span className="text-[9px] sm:text-[10px] font-black bg-sky-50 text-sky-700 border border-sky-200 px-1.5 py-0.5 rounded-md shrink-0">
+                <span className="hidden sm:inline-flex text-[9px] sm:text-[10px] font-black bg-sky-50 text-sky-700 border border-sky-200 px-1.5 py-0.5 rounded-md shrink-0">
                   AI LMS
                 </span>
               </div>
@@ -749,8 +749,8 @@ function AppContent() {
           </Link>
         </div>
 
-        {/* 🌟 DESKTOP NAVIGATION LINKS (Unified Clean SaaS Design) */}
-        <nav className="hidden lg:flex items-center gap-1 text-xs font-bold">
+        {/* 🌟 DESKTOP NAVIGATION LINKS (Exactly 3 clean core links: الرئيسية | المتجر | فيديوهات قصيرة) */}
+        <nav className="hidden md:flex items-center gap-1.5 text-xs font-bold">
           <Link
             to="/"
             className={`px-3.5 py-2 rounded-xl transition ${
@@ -770,8 +770,8 @@ function AppContent() {
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
             }`}
           >
-            <ShoppingCart className="w-3.5 h-3.5" />
-            <span>{t('nav.marketplace', 'مكتبة المقررات')}</span>
+            <BookOpen className="w-3.5 h-3.5 text-teal-600" />
+            <span>{t('nav.marketplace', 'المتجر والمقررات')}</span>
             <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
               location.pathname === '/marketplace' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
             }`}>
@@ -793,72 +793,33 @@ function AppContent() {
               <span>فيديوهات قصيرة 🎬</span>
             </Link>
           )}
-
-          {/* INSTRUCTOR / ADMIN HUB LINK */}
-          {currentUser && (userRole === 'admin' || userRole === 'instructor' || isAdminMode) && (
-            <Link
-              to={userRole === 'admin' || isAdminMode ? '/admin' : '/instructor'}
-              className={`px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 ${
-                location.pathname === '/admin' || location.pathname === '/instructor'
-                  ? 'bg-slate-900 text-white font-black shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
-              }`}
-            >
-              <Shield className="w-3.5 h-3.5 text-teal-600" />
-              <span>{userRole === 'admin' || isAdminMode ? 'لوحة الإدارة ⚙️' : 'لوحة المعلم 👨‍🏫'}</span>
-            </Link>
-          )}
         </nav>
 
-        {/* 🌟 RIGHT ACTION CONTROLS & AUTH */}
-        <div className="flex items-center gap-2">
-          {/* 🌐 INTERNATIONAL LANGUAGE SELECTOR */}
-          <LanguageSelector />
-
-          {/* SUPPORT / COMPLAINTS BUTTON (Desktop) */}
-          <button
-            onClick={() => setIsSupportModalOpen(true)}
-            className="hidden sm:flex px-3 py-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-bold text-xs rounded-xl transition items-center gap-1.5 cursor-pointer"
-            title="مركز الشكاوى والدعم الفني"
+        {/* 🌟 LEFT ACTION CONTROLS & AUTH (Cart + Profile + Menu) */}
+        <div className="flex items-center gap-1 sm:gap-2">
+          {/* 🛒 MY BOOKS / CART ICON (Direct jump to enrolled & purchased materials) */}
+          <Link
+            to="/marketplace?tab=my_library"
+            className="relative p-2 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition flex items-center justify-center cursor-pointer"
+            title="مقرراتي المشترك بها والمشتريات"
           >
-            <MessageSquare className="w-3.5 h-3.5 text-slate-500" />
-            <span>الدعم والمساعدة</span>
-          </button>
+            <ShoppingCart className="w-5 h-5 text-slate-700" />
+            {ebooks.filter(b => b.is_published).length > 0 && (
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-teal-500 ring-2 ring-white" />
+            )}
+          </Link>
 
-          {/* ADMIN / STUDENT MODE TOGGLE */}
-          {userRole === 'admin' && (
-            <button
-              onClick={() => setIsAdminMode(!isAdminMode)}
-              className={`hidden md:flex px-2.5 py-1.5 rounded-xl text-xs font-bold border transition items-center gap-1.5 cursor-pointer ${
-                isAdminMode
-                  ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
-                  : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-              }`}
-              title="التبديل بين وضع المسؤول والواجهة العادية"
-            >
-              <Shield className="w-3.5 h-3.5 text-amber-400" />
-              <span>{isAdminMode ? 'المسؤول 🛡️' : 'وضع الطالب'}</span>
-            </button>
-          )}
+          {/* 🌐 INTERNATIONAL LANGUAGE SELECTOR */}
+          <div className="hidden sm:block">
+            <LanguageSelector />
+          </div>
 
-          {/* QUICK UPLOAD BUTTON FOR INSTRUCTORS & ADMINS */}
-          {currentUser && (userRole === 'admin' || userRole === 'instructor' || isAdminMode) && (
-            <button
-              onClick={() => setIsAiCreateModalOpen(true)}
-              className="hidden md:flex px-3.5 py-1.5 bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 text-white font-black text-xs rounded-xl shadow-xs transition active:scale-95 items-center gap-1.5 cursor-pointer"
-              title="رفع مذكرة واستخراج الفصول بالذكاء الاصطناعي"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              <span>رفع مقرر بالـ AI 📤</span>
-            </button>
-          )}
-
-          {/* USER PROFILE OR LOGIN BUTTON WITH INTERACTIVE DROPDOWN */}
+          {/* USER PROFILE OR LOGIN BUTTON (DESKTOP ONLY) */}
           {currentUser ? (
-            <div className="relative" ref={userMenuRef}>
+            <div className="relative hidden md:block" ref={userMenuRef}>
               <button
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                className="hidden sm:flex items-center gap-2 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-xl px-2.5 py-1.5 transition cursor-pointer"
+                className="flex items-center gap-2 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-xl px-2.5 py-1.5 transition cursor-pointer"
               >
                 <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-teal-500 to-indigo-600 text-white flex items-center justify-center font-black text-xs shadow-2xs shrink-0">
                   {(currentUser.user_metadata?.full_name || currentUser.email || 'U').charAt(0).toUpperCase()}
@@ -939,6 +900,24 @@ function AppContent() {
                       </button>
                     )}
 
+                    {userRole === 'admin' && (
+                      <button
+                        onClick={() => {
+                          setIsAdminMode(!isAdminMode);
+                          setIsUserMenuOpen(false);
+                        }}
+                        className="w-full flex items-center justify-between p-2 hover:bg-amber-50 text-amber-900 rounded-xl transition cursor-pointer"
+                      >
+                        <span className="flex items-center gap-2">
+                          <Sliders className="w-4 h-4 text-amber-600" />
+                          <span>التبديل إلى {isAdminMode ? 'وضع الطالب' : 'وضع المسؤول 🛡️'}</span>
+                        </span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-black ${isAdminMode ? 'bg-amber-200 text-amber-900' : 'bg-slate-200 text-slate-700'}`}>
+                          {isAdminMode ? 'نشط' : 'معطل'}
+                        </span>
+                      </button>
+                    )}
+
                     <button
                       onClick={() => {
                         setIsUserMenuOpen(false);
@@ -969,23 +948,28 @@ function AppContent() {
           ) : (
             <button
               onClick={() => setIsAuthModalOpen(true)}
-              className="hidden sm:flex px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition active:scale-95 items-center gap-1.5 cursor-pointer"
+              className="hidden md:flex px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition active:scale-95 items-center gap-1.5 cursor-pointer"
             >
               <User className="w-3.5 h-3.5 text-teal-400" />
               <span>{t('nav.sign_in', 'تسجيل الدخول')}</span>
             </button>
           )}
 
-          {/* 🍔 MOBILE HAMBURGER MENU BUTTON (Visible on < lg) */}
+          {/* 🍔 UNIFIED MOBILE MENU & PROFILE BUTTON (Single entry point on mobile) */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             aria-label="القائمة الرئيسية"
-            className="lg:hidden p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200/80 transition flex items-center justify-center cursor-pointer active:scale-95"
+            className="md:hidden p-1.5 sm:p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200/80 transition flex items-center gap-1.5 cursor-pointer active:scale-95"
           >
+            {currentUser && (
+              <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-teal-500 to-indigo-600 text-white flex items-center justify-center font-black text-xs shadow-2xs">
+                {(currentUser.user_metadata?.full_name || currentUser.email || 'U').charAt(0).toUpperCase()}
+              </div>
+            )}
             {isMobileMenuOpen ? (
-              <X className="w-5 h-5 text-rose-600" />
+              <X className="w-4 h-4 text-rose-600" />
             ) : (
-              <Menu className="w-5 h-5 text-slate-800" />
+              <Menu className="w-4 h-4 text-slate-800" />
             )}
           </button>
         </div>

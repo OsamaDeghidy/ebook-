@@ -3,7 +3,7 @@ import {
   Play, Pause, RefreshCw, Volume2, VolumeX, Sparkles, Brain, 
   HelpCircle, FastForward, RotateCcw, CheckCircle2, User, 
   MessageSquare, Sliders, ChevronLeft, Award, Layers, ShieldCheck, Zap, 
-  ArrowRight, Smartphone, Monitor
+  ArrowRight, Smartphone, Monitor, Mic, Headphones, RotateCw
 } from 'lucide-react';
 import { Chapter, MarketplaceBook } from '../../types';
 import { InteractiveCanvas } from './InteractiveCanvas';
@@ -25,11 +25,11 @@ export const InteractiveLessonExplanation: React.FC<InteractiveLessonExplanation
   const [isCheckingSaved, setIsCheckingSaved] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
+  const [playbackSpeed, setPlaybackSpeed] = useState<number>(1.25);
   const [isMuted, setIsMuted] = useState(false);
   const [mobileTab, setMobileTab] = useState<'canvas' | 'transcript'>('canvas');
   
-  // Voice selection states (Google Cloud Chirp 3 HD + Edge TTS)
+  // Voice selection states (friendly names)
   const [voiceKarim, setVoiceKarim] = useState<string>('ar-XA-Chirp3-HD-Fenrir');
   const [voiceFarah, setVoiceFarah] = useState<string>('ar-XA-Chirp3-HD-Aoede');
   const [isVoiceSettingsOpen, setIsVoiceSettingsOpen] = useState(false);
@@ -38,8 +38,14 @@ export const InteractiveLessonExplanation: React.FC<InteractiveLessonExplanation
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastLoadedSrcRef = useRef<string>('');
 
+  const skipSeconds = (seconds: number) => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime + seconds);
+    }
+  };
+
   // Local storage position key
-  const storageKey = `interactive_v2_pos_${book.id}_${chapter.id}`;
+  const storageKey = `interactive_pos_${book.id}_${chapter.id}`;
 
   // Check if explanation was previously saved in database & restore last position
   useEffect(() => {
@@ -213,81 +219,75 @@ export const InteractiveLessonExplanation: React.FC<InteractiveLessonExplanation
   // ========================================================
   if (!explanation) {
     return (
-      <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 border border-indigo-500/20 rounded-3xl p-5 sm:p-8 md:p-10 shadow-2xl text-center space-y-6 animate-fade-in text-white max-w-full overflow-hidden" dir="rtl">
-        <div className="max-w-2xl mx-auto space-y-3.5">
-          <div className="inline-flex items-center justify-center p-3.5 sm:p-4 rounded-3xl bg-gradient-to-tr from-teal-500 via-indigo-600 to-purple-600 shadow-xl shadow-teal-500/20">
-            <Brain className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+      <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 border border-indigo-500/20 rounded-3xl p-6 sm:p-8 shadow-xl text-center space-y-5 animate-fade-in text-white max-w-xl mx-auto" dir="rtl">
+        <div className="space-y-3">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-teal-500 to-indigo-600 flex items-center justify-center mx-auto text-white shadow-lg shadow-teal-500/20">
+            <Mic className="w-7 h-7" />
           </div>
 
           <div className="space-y-1">
-            <span className="px-3 py-1 rounded-full bg-teal-500/20 text-teal-300 text-[11px] font-black border border-teal-500/30">
-              ✨ الجيل الثاني (V2 Architecture)
-            </span>
-            <h3 className="text-lg sm:text-2xl font-black text-white pt-1 break-words">
-              استوديو الشرح التفاعلي المتزامن: "{chapter.title}"
+            <h3 className="text-lg sm:text-xl font-black text-white">
+              الشرح التفاعلي الصوتي: "{chapter.title}"
             </h3>
+            <p className="text-xs text-slate-300 leading-relaxed max-w-md mx-auto">
+              حوار صوتي ممتع بين كريم وفرح، متزامن لحظة بلحظة مع لوحة توضيحية ذكية للدرس.
+            </p>
           </div>
-
-          <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-xl mx-auto font-medium break-words">
-            حوار صوتي أكاديمي متزامن بين (كريم وفرح) مصحوب بلوحة تفاعلية حية تعرض مخططات ومفاهيم وقواعد ذهبية، مع حفظ دائم في قاعدة البيانات.
-          </p>
         </div>
 
-        {/* VOICE PREFERENCES */}
-        <div className="max-w-lg mx-auto bg-slate-900/80 border border-slate-800 rounded-2xl p-4 grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-right">
-          <div>
-            <label className="block text-[11px] font-bold text-slate-300 mb-1.5 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-cyan-400 shrink-0" />
-              <span className="truncate">صوت كريم (المحاور):</span>
-            </label>
+        {/* VOICE SELECTOR BUTTONS (SIMPLE & HUMAN-FRIENDLY) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-right">
+          <div className="p-3 bg-slate-900/90 border border-slate-800 rounded-2xl space-y-1.5">
+            <span className="text-[11px] font-bold text-cyan-300 flex items-center gap-1">
+              <span>👦</span>
+              <span>صوت كريم (المحاور):</span>
+            </span>
             <select
               value={voiceKarim}
               onChange={(e) => setVoiceKarim(e.target.value)}
               className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs font-bold text-white outline-none cursor-pointer"
             >
-              <option value="ar-XA-Chirp3-HD-Fenrir">جوجل Chirp 3 HD (Fenrir) 🌟</option>
-              <option value="ar-XA-Chirp3-HD-Puck">جوجل Chirp 3 HD (Puck)</option>
-              <option value="ar-EG-ShakirNeural">إيدج: شاكر (مصري دافئ)</option>
+              <option value="ar-XA-Chirp3-HD-Fenrir">صوت كريم (طبيعي / هادئ) 🎙️</option>
+              <option value="ar-XA-Chirp3-HD-Puck">صوت كريم (حماسي وتفاعلي)</option>
+              <option value="ar-EG-ShakirNeural">صوت كريم (لهجة مصرية)</option>
             </select>
           </div>
 
-          <div>
-            <label className="block text-[11px] font-bold text-slate-300 mb-1.5 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-purple-400 shrink-0" />
-              <span className="truncate">صوت فرح (المعلمة):</span>
-            </label>
+          <div className="p-3 bg-slate-900/90 border border-slate-800 rounded-2xl space-y-1.5">
+            <span className="text-[11px] font-bold text-purple-300 flex items-center gap-1">
+              <span>👩‍🏫</span>
+              <span>صوت فرح (المعلمة):</span>
+            </span>
             <select
               value={voiceFarah}
               onChange={(e) => setVoiceFarah(e.target.value)}
               className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs font-bold text-white outline-none cursor-pointer"
             >
-              <option value="ar-XA-Chirp3-HD-Aoede">جوجل Chirp 3 HD (Aoede) 🌟</option>
-              <option value="ar-XA-Chirp3-HD-Kore">جوجل Chirp 3 HD (Kore)</option>
-              <option value="ar-EG-SalmaNeural">إيدج: سلمى (مصرية تربوية)</option>
+              <option value="ar-XA-Chirp3-HD-Aoede">صوت فرح (واضح / تعليمي) 🎙️</option>
+              <option value="ar-XA-Chirp3-HD-Kore">صوت فرح (معلمة هادئة)</option>
+              <option value="ar-EG-SalmaNeural">صوت فرح (لهجة مصرية)</option>
             </select>
           </div>
         </div>
 
-        {/* 🚀 PRIMARY GENERATION TRIGGER BUTTON */}
-        <div className="pt-2">
-          <button
-            onClick={() => handleGenerateExplanation(false)}
-            disabled={isLoading}
-            className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-teal-500 via-indigo-600 to-purple-600 hover:from-teal-400 hover:to-purple-500 text-white font-black text-sm sm:text-base rounded-2xl shadow-xl shadow-teal-500/25 transition active:scale-95 flex items-center justify-center gap-3 mx-auto disabled:opacity-60 cursor-pointer"
-          >
-            {isLoading ? (
-              <>
-                <RefreshCw className="w-5 h-5 animate-spin" />
-                <span>جاري بناء الشرح المتزامن واللوحة التفاعلية...</span>
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-5 h-5 text-yellow-300" />
-                <span>🚀 ابدأ توليد وتجهيز الشرح التفاعلي الآن</span>
-              </>
-            )}
-          </button>
-        </div>
+        {/* 🚀 PRIMARY START BUTTON */}
+        <button
+          onClick={() => handleGenerateExplanation(false)}
+          disabled={isLoading}
+          className="w-full py-3.5 bg-gradient-to-r from-teal-500 via-indigo-600 to-purple-600 hover:from-teal-400 hover:to-purple-500 text-white font-black text-sm rounded-2xl shadow-lg shadow-teal-500/25 transition active:scale-95 flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-60"
+        >
+          {isLoading ? (
+            <>
+              <RefreshCw className="w-5 h-5 animate-spin" />
+              <span>جاري بناء الشرح المتزامن واللوحة التفاعلية...</span>
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-5 h-5 text-amber-300" />
+              <span>🚀 ابدأ الاستماع والشرح التفاعلي الآن</span>
+            </>
+          )}
+        </button>
       </div>
     );
   }
@@ -329,31 +329,19 @@ export const InteractiveLessonExplanation: React.FC<InteractiveLessonExplanation
           </div>
         </div>
 
-        {/* CONTROLS (WRAPPABLE & TOUCH-FRIENDLY) */}
-        <div className="flex items-center gap-2 flex-wrap w-full md:w-auto justify-end">
-          {/* RESTART FROM BEGINNING BUTTON */}
-          {currentStepIndex > 0 && (
-            <button
-              onClick={restartFromBeginning}
-              className="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-[11px] font-bold text-slate-300 border border-slate-700 flex items-center gap-1 transition cursor-pointer"
-              title="إعادة التشغيل من البداية"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-teal-400" />
-              <span className="hidden sm:inline">من البداية</span>
-            </button>
-          )}
-
-          {/* VOICE SELECTOR BUTTON */}
+        {/* CONTROLS (STICKY TOP PLAYER BAR WITH 10S SKIP, PLAY/PAUSE, SPEED) */}
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap w-full md:w-auto justify-end">
+          {/* SKIP 10S BACKWARD */}
           <button
-            onClick={() => setIsVoiceSettingsOpen(!isVoiceSettingsOpen)}
-            className="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 flex items-center gap-1.5 transition cursor-pointer"
-            title="تخصيص أصوات كريم وفرح"
+            onClick={() => skipSeconds(-10)}
+            className="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 flex items-center gap-1 transition cursor-pointer"
+            title="تراجع 10 ثوانٍ"
           >
-            <Sliders className="w-3.5 h-3.5 text-teal-400" />
-            <span className="hidden sm:inline">الأصوات</span>
+            <RotateCcw className="w-3.5 h-3.5 text-teal-400" />
+            <span className="text-[11px]">10ث</span>
           </button>
 
-          {/* PLAY / PAUSE BUTTON (RESUMES SEAMLESSLY FROM PAUSED SECOND) */}
+          {/* PLAY / PAUSE BUTTON */}
           <button
             onClick={togglePlayPause}
             disabled={isLoading}
@@ -367,20 +355,51 @@ export const InteractiveLessonExplanation: React.FC<InteractiveLessonExplanation
             <span>{isPlaying ? 'إيقاف' : currentStepIndex > 0 ? 'استئناف' : 'تشغيل'}</span>
           </button>
 
-          {/* SPEED */}
+          {/* SKIP 10S FORWARD */}
           <button
-            onClick={toggleSpeed}
-            className="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-amber-300 border border-slate-700 transition"
+            onClick={() => skipSeconds(10)}
+            className="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 flex items-center gap-1 transition cursor-pointer"
+            title="تقديم 10 ثوانٍ"
           >
-            {playbackSpeed}x
+            <RotateCw className="w-3.5 h-3.5 text-teal-400" />
+            <span className="text-[11px]">10ث</span>
           </button>
+
+          {/* SPEED SELECTOR */}
+          <div className="flex items-center bg-slate-800 rounded-xl p-0.5 border border-slate-700">
+            {[1, 1.25, 1.5].map((s) => (
+              <button
+                key={s}
+                onClick={() => {
+                  setPlaybackSpeed(s);
+                  if (audioRef.current) audioRef.current.playbackRate = s;
+                }}
+                className={`px-2 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer ${
+                  playbackSpeed === s ? 'bg-teal-500 text-slate-950 font-black' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {s}x
+              </button>
+            ))}
+          </div>
+
+          {/* RESTART FROM BEGINNING */}
+          {currentStepIndex > 0 && (
+            <button
+              onClick={restartFromBeginning}
+              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition cursor-pointer"
+              title="إعادة التشغيل من البداية"
+            >
+              <RotateCcw className="w-4 h-4 text-slate-400 hover:text-teal-400" />
+            </button>
+          )}
 
           {/* REGENERATE */}
           <button
             onClick={() => handleGenerateExplanation(true)}
             disabled={isLoading}
             className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition cursor-pointer"
-            title="إعادة توليد الشرح التفاعلي بالذكاء الاصطناعي"
+            title="إعادة توليد الشرح التفاعلي"
           >
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-teal-400' : ''}`} />
           </button>
@@ -476,20 +495,26 @@ export const InteractiveLessonExplanation: React.FC<InteractiveLessonExplanation
                 <div
                   key={idx}
                   onClick={() => jumpToStep(idx)}
-                  className={`p-3 rounded-2xl border transition-all cursor-pointer select-none text-right break-words ${
+                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer select-none text-right break-words ${
                     isCurrent
                       ? isKarim 
-                        ? 'bg-cyan-950/90 border-cyan-400 text-white shadow-md' 
-                        : 'bg-purple-950/90 border-purple-400 text-white shadow-md'
+                        ? 'bg-cyan-950/95 border-cyan-400 text-white shadow-lg ring-2 ring-cyan-500/30' 
+                        : 'bg-purple-950/95 border-purple-400 text-white shadow-lg ring-2 ring-purple-500/30'
                       : 'bg-slate-800/40 hover:bg-slate-800/70 border-slate-700/50 text-slate-300 opacity-70 hover:opacity-100'
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-2 mb-1">
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
                     <div className="flex items-center gap-1.5">
                       <span className="text-xs">{isKarim ? '👦' : '👩‍🏫'}</span>
                       <span className={`text-[11px] font-black ${isKarim ? 'text-cyan-300' : 'text-purple-300'}`}>
                         {isKarim ? 'كريم' : 'فرح'}
                       </span>
+                      {isCurrent && isPlaying && (
+                        <span className="px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[10px] font-black animate-pulse flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-ping" />
+                          <span>🎙️ يتحدث الآن</span>
+                        </span>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-1">
@@ -509,7 +534,12 @@ export const InteractiveLessonExplanation: React.FC<InteractiveLessonExplanation
                     </div>
                   </div>
 
-                  <p className="text-xs leading-relaxed break-words font-medium">
+                  {/* KARAOKE HIGHLIGHTED TEXT */}
+                  <p className={`text-xs leading-relaxed break-words transition-all ${
+                    isCurrent 
+                      ? 'font-black text-amber-200 text-sm drop-shadow-xs bg-amber-400/10 p-1.5 rounded-xl border border-amber-400/20' 
+                      : 'font-medium text-slate-300'
+                  }`}>
                     {step.audio_text}
                   </p>
                 </div>

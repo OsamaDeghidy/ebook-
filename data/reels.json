@@ -431,7 +431,7 @@
       "explanation": "البيانات تمثل الحقائق الخام قبل المعالجة (مثل درجات الحرارة المسجلة)، بينما المعلومات هي المخرجات المنظمة والمعالجة (مثل تقرير متوسط درجات الحرارة)."
     },
     "likes_count": 32,
-    "views_count": 183,
+    "views_count": 185,
     "completions_count": 45,
     "is_public_teaser": true,
     "created_at": "2026-10-12T20:40:29.291Z"
@@ -803,9 +803,758 @@
       "explanation": "الإجابة الصحيحة هي الضمير الإنساني الحي؛ لأن القانون يضع الحد الأدنى فقط، بينما الضمير يدفع الباحث لصيانة كرامة الإنسان ومنع التلاعب بها."
     },
     "likes_count": 32,
-    "views_count": 180,
+    "views_count": 196,
     "completions_count": 45,
     "is_public_teaser": true,
     "created_at": "2026-10-29T14:02:01.247Z"
+  },
+  {
+    "id": "reel-1793356528713",
+    "book_id": "ec202018-9b5d-4202-8a20-dc800f7d9a0e",
+    "book_title": "ما لا يسع المسلم جهله",
+    "author_name": "خبير المادة",
+    "category": "law_political_science",
+    "subcategory": "التشريع والاستشارات القانونية",
+    "thumbnail_url": "",
+    "chapter_id": "ch-ec202018-9b5d-4202-8a20-dc800f7d9a0e-3",
+    "chapter_title": "الفصل الأول: أركان الإيمان",
+    "style_type": "chalkboard",
+    "style": "chalkboard",
+    "voice": "ar-XA-Chirp3-HD-Fenrir",
+    "language": "ar",
+    "duration_seconds": 45,
+    "audio_url": "https://ydlzvuutjgelpxueufgn.supabase.co/storage/v1/object/public/book-audios/reel_ec202018-9b5d-4202-8a20-dc800f7d9a0e_ch-ec202018-9b5d-4202-8a20-dc800f7d9a0e-3_1793356522840.mp3",
+    "narration_script": "لَحْظَةً... هَلْ سَأَلْتَ نَفْسَكَ يَوْماً عَنْ سِرِّ الإِيمَانِ الحَقِيقِيِّ؟.. إِنَّهُ أَرْكَانٌ سِتَّةٌ لا تَتَجَزَّأُ! فَالإِيمَانُ لَيْسَ أُمْنِيَّةً، بَلْ هُوَ تَصْدِيقٌ بِالجَنَانِ، وَإِقْرَارٌ بِاللِّسَانِ، وَعَمَلٌ بِالأَرْكَانِ.. أَتَدْرِي لِمَاذَا؟.. لِأَنَّ الكُفْرَ بِرُكْنٍ وَاحِدٍ يُؤَدِّي إِلَى التَّشَظِّي وَالضَّلَالِ البَعِيدِ! آمِنْ بِاللَّهِ، وَمَلَائِكَتِهِ، وَكُتُبِهِ، وَرُسُلِهِ، وَاليَوْمِ الآخِرِ، وَالقَدَرِ خَيْرِهِ وَشَرِّهِ.. كُلٌّ مُتَكَامِلٌ لَا يَقْبَلُ التَّفْرِيقَ!",
+    "scenes": [
+      {
+        "id": "scene-1",
+        "act": "hook",
+        "title": "أركان الإيمان الستة",
+        "badgeText": "🔥 فكرة محورية",
+        "visualType": "quote",
+        "visualData": {
+          "highlightQuote": "الإيمان أن تؤمن بالله وملائكته وكتبه ورسله واليوم الآخر وتؤمن بالقدر خيره وشره"
+        },
+        "startSec": 0,
+        "endSec": 10
+      },
+      {
+        "id": "scene-2",
+        "act": "concept",
+        "title": "جوهر الدرس",
+        "badgeText": "🧠 الشرح العميق",
+        "visualType": "bullet_points",
+        "visualData": {
+          "bullets": [
+            "الإيمان تصديق بالقلب وعمل بالجوارح",
+            "أركان الإيمان ستة متفق عليها في الكتاب والسنة",
+            "الإيمان بكل الأركان هو أصل التوحيد الصحيح"
+          ],
+          "formulaLatex": "",
+          "codeSnippet": "",
+          "imagePrompt": "An academic chalkboard illustration showing the six pillars of faith in Islam, highly detailed and clear, educational style"
+        },
+        "startSec": 10,
+        "endSec": 30
+      },
+      {
+        "id": "scene-3",
+        "act": "takeaway",
+        "title": "الخلاصة الذهبية",
+        "badgeText": "🏆 التطبيق والنتيجة",
+        "visualType": "bullet_points",
+        "visualData": {
+          "highlightQuote": "الإيمان كل لا يتجزأ، فالكفر بركن واحد يخرج المسلم عن جادة الصواب."
+        },
+        "startSec": 30,
+        "endSec": 45
+      }
+    ],
+    "word_timings": [
+      {
+        "word": "لَحْظَةً...",
+        "startMs": 0,
+        "endMs": 784
+      },
+      {
+        "word": "هَلْ",
+        "startMs": 784,
+        "endMs": 1569
+      },
+      {
+        "word": "سَأَلْتَ",
+        "startMs": 1569,
+        "endMs": 2353
+      },
+      {
+        "word": "نَفْسَكَ",
+        "startMs": 2353,
+        "endMs": 3137
+      },
+      {
+        "word": "يَوْماً",
+        "startMs": 3137,
+        "endMs": 3922
+      },
+      {
+        "word": "عَنْ",
+        "startMs": 3922,
+        "endMs": 4706
+      },
+      {
+        "word": "سِرِّ",
+        "startMs": 4706,
+        "endMs": 5490
+      },
+      {
+        "word": "الإِيمَانِ",
+        "startMs": 5490,
+        "endMs": 6275
+      },
+      {
+        "word": "الحَقِيقِيِّ؟..",
+        "startMs": 6275,
+        "endMs": 7059
+      },
+      {
+        "word": "إِنَّهُ",
+        "startMs": 7059,
+        "endMs": 7843
+      },
+      {
+        "word": "أَرْكَانٌ",
+        "startMs": 7843,
+        "endMs": 8627
+      },
+      {
+        "word": "سِتَّةٌ",
+        "startMs": 8627,
+        "endMs": 9412
+      },
+      {
+        "word": "لا",
+        "startMs": 9412,
+        "endMs": 10196
+      },
+      {
+        "word": "تَتَجَزَّأُ!",
+        "startMs": 10196,
+        "endMs": 10980
+      },
+      {
+        "word": "فَالإِيمَانُ",
+        "startMs": 10980,
+        "endMs": 11765
+      },
+      {
+        "word": "لَيْسَ",
+        "startMs": 11765,
+        "endMs": 12549
+      },
+      {
+        "word": "أُمْنِيَّةً،",
+        "startMs": 12549,
+        "endMs": 13333
+      },
+      {
+        "word": "بَلْ",
+        "startMs": 13333,
+        "endMs": 14118
+      },
+      {
+        "word": "هُوَ",
+        "startMs": 14118,
+        "endMs": 14902
+      },
+      {
+        "word": "تَصْدِيقٌ",
+        "startMs": 14902,
+        "endMs": 15686
+      },
+      {
+        "word": "بِالجَنَانِ،",
+        "startMs": 15686,
+        "endMs": 16471
+      },
+      {
+        "word": "وَإِقْرَارٌ",
+        "startMs": 16471,
+        "endMs": 17255
+      },
+      {
+        "word": "بِاللِّسَانِ،",
+        "startMs": 17255,
+        "endMs": 18039
+      },
+      {
+        "word": "وَعَمَلٌ",
+        "startMs": 18039,
+        "endMs": 18824
+      },
+      {
+        "word": "بِالأَرْكَانِ..",
+        "startMs": 18824,
+        "endMs": 19608
+      },
+      {
+        "word": "أَتَدْرِي",
+        "startMs": 19608,
+        "endMs": 20392
+      },
+      {
+        "word": "لِمَاذَا؟..",
+        "startMs": 20392,
+        "endMs": 21176
+      },
+      {
+        "word": "لِأَنَّ",
+        "startMs": 21176,
+        "endMs": 21961
+      },
+      {
+        "word": "الكُفْرَ",
+        "startMs": 21961,
+        "endMs": 22745
+      },
+      {
+        "word": "بِرُكْنٍ",
+        "startMs": 22745,
+        "endMs": 23529
+      },
+      {
+        "word": "وَاحِدٍ",
+        "startMs": 23529,
+        "endMs": 24314
+      },
+      {
+        "word": "يُؤَدِّي",
+        "startMs": 24314,
+        "endMs": 25098
+      },
+      {
+        "word": "إِلَى",
+        "startMs": 25098,
+        "endMs": 25882
+      },
+      {
+        "word": "التَّشَظِّي",
+        "startMs": 25882,
+        "endMs": 26667
+      },
+      {
+        "word": "وَالضَّلَالِ",
+        "startMs": 26667,
+        "endMs": 27451
+      },
+      {
+        "word": "البَعِيدِ!",
+        "startMs": 27451,
+        "endMs": 28235
+      },
+      {
+        "word": "آمِنْ",
+        "startMs": 28235,
+        "endMs": 29020
+      },
+      {
+        "word": "بِاللَّهِ،",
+        "startMs": 29020,
+        "endMs": 29804
+      },
+      {
+        "word": "وَمَلَائِكَتِهِ،",
+        "startMs": 29804,
+        "endMs": 30588
+      },
+      {
+        "word": "وَكُتُبِهِ،",
+        "startMs": 30588,
+        "endMs": 31373
+      },
+      {
+        "word": "وَرُسُلِهِ،",
+        "startMs": 31373,
+        "endMs": 32157
+      },
+      {
+        "word": "وَاليَوْمِ",
+        "startMs": 32157,
+        "endMs": 32941
+      },
+      {
+        "word": "الآخِرِ،",
+        "startMs": 32941,
+        "endMs": 33725
+      },
+      {
+        "word": "وَالقَدَرِ",
+        "startMs": 33725,
+        "endMs": 34510
+      },
+      {
+        "word": "خَيْرِهِ",
+        "startMs": 34510,
+        "endMs": 35294
+      },
+      {
+        "word": "وَشَرِّهِ..",
+        "startMs": 35294,
+        "endMs": 36078
+      },
+      {
+        "word": "كُلٌّ",
+        "startMs": 36078,
+        "endMs": 36863
+      },
+      {
+        "word": "مُتَكَامِلٌ",
+        "startMs": 36863,
+        "endMs": 37647
+      },
+      {
+        "word": "لَا",
+        "startMs": 37647,
+        "endMs": 38431
+      },
+      {
+        "word": "يَقْبَلُ",
+        "startMs": 38431,
+        "endMs": 39216
+      },
+      {
+        "word": "التَّفْرِيقَ!",
+        "startMs": 39216,
+        "endMs": 40000
+      }
+    ],
+    "visual_cards": [
+      {
+        "title": "الأركان الستة",
+        "content": "الله، ملائكته، كتبه، رسله، اليوم الآخر، القدر خيره وشره.",
+        "type": "formula",
+        "startSec": 5,
+        "endSec": 20
+      },
+      {
+        "title": "قاعدة التشظي والتجزئة",
+        "content": "الإيمان وحدة متكاملة لا تقبل التجزئة أو الإنكار لأي ركن منها.",
+        "type": "diagram",
+        "startSec": 21,
+        "endSec": 35
+      }
+    ],
+    "interactive_quiz": {
+      "question": "ما الحكم الشرعي لمن ينكر ركناً واحداً من أركان الإيمان الستة؟",
+      "options": [
+        "يعد ضلالاً بعيداً وخروجاً عن جادة الصواب",
+        "لا شيء عليه فإيمانه صحيح ومقبول",
+        "يكتفى بالاستغفار دون الحاجة للإقرار به"
+      ],
+      "correctIndex": 0,
+      "triggerSec": 32,
+      "explanation": "الإيمان كل لا يتجزأ، وإنكار أي ركن من أركانه يعد كفراً وضلالاً بعيداً عن أصل التوحيد."
+    },
+    "likes_count": 32,
+    "views_count": 180,
+    "completions_count": 45,
+    "is_public_teaser": true,
+    "created_at": "2026-10-30T10:35:28.713Z"
+  },
+  {
+    "id": "reel-1793356856901",
+    "book_id": "f2c31b44-f90b-4ae0-81bf-a060db19bf52",
+    "book_title": "التقييمات والأداءات - اللغة العربية - الصف الثاني الثانوي - الفصل الدراسي الأول",
+    "author_name": "خبير المادة",
+    "category": "academic_curriculum",
+    "subcategory": "اللغة العربية وآدابها",
+    "thumbnail_url": "",
+    "chapter_id": "ch-f2c31b44-f90b-4ae0-81bf-a060db19bf52-2",
+    "chapter_title": "هيا نتحدث ونكتب - توظيف العلم لتحقيق أهداف إنسانية نبيلة",
+    "style_type": "chalkboard",
+    "style": "chalkboard",
+    "voice": "ar-XA-Chirp3-HD-Fenrir",
+    "language": "ar",
+    "duration_seconds": 45,
+    "audio_url": "https://ydlzvuutjgelpxueufgn.supabase.co/storage/v1/object/public/book-audios/reel_f2c31b44-f90b-4ae0-81bf-a060db19bf52_ch-f2c31b44-f90b-4ae0-81bf-a060db19bf52-2_1793356850327.mp3",
+    "narration_script": "لَحْظَةً... كَيْفَ يُوظَّفُ العِلْمُ لِخِدْمَةِ الإِنْسَانِيَّةِ؟ تَمَعَّنْ مَعِي... إِنَّ العِلْمَ الحَقِيقِيَّ لَا يَنْفَصِلُ أَبَداً عَنِ الضَّمِيرِ الإِنْسَانِيِّ! وَذُو العِلْمِ يُكْرَمُ لِتَفَانِيهِ لَا لِلإِضْرَارِ بِالْبَشَرِ. هَلْ تَعْلَمُونَ أَنَّ كَلِمَةَ 'ذُو' تُعْرَبُ حَسَبَ مَوْقِعِهَا فَتُرْفَعُ بِالْوَاوِ كَمَا فِي: 'ذُو العِلْمِ يَنْطِقُ بِالصَّوَابِ'؟ لَكِنْ احْذَرْ! إِذَا أُضِيفَتْ إِلَى يَاءِ الْمُتَكَلِّمِ، تُعْرَبُ بِحَرَكَاتٍ مُقَدَّرَةٍ! انْتَبِهْ جَيِّداً لِتَكُونَ مِنَ الْمُتَفَوِّقِينَ فِي مَهَارَاتِ التَّحَدُّثِ وَالإِعْرَابِ السَّلِيمِ!",
+    "scenes": [
+      {
+        "id": "scene-1",
+        "act": "hook",
+        "title": "توظيف العلم لأهداف إنسانية",
+        "badgeText": "🔥 فكرة محورية",
+        "visualType": "quote",
+        "visualData": {
+          "highlightQuote": "إِنَّ العِلْمَ الحَقِيقِيَّ لَا يَنْفَصِلُ عَنِ الضَّمِيرِ الإِنْسَانِيِّ!"
+        },
+        "startSec": 0,
+        "endSec": 10
+      },
+      {
+        "id": "scene-2",
+        "act": "concept",
+        "title": "الأسماء الخمسة والإعراب",
+        "badgeText": "🧠 الشرح العميق",
+        "visualType": "bullet_points",
+        "visualData": {
+          "bullets": [
+            "تُرفع الأسماء الخمسة بالواو وتنصب بالألف وتجر بالياء.",
+            "يُشترط إضافتها لغير ياء المتكلم وأن تكون مفردة مكبرة.",
+            "الأسلوب الخبري يحتمل الصدق والكذب، والإنشاء الطلبي لا يحتملهما."
+          ],
+          "formulaLatex": "",
+          "codeSnippet": "",
+          "imagePrompt": "An educational chalkboard illustration showing Arabic grammar rules for Asmaa Al-Khamsa with clear diagrams and scientific human ethics concept."
+        },
+        "startSec": 10,
+        "endSec": 30
+      },
+      {
+        "id": "scene-3",
+        "act": "takeaway",
+        "title": "الخلاصة الذهبية",
+        "badgeText": "🏆 التطبيق والنتيجة",
+        "visualType": "bullet_points",
+        "visualData": {
+          "highlightQuote": "ذُو العِلْمِ يُكْرَمُ لِخِدْمَةِ النَّاسِ وَالنُّطْقِ بِالصَّوَابِ!"
+        },
+        "startSec": 30,
+        "endSec": 45
+      }
+    ],
+    "word_timings": [
+      {
+        "word": "لَحْظَةً...",
+        "startMs": 0,
+        "endMs": 667
+      },
+      {
+        "word": "كَيْفَ",
+        "startMs": 667,
+        "endMs": 1333
+      },
+      {
+        "word": "يُوظَّفُ",
+        "startMs": 1333,
+        "endMs": 2000
+      },
+      {
+        "word": "العِلْمُ",
+        "startMs": 2000,
+        "endMs": 2667
+      },
+      {
+        "word": "لِخِدْمَةِ",
+        "startMs": 2667,
+        "endMs": 3333
+      },
+      {
+        "word": "الإِنْسَانِيَّةِ؟",
+        "startMs": 3333,
+        "endMs": 4000
+      },
+      {
+        "word": "تَمَعَّنْ",
+        "startMs": 4000,
+        "endMs": 4667
+      },
+      {
+        "word": "مَعِي...",
+        "startMs": 4667,
+        "endMs": 5333
+      },
+      {
+        "word": "إِنَّ",
+        "startMs": 5333,
+        "endMs": 6000
+      },
+      {
+        "word": "العِلْمَ",
+        "startMs": 6000,
+        "endMs": 6667
+      },
+      {
+        "word": "الحَقِيقِيَّ",
+        "startMs": 6667,
+        "endMs": 7333
+      },
+      {
+        "word": "لَا",
+        "startMs": 7333,
+        "endMs": 8000
+      },
+      {
+        "word": "يَنْفَصِلُ",
+        "startMs": 8000,
+        "endMs": 8667
+      },
+      {
+        "word": "أَبَداً",
+        "startMs": 8667,
+        "endMs": 9333
+      },
+      {
+        "word": "عَنِ",
+        "startMs": 9333,
+        "endMs": 10000
+      },
+      {
+        "word": "الضَّمِيرِ",
+        "startMs": 10000,
+        "endMs": 10667
+      },
+      {
+        "word": "الإِنْسَانِيِّ!",
+        "startMs": 10667,
+        "endMs": 11333
+      },
+      {
+        "word": "وَذُو",
+        "startMs": 11333,
+        "endMs": 12000
+      },
+      {
+        "word": "العِلْمِ",
+        "startMs": 12000,
+        "endMs": 12667
+      },
+      {
+        "word": "يُكْرَمُ",
+        "startMs": 12667,
+        "endMs": 13333
+      },
+      {
+        "word": "لِتَفَانِيهِ",
+        "startMs": 13333,
+        "endMs": 14000
+      },
+      {
+        "word": "لَا",
+        "startMs": 14000,
+        "endMs": 14667
+      },
+      {
+        "word": "لِلإِضْرَارِ",
+        "startMs": 14667,
+        "endMs": 15333
+      },
+      {
+        "word": "بِالْبَشَرِ.",
+        "startMs": 15333,
+        "endMs": 16000
+      },
+      {
+        "word": "هَلْ",
+        "startMs": 16000,
+        "endMs": 16667
+      },
+      {
+        "word": "تَعْلَمُونَ",
+        "startMs": 16667,
+        "endMs": 17333
+      },
+      {
+        "word": "أَنَّ",
+        "startMs": 17333,
+        "endMs": 18000
+      },
+      {
+        "word": "كَلِمَةَ",
+        "startMs": 18000,
+        "endMs": 18667
+      },
+      {
+        "word": "'ذُو'",
+        "startMs": 18667,
+        "endMs": 19333
+      },
+      {
+        "word": "تُعْرَبُ",
+        "startMs": 19333,
+        "endMs": 20000
+      },
+      {
+        "word": "حَسَبَ",
+        "startMs": 20000,
+        "endMs": 20667
+      },
+      {
+        "word": "مَوْقِعِهَا",
+        "startMs": 20667,
+        "endMs": 21333
+      },
+      {
+        "word": "فَتُرْفَعُ",
+        "startMs": 21333,
+        "endMs": 22000
+      },
+      {
+        "word": "بِالْوَاوِ",
+        "startMs": 22000,
+        "endMs": 22667
+      },
+      {
+        "word": "كَمَا",
+        "startMs": 22667,
+        "endMs": 23333
+      },
+      {
+        "word": "فِي:",
+        "startMs": 23333,
+        "endMs": 24000
+      },
+      {
+        "word": "'ذُو",
+        "startMs": 24000,
+        "endMs": 24667
+      },
+      {
+        "word": "العِلْمِ",
+        "startMs": 24667,
+        "endMs": 25333
+      },
+      {
+        "word": "يَنْطِقُ",
+        "startMs": 25333,
+        "endMs": 26000
+      },
+      {
+        "word": "بِالصَّوَابِ'؟",
+        "startMs": 26000,
+        "endMs": 26667
+      },
+      {
+        "word": "لَكِنْ",
+        "startMs": 26667,
+        "endMs": 27333
+      },
+      {
+        "word": "احْذَرْ!",
+        "startMs": 27333,
+        "endMs": 28000
+      },
+      {
+        "word": "إِذَا",
+        "startMs": 28000,
+        "endMs": 28667
+      },
+      {
+        "word": "أُضِيفَتْ",
+        "startMs": 28667,
+        "endMs": 29333
+      },
+      {
+        "word": "إِلَى",
+        "startMs": 29333,
+        "endMs": 30000
+      },
+      {
+        "word": "يَاءِ",
+        "startMs": 30000,
+        "endMs": 30667
+      },
+      {
+        "word": "الْمُتَكَلِّمِ،",
+        "startMs": 30667,
+        "endMs": 31333
+      },
+      {
+        "word": "تُعْرَبُ",
+        "startMs": 31333,
+        "endMs": 32000
+      },
+      {
+        "word": "بِحَرَكَاتٍ",
+        "startMs": 32000,
+        "endMs": 32667
+      },
+      {
+        "word": "مُقَدَّرَةٍ!",
+        "startMs": 32667,
+        "endMs": 33333
+      },
+      {
+        "word": "انْتَبِهْ",
+        "startMs": 33333,
+        "endMs": 34000
+      },
+      {
+        "word": "جَيِّداً",
+        "startMs": 34000,
+        "endMs": 34667
+      },
+      {
+        "word": "لِتَكُونَ",
+        "startMs": 34667,
+        "endMs": 35333
+      },
+      {
+        "word": "مِنَ",
+        "startMs": 35333,
+        "endMs": 36000
+      },
+      {
+        "word": "الْمُتَفَوِّقِينَ",
+        "startMs": 36000,
+        "endMs": 36667
+      },
+      {
+        "word": "فِي",
+        "startMs": 36667,
+        "endMs": 37333
+      },
+      {
+        "word": "مَهَارَاتِ",
+        "startMs": 37333,
+        "endMs": 38000
+      },
+      {
+        "word": "التَّحَدُّثِ",
+        "startMs": 38000,
+        "endMs": 38667
+      },
+      {
+        "word": "وَالإِعْرَابِ",
+        "startMs": 38667,
+        "endMs": 39333
+      },
+      {
+        "word": "السَّلِيمِ!",
+        "startMs": 39333,
+        "endMs": 40000
+      }
+    ],
+    "visual_cards": [
+      {
+        "title": "إعراب الأسماء الخمسة",
+        "content": "الرفع بالواو (ذو)، النصب بالألف (ذا)، الجر بالياء (ذي). بشرط الإضافة لغير ياء المتكلم.",
+        "type": "formula",
+        "startSec": 5,
+        "endSec": 20
+      },
+      {
+        "title": "الأساليب النحوية",
+        "content": "التمييز بدقة بين الأسلوب الخبري والإنشائي (أمر، نهي، استفهام، تمني، نداء).",
+        "type": "diagram",
+        "startSec": 21,
+        "endSec": 35
+      }
+    ],
+    "interactive_quiz": {
+      "question": "ما إعراب كلمة (ذو) في جملة: (إن أخاك ذو علم نافع)؟",
+      "options": [
+        "خبر إن مرفوع وعلامة رفعه الواو لأنه من الأسماء الخمسة",
+        "مبتدأ مرفوع وعلامة رفعه الضمة المقدرة",
+        "نعت مرفوع وعلامة رفعه الواو"
+      ],
+      "correctIndex": 0,
+      "triggerSec": 32,
+      "explanation": "كلمة (ذو) هنا خبر (إن) مرفوع وعلامة رفعه الواو لأنها من الأسماء الخمسة، و(أخاك) هو اسم إن منصوب بالألف."
+    },
+    "likes_count": 32,
+    "views_count": 181,
+    "completions_count": 45,
+    "is_public_teaser": true,
+    "created_at": "2026-10-30T10:40:56.901Z"
   }
 ]

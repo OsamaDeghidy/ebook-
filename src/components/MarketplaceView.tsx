@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   Search, Filter, BookOpen, Star, Sparkles, ExternalLink, Play, HelpCircle,
   Plus, Shield, Eye, EyeOff, Trash2, Layers, GraduationCap, Calendar, Edit3, Tag,
-  ShoppingCart, CheckCircle2, Bookmark, Flame, Radio, Zap, Clock, Award, Heart, TrendingUp, School, Building2, X
+  ShoppingCart, CheckCircle2, Bookmark, Flame, Radio, Zap, Clock, Award, Heart, TrendingUp, School, Building2, X, ChevronDown
 } from 'lucide-react';
 import { MarketplaceBook, BookCategory, UserRole } from '../types';
 import { EditBookModal } from './EditBookModal';
@@ -54,8 +54,8 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
   onPurchaseBook
 }) => {
   const { t, language, dir } = useLanguage();
-  const [mainViewTab, setMainViewTab] = useState<'marketplace' | 'my_library'>('marketplace');
-  const [quickFilter, setQuickFilter] = useState<'all' | 'bestsellers' | 'trending' | 'top_rated' | 'favorites' | 'read_later' | 'free' | 'paid'>('all');
+  const [mainViewTab, setMainViewTab] = useState<'marketplace' | 'my_library' | 'favorites'>('marketplace');
+  const [quickFilter, setQuickFilter] = useState<'all' | 'free' | 'paid' | 'certified' | 'ai_interactive'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<BookCategory>('all');
   const [selectedEducationLevel, setSelectedEducationLevel] = useState<string>('all');
@@ -72,7 +72,15 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   
   // DEFAULT SORTING: Newest to Oldest (من الأحدث للأقدم)
-  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'popular' | 'rating'>('newest');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'popular' | 'rating' | 'price_low' | 'price_high'>('newest');
+
+  // Sync tab with URL query parameter on mount or change
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get('tab');
+    if (tabParam === 'my_library') setMainViewTab('my_library');
+    else if (tabParam === 'favorites') setMainViewTab('favorites');
+  }, []);
 
   // Favorites & Read Later States (saved to localStorage)
   const [favorites, setFavorites] = useState<string[]>(() => {
@@ -138,16 +146,20 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
 
   // Comprehensive multi-criteria filtering and sorting
   const filteredBooks = useMemo(() => {
-    const sourceList = mainViewTab === 'my_library' ? myLibraryBooks : books;
+    const sourceList = mainViewTab === 'my_library' 
+      ? myLibraryBooks 
+      : mainViewTab === 'favorites'
+        ? books.filter(b => favorites.includes(b.id))
+        : books;
 
     let result = sourceList.filter(book => {
       if (!isAdminMode && !book.is_published) return false;
       
-      // Quick Filter Check
-      if (quickFilter === 'favorites' && !favorites.includes(book.id)) return false;
-      if (quickFilter === 'read_later' && !readLater.includes(book.id)) return false;
+      // Quick Filter Pills (الكل | المجانية | المدفوعة | معتمد | تفاعلي بالذكاء الاصطناعي)
       if (quickFilter === 'free' && book.price && book.price > 0) return false;
       if (quickFilter === 'paid' && (!book.price || book.price === 0)) return false;
+      if (quickFilter === 'certified' && (!book.is_published && !book.is_external)) return false;
+      if (quickFilter === 'ai_interactive' && (!book.chapters || book.chapters.length === 0)) return false;
 
       // Category filter (support 10 main categories and legacy aliases)
       if (selectedCategory !== 'all') {
@@ -243,14 +255,8 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
       return true;
     });
 
-    // Quick Filter Sortings or Standard Sort
-    if (quickFilter === 'bestsellers') {
-      result.sort((a, b) => (b.sales_count || b.reviews_count || 0) - (a.sales_count || a.reviews_count || 0));
-    } else if (quickFilter === 'trending') {
-      result.sort((a, b) => ((b.rating || 5) * (b.reviews_count || 1)) - ((a.rating || 5) * (a.reviews_count || 1)));
-    } else if (quickFilter === 'top_rated') {
-      result.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-    } else if (sortBy === 'newest') {
+    // Sort by criteria
+    if (sortBy === 'newest') {
       result.sort((a, b) => new Date(b.created_at || b.createdAt || 0).getTime() - new Date(a.created_at || a.createdAt || 0).getTime());
     } else if (sortBy === 'oldest') {
       result.sort((a, b) => new Date(a.created_at || a.createdAt || 0).getTime() - new Date(b.created_at || b.createdAt || 0).getTime());
@@ -258,6 +264,10 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
       result.sort((a, b) => (b.reviews_count || 0) - (a.reviews_count || 0));
     } else if (sortBy === 'rating') {
       result.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    } else if (sortBy === 'price_low') {
+      result.sort((a, b) => (a.price || 0) - (b.price || 0));
+    } else if (sortBy === 'price_high') {
+      result.sort((a, b) => (b.price || 0) - (a.price || 0));
     }
 
     return result;
@@ -340,741 +350,465 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
     setSortBy('newest');
   };
 
-  return (
-    <div className="space-y-8 animate-fade-in text-right" dir={dir}>
-      
-      {/* 🌟 MARKETING HERO & CALL TO ACTION */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-white p-6 sm:p-9 border border-slate-800/80 shadow-xl">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (selectedCategory !== 'all') count++;
+    if (selectedEducationLevel !== 'all') count++;
+    if (selectedAcademicSystem !== 'all') count++;
+    if (selectedSubcategory !== 'all') count++;
+    if (selectedGradeLevel !== 'all') count++;
+    if (selectedSemester !== 'all') count++;
+    if (selectedAcademicYear !== 'all') count++;
+    if (selectedTag !== 'all') count++;
+    if (costFilter !== 'all') count++;
+    if (hasQuizFilter) count++;
+    if (hasMediaFilter) count++;
+    if (minRating > 0) count++;
+    return count;
+  }, [
+    selectedCategory, selectedEducationLevel, selectedAcademicSystem,
+    selectedSubcategory, selectedGradeLevel, selectedSemester,
+    selectedAcademicYear, selectedTag, costFilter, hasQuizFilter,
+    hasMediaFilter, minRating
+  ]);
 
-        <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 sm:gap-8">
-          <div className="space-y-3.5 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-teal-300 text-xs font-black backdrop-blur-md">
-              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              <span>المنصة الأولى للكتب والمذكرات التفاعلية بالذكاء الاصطناعي</span>
-            </div>
+  // 🎨 Generates Subject-Specific Dynamic Covers to prevent repetitive identical photos
+  const renderBookCover = (book: MarketplaceBook) => {
+    const isGenericUnsplash = !book.thumbnail_url || book.thumbnail_url.includes('photo-1532012197267-da84d127e765');
+    if (!isGenericUnsplash && book.thumbnail_url) {
+      return (
+        <img
+          src={book.thumbnail_url}
+          alt={book.title}
+          className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+          loading="lazy"
+        />
+      );
+    }
 
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight leading-tight text-white">
-              تعلم أسرع، استمع بذكاء، واختبر فهمك فورياً 🎧📖
-            </h1>
+    const titleLower = (book.title + ' ' + (book.subcategory || '')).toLowerCase();
+    
+    let theme = {
+      gradient: 'from-slate-900 via-indigo-950 to-slate-900',
+      badge: 'مقرر دراسي',
+      icon: '📚'
+    };
 
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-medium">
-              حوّل أي مذكرة أو كتاب دراسي إلى تجربة تعليمية حية: بودكاست حواري ذكي، تسجيلات صوتية فائقة الوضوح، خرائط مفاهيم تفاعلية، وامتحانات تجريبية موقوتة.
-            </p>
+    if (titleLower.includes('قرآن') || titleLower.includes('ملك') || titleLower.includes('تبارك') || titleLower.includes('إسلامي') || titleLower.includes('دين') || titleLower.includes('تفسير')) {
+      theme = {
+        gradient: 'from-emerald-950 via-teal-900 to-slate-950',
+        badge: 'دراسات إسلامية وقرآن',
+        icon: '📖'
+      };
+    } else if (titleLower.includes('حاسب') || titleLower.includes('برمج') || titleLower.includes('ذكاء') || titleLower.includes('تقني') || titleLower.includes('كود')) {
+      theme = {
+        gradient: 'from-slate-950 via-cyan-950 to-indigo-950',
+        badge: 'حاسب آلي وتكنولوجيا',
+        icon: '💻'
+      };
+    } else if (titleLower.includes('أحياء') || titleLower.includes('جيولوج') || titleLower.includes('طبيع') || titleLower.includes('نبات')) {
+      theme = {
+        gradient: 'from-emerald-950 via-green-900 to-teal-950',
+        badge: 'علوم وأحياء',
+        icon: '🧬'
+      };
+    } else if (titleLower.includes('فيزياء') || titleLower.includes('كيمياء') || titleLower.includes('علوم')) {
+      theme = {
+        gradient: 'from-blue-950 via-indigo-900 to-purple-950',
+        badge: 'فيزياء وكيمياء',
+        icon: '⚡'
+      };
+    } else if (titleLower.includes('رياضيات') || titleLower.includes('جبر') || titleLower.includes('هندسة') || titleLower.includes('تفاضل')) {
+      theme = {
+        gradient: 'from-cyan-950 via-blue-900 to-slate-950',
+        badge: 'رياضيات وإحصاء',
+        icon: '📐'
+      };
+    } else if (titleLower.includes('إنجليز') || titleLower.includes('english') || titleLower.includes('لغات') || titleLower.includes('فرنسي')) {
+      theme = {
+        gradient: 'from-purple-950 via-fuchsia-900 to-slate-950',
+        badge: 'لغات وترجمة',
+        icon: '🌐'
+      };
+    } else if (titleLower.includes('رخصة') || titleLower.includes('مهني') || titleLower.includes('معلم')) {
+      theme = {
+        gradient: 'from-amber-950 via-orange-900 to-slate-950',
+        badge: 'رخصة مهنية وتأهيل',
+        icon: '🎓'
+      };
+    } else if (titleLower.includes('حرب') || titleLower.includes('تاريخ') || titleLower.includes('فلسف') || titleLower.includes('أدب')) {
+      theme = {
+        gradient: 'from-stone-950 via-amber-950 to-neutral-900',
+        badge: 'علوم إنسانية وفكر',
+        icon: '🏛️'
+      };
+    }
 
-            {/* FEATURE PILLS */}
-            <div className="flex flex-wrap items-center gap-2 pt-1 text-xs font-bold text-slate-200">
-              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white/10 rounded-lg border border-white/10">
-                <Radio className="w-3.5 h-3.5 text-teal-300" />
-                <span>بودكاست ذكي لكل درس</span>
-              </div>
-              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white/10 rounded-lg border border-white/10">
-                <Clock className="w-3.5 h-3.5 text-amber-300" />
-                <span>امتحانات وبنوك أسئلة</span>
-              </div>
-              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white/10 rounded-lg border border-white/10">
-                <Zap className="w-3.5 h-3.5 text-emerald-300" />
-                <span>توليد وتصنيف ذكي فوري</span>
-              </div>
-            </div>
+    return (
+      <div className={`w-full h-full bg-gradient-to-br ${theme.gradient} p-3.5 flex flex-col justify-between text-white relative select-none group-hover:scale-102 transition duration-300`}>
+        <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-white/5 blur-xl pointer-events-none" />
+        <div className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-white/5 blur-xl pointer-events-none" />
+
+        {/* Top spacer to ensure clear clearance for top-left icons & top-right price */}
+        <div className="h-6" />
+
+        <div className="relative z-10 my-auto text-center px-2 py-1 space-y-1">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/10 backdrop-blur-md text-[10px] font-black border border-white/15 text-white/90">
+            <span>{theme.icon}</span>
+            <span>{theme.badge}</span>
           </div>
 
-          {/* ADMIN & STATS PANEL */}
-          <div className="flex flex-col gap-3.5 shrink-0 w-full lg:w-auto">
+          <h4 className="text-sm sm:text-base font-black text-white leading-snug drop-shadow-md line-clamp-2">
+            {book.title}
+          </h4>
+          {book.grade_level && (
+            <span className="text-[10px] text-white/75 font-bold block">
+              {book.grade_level}
+            </span>
+          )}
+        </div>
+
+        <div className="relative z-10 flex items-center justify-between text-[10px] text-white/60 border-t border-white/10 pt-1.5">
+          <span className="font-bold truncate max-w-[140px]">{book.author_name || 'خبير المادة'}</span>
+          <span className="text-amber-400 font-black">★ {book.rating || 5.0}</span>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-5 animate-fade-in text-right" dir={dir}>
+      
+      {/* 🌟 UNIFIED TOP ACTION & CONTROLS BAR (No bulky hero - compact & powerful) */}
+      <div className="space-y-3">
+        {/* ROW 1: TABS (STORE / MY COURSES) + FAVORITES + COMPACT GENERATION BUTTONS */}
+        <div className="flex flex-wrap items-center justify-between gap-2.5 pb-1">
+          {/* Main 2 Switcher Tabs */}
+          <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-2xl">
+            <button
+              onClick={() => setMainViewTab('marketplace')}
+              className={`py-1.5 px-3 sm:px-4 rounded-xl font-black text-xs sm:text-sm flex items-center gap-2 transition cursor-pointer ${
+                mainViewTab === 'marketplace'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <BookOpen className="w-3.5 h-3.5 text-teal-400" />
+              <span>المتجر والمقررات ({books.length})</span>
+            </button>
+
+            <button
+              onClick={() => setMainViewTab('my_library')}
+              className={`py-1.5 px-3 sm:px-4 rounded-xl font-black text-xs sm:text-sm flex items-center gap-2 transition cursor-pointer ${
+                mainViewTab === 'my_library'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Bookmark className="w-3.5 h-3.5 text-amber-400" />
+              <span>مقرراتي المشترك بها ({myLibraryBooks.length})</span>
+            </button>
+          </div>
+
+          {/* Action Group: Favorites + Generation Buttons */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* Favorites Button */}
+            <button
+              onClick={() => setMainViewTab('favorites')}
+              className={`py-1.5 px-3 rounded-xl font-black text-xs flex items-center gap-1.5 transition cursor-pointer ${
+                mainViewTab === 'favorites'
+                  ? 'bg-rose-500 text-white shadow-xs'
+                  : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200'
+              }`}
+              title="المقررات المفضلة"
+            >
+              <Heart className={`w-3.5 h-3.5 ${mainViewTab === 'favorites' ? 'fill-current' : 'fill-rose-500 text-rose-500'}`} />
+              <span>المفضلة ({favorites.length})</span>
+            </button>
+
+            {/* AI Generation Buttons (Compact, visible on all screens) */}
             {(isAdminMode || userRole === 'instructor' || userRole === 'admin') && (
-              <div className="flex flex-wrap items-center gap-2.5">
+              <>
                 <button
                   onClick={onOpenCreateModal}
-                  className="px-5 py-3 bg-gradient-to-r from-teal-500 to-indigo-600 hover:from-teal-400 hover:to-indigo-500 text-white font-black text-xs sm:text-sm rounded-2xl flex items-center gap-2 shadow-lg shadow-teal-500/20 transition active:scale-95 cursor-pointer"
+                  className="px-3 py-1.5 bg-gradient-to-r from-teal-500 to-indigo-600 hover:from-teal-600 hover:to-indigo-700 text-white font-black text-xs rounded-xl flex items-center gap-1.5 shadow-xs transition active:scale-95 cursor-pointer shrink-0"
+                  title="توليد مقرر جديد بالذكاء الاصطناعي"
                 >
-                  <Sparkles className="w-4 h-4 text-amber-300" />
-                  <span>توليد مقرر جديد بالـ AI</span>
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                  <span>توليد بالـ AI ⚡</span>
                 </button>
 
                 <button
                   onClick={onOpenExternalModal}
-                  className="px-4 py-3 bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold text-xs sm:text-sm rounded-2xl flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
+                  className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 font-bold text-xs rounded-xl flex items-center gap-1 transition active:scale-95 cursor-pointer shrink-0"
+                  title="إضافة مقرر خارجي مدمج"
                 >
-                  <Plus className="w-4 h-4 text-emerald-400" />
-                  <span>إضافة مقرر مدمج</span>
+                  <Plus className="w-3.5 h-3.5 text-teal-600" />
+                  <span className="hidden sm:inline">مقرر مدمج</span>
+                  <span className="sm:hidden">+</span>
                 </button>
-              </div>
+              </>
             )}
-
-            {/* LIVE PLATFORM STATS */}
-            <div className="grid grid-cols-3 gap-2 p-3 bg-white/5 border border-white/10 rounded-2xl text-center backdrop-blur-md">
-              <div className="p-1.5">
-                <span className="text-base sm:text-lg font-black text-white block">+{books.length}</span>
-                <span className="text-[10px] text-teal-300 font-bold">مقرر تفاعلي</span>
-              </div>
-              <div className="p-1.5 border-r border-l border-white/10">
-                <span className="text-base sm:text-lg font-black text-amber-300 block">5.0 ★</span>
-                <span className="text-[10px] text-teal-300 font-bold">تقييم الطلاب</span>
-              </div>
-              <div className="p-1.5">
-                <span className="text-base sm:text-lg font-black text-emerald-400 block">100%</span>
-                <span className="text-[10px] text-teal-300 font-bold">مناهج معتمدة</span>
-              </div>
-            </div>
           </div>
         </div>
-      </div>
 
-      {/* 🧭 MASTER TABS SWITCHER (المكتبة العامة vs مقرراتي) */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-gray-200 pb-3">
-        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
-          <button
-            onClick={() => setMainViewTab('marketplace')}
-            className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl font-black text-xs sm:text-sm flex items-center gap-2 transition cursor-pointer ${
-              mainViewTab === 'marketplace'
-                ? 'bg-slate-900 text-white shadow-md'
-                : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
-            }`}
-          >
-            <BookOpen className="w-4 h-4 text-teal-400" />
-            <span>مكتبة المقررات</span>
-            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${mainViewTab === 'marketplace' ? 'bg-slate-800 text-teal-300' : 'bg-gray-100 text-gray-700'}`}>
-              {books.length}
-            </span>
-          </button>
+        {/* ROW 2: INTEGRATED SEARCH + 10-DEPARTMENT SELECTOR + FILTER TRIGGER + SORT */}
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2 bg-white p-2.5 rounded-2xl border border-slate-200 shadow-2xs">
+          {/* Central Search Input */}
+          <div className="relative flex-1">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="ابحث بالعنوان، المادة، اسم المدرس، أو المرحلة..."
+              className="w-full pl-9 pr-9 py-2 bg-slate-50 border border-slate-200 text-slate-900 rounded-xl text-xs sm:text-sm font-bold focus:outline-none focus:bg-white focus:border-teal-500 placeholder-slate-400 transition"
+            />
+            <Search className="w-4 h-4 text-teal-600 absolute top-2.5 right-3 pointer-events-none" />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute top-2.5 left-3 text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
 
-          <button
-            onClick={() => setMainViewTab('my_library')}
-            className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl font-black text-xs sm:text-sm flex items-center gap-2 transition cursor-pointer ${
-              mainViewTab === 'my_library'
-                ? 'bg-slate-900 text-white shadow-md'
-                : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
-            }`}
-          >
-            <Bookmark className="w-4 h-4 text-amber-400" />
-            <span>مقرراتي المشترك بها</span>
-            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${mainViewTab === 'my_library' ? 'bg-slate-800 text-amber-300' : 'bg-gray-100 text-gray-700'}`}>
-              {myLibraryBooks.length}
-            </span>
-          </button>
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none">
+            {/* 10 Departments Dropdown */}
+            <div className="relative shrink-0">
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value as BookCategory)}
+                className="pl-3 pr-7 py-2 bg-slate-50 border border-slate-200 hover:border-slate-300 text-slate-800 text-xs font-black rounded-xl focus:outline-none focus:border-teal-500 cursor-pointer"
+              >
+                <option value="all">📚 جميع الأقسام ({books.length})</option>
+                {MAIN_CATEGORIES.map(dept => {
+                  const count = books.filter(b => {
+                    if (dept.id === 'academic_curriculum') return b.category === 'academic_curriculum' || b.category === 'digital_book' || b.track === 'academic';
+                    if (dept.id === 'programming_ai') return b.category === 'programming_ai' || b.category === 'technology' || b.track === 'programming_tech';
+                    if (dept.id === 'self_help') return b.category === 'self_help' || b.track === 'self_help';
+                    if (dept.id === 'business_marketing') return b.category === 'business_marketing' || b.category === 'business' || b.track === 'business_finance';
+                    if (dept.id === 'languages_translation') return b.category === 'languages_translation' || b.track === 'languages';
+                    if (dept.id === 'literature_novels') return b.category === 'literature_novels' || b.category === 'classics' || b.track === 'general_literature';
+                    if (dept.id === 'training_packages') return b.category === 'training_packages' || b.category === 'training_kit';
+                    return b.category === dept.id;
+                  }).length;
+                  return (
+                    <option key={dept.id} value={dept.id}>
+                      {dept.label} ({count})
+                    </option>
+                  );
+                })}
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute top-2.5 right-2 pointer-events-none" />
+            </div>
 
-          <Link
-            to="/reels"
-            className="px-4 py-2 sm:py-2.5 rounded-2xl font-bold text-xs sm:text-sm flex items-center gap-1.5 bg-white hover:bg-purple-50 text-purple-700 border border-purple-200 shadow-2xs transition active:scale-95"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-            <span>فيديوهات قصيرة 🎬</span>
-          </Link>
-
-          {currentUser && (isAdminMode || userRole === 'admin' || userRole === 'instructor') && (
-            <Link
-              to={userRole === 'admin' || isAdminMode ? '/admin' : '/instructor'}
-              className="px-4 py-2 sm:py-2.5 rounded-2xl font-bold text-xs sm:text-sm flex items-center gap-1.5 bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-2xs transition active:scale-95"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-              <span>{userRole === 'admin' || isAdminMode ? 'لوحة الإدارة ⚙️' : 'لوحة المعلم 👨‍🏫'}</span>
-            </Link>
-          )}
-        </div>
-
-        {mainViewTab === 'my_library' && (
-          <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100 inline-flex items-center gap-1.5">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>مقرراتك الدراسية جاهزة للقراءة الفورية</span>
-          </span>
-        )}
-      </div>
-
-      {/* 🔥 CLEAN QUICK FILTER BAR */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {[
-          { id: 'all', label: 'كل المقررات 🌟' },
-          { id: 'trending', label: 'الأكثر رواجاً ⚡' },
-          { id: 'bestsellers', label: 'الأعلى طلباً 🔥' },
-          { id: 'top_rated', label: 'الأعلى تقييماً 🏆' },
-          { id: 'favorites', label: `المفضلة (${favorites.length}) ❤️` },
-          { id: 'free', label: 'المجانية 🆓' },
-          { id: 'paid', label: 'المدفوعة 💎' },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setQuickFilter(tab.id as any)}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer shrink-0 ${
-              quickFilter === tab.id
-                ? 'bg-slate-900 text-white shadow-xs font-black'
-                : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
-            }`}
-          >
-            <span>{tab.label}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* MOBILE HORIZONTAL CATEGORY SWIPER */}
-      <div className="lg:hidden flex items-center gap-2 overflow-x-auto pb-2 pt-1 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
-        <button
-          onClick={() => setSelectedCategory('all')}
-          className={`px-3 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition shrink-0 ${
-            selectedCategory === 'all'
-              ? 'bg-teal-600 text-white shadow-xs'
-              : 'bg-white border border-gray-200 text-gray-700'
-          }`}
-        >
-          الكل ({books.length})
-        </button>
-        {MAIN_CATEGORIES.map(cat => (
-          <button
-            key={cat.id}
-            onClick={() => setSelectedCategory(cat.id as BookCategory)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition shrink-0 ${
-              selectedCategory === cat.id
-                ? 'bg-teal-600 text-white shadow-xs'
-                : 'bg-white border border-gray-200 text-gray-700'
-            }`}
-          >
-            {cat.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
-        {/* DESKTOP RIGHT SIDEBAR FILTERS */}
-        <div className="hidden lg:block lg:col-span-1 bg-white border border-gray-200 rounded-3xl p-5 space-y-5 shadow-sm sticky top-6">
-          <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-            <h3 className="font-black text-gray-800 text-sm flex items-center gap-2">
-              <Filter className="w-4 h-4 text-teal-600" />
-              تصفية الكتب والأبحاث
-            </h3>
+            {/* Filter Sheet Trigger */}
             <button
-              onClick={handleResetFilters}
-              className="text-[11px] text-gray-500 hover:text-indigo-600 font-bold"
+              onClick={() => setIsMobileFilterOpen(true)}
+              className="px-3 py-2 bg-teal-50 border border-teal-200 hover:bg-teal-100 text-teal-800 rounded-xl text-xs font-black flex items-center gap-1.5 transition shrink-0 cursor-pointer"
             >
-              إعادة ضبط
-            </button>
-          </div>
-
-          {/* ACADEMIC & LIBRARY DEPARTMENTS (10 MAIN CATEGORIES) */}
-          <div className="space-y-2">
-            <label className="text-xs font-black text-gray-700 flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <Layers className="w-3.5 h-3.5 text-indigo-600" />
-                أقسام المكتبة والمقررات
-              </span>
-              <span className="text-[10px] text-gray-400 font-bold">10 أقسام</span>
-            </label>
-            <div className="space-y-1 max-h-72 overflow-y-auto pr-1">
-              <button
-                key="all"
-                onClick={() => setSelectedCategory('all')}
-                className={`w-full py-2 px-3 rounded-xl text-xs font-bold text-right flex items-center justify-between transition ${
-                  selectedCategory === 'all'
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                }`}
-              >
-                <span>جميع المحتويات</span>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] ${selectedCategory === 'all' ? 'bg-indigo-500 text-white' : 'bg-gray-200 text-gray-600'}`}>
-                  {books.length}
+              <Filter className="w-3.5 h-3.5 text-teal-600" />
+              <span>تصفية وفلاتر ⚙️</span>
+              {activeFiltersCount > 0 && (
+                <span className="w-4 h-4 rounded-full bg-teal-600 text-white text-[10px] flex items-center justify-center font-bold">
+                  {activeFiltersCount}
                 </span>
-              </button>
-
-              {MAIN_CATEGORIES.map(dept => {
-                const count = books.filter(b => {
-                  if (dept.id === 'academic_curriculum') {
-                    return b.category === 'academic_curriculum' || b.category === 'digital_book' || b.track === 'academic';
-                  }
-                  if (dept.id === 'programming_ai') {
-                    return b.category === 'programming_ai' || b.category === 'technology' || b.track === 'programming_tech';
-                  }
-                  if (dept.id === 'self_help') {
-                    return b.category === 'self_help' || b.track === 'self_help';
-                  }
-                  if (dept.id === 'business_marketing') {
-                    return b.category === 'business_marketing' || b.category === 'business' || b.track === 'business_finance';
-                  }
-                  if (dept.id === 'languages_translation') {
-                    return b.category === 'languages_translation' || b.track === 'languages';
-                  }
-                  if (dept.id === 'literature_novels') {
-                    return b.category === 'literature_novels' || b.category === 'classics' || b.track === 'general_literature';
-                  }
-                  if (dept.id === 'training_packages') {
-                    return b.category === 'training_packages' || b.category === 'training_kit';
-                  }
-                  return b.category === dept.id;
-                }).length;
-
-                return (
-                  <button
-                    key={dept.id}
-                    onClick={() => setSelectedCategory(dept.id as BookCategory)}
-                    className={`w-full py-2 px-3 rounded-xl text-xs font-bold text-right flex items-center justify-between transition ${
-                      selectedCategory === dept.id
-                        ? 'bg-indigo-600 text-white shadow-sm'
-                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                    }`}
-                  >
-                    <span className="truncate">{dept.label}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] shrink-0 mr-1.5 ${selectedCategory === dept.id ? 'bg-indigo-500 text-white' : 'bg-gray-200 text-gray-600'}`}>
-                      {count}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* EDUCATION LEVEL & ACADEMIC SYSTEM FILTERS (When in Academic or All) */}
-          {(selectedCategory === 'all' || selectedCategory === 'academic_curriculum') && (
-            <>
-              {/* EDUCATION LEVEL */}
-              <div className="space-y-1.5 pt-2 border-t border-gray-100">
-                <label className="text-xs font-black text-gray-700 flex items-center gap-1.5">
-                  <School className="w-3.5 h-3.5 text-indigo-600" />
-                  المرحلة التعليمية
-                </label>
-                <select
-                  value={selectedEducationLevel}
-                  onChange={(e) => {
-                    setSelectedEducationLevel(e.target.value);
-                    if (e.target.value === 'all') setSelectedAcademicSystem('all');
-                  }}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-xs font-bold focus:outline-none focus:border-indigo-500"
-                >
-                  <option value="all">كل المراحل (قبل جامعي وجامعي)</option>
-                  {EDUCATION_LEVELS.map((lvl) => (
-                    <option key={lvl.id} value={lvl.id}>{lvl.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* ACADEMIC SYSTEM (If pre-university selected or all) */}
-              {selectedEducationLevel === 'pre_university' && (
-                <div className="space-y-1.5 pt-1">
-                  <label className="text-xs font-black text-gray-700">مسار ونظام التعليم</label>
-                  <select
-                    value={selectedAcademicSystem}
-                    onChange={(e) => setSelectedAcademicSystem(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-xs font-bold focus:outline-none focus:border-indigo-500"
-                  >
-                    <option value="all">كل المسارات (عربي / لغات / دولي / فني)</option>
-                    {ACADEMIC_SYSTEMS.map((sys) => (
-                      <option key={sys.id} value={sys.id}>{sys.label}</option>
-                    ))}
-                  </select>
-                </div>
               )}
-            </>
-          )}
+            </button>
 
-          {/* SUBCATEGORY / SUBJECT FILTER */}
-          <div className="space-y-1.5 pt-2 border-t border-gray-100">
-            <label className="text-xs font-black text-gray-700">المادة / التخصص الفرعي</label>
-            <select
-              value={selectedSubcategory}
-              onChange={(e) => setSelectedSubcategory(e.target.value)}
-              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-xs font-bold focus:outline-none focus:border-indigo-500"
-            >
-              <option value="all">كل التخصصات والمواد</option>
-              {Array.from(new Set([...ACADEMIC_SUBJECTS, ...GENERAL_SUBJECTS])).map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* GRADE LEVEL FILTER */}
-          <div className="space-y-1.5 pt-2 border-t border-gray-100">
-            <label className="text-xs font-black text-gray-700 flex items-center gap-1.5">
-              <GraduationCap className="w-3.5 h-3.5 text-indigo-600" />
-              الصف / المرحلة الدراسية
-            </label>
-            <select
-              value={selectedGradeLevel}
-              onChange={(e) => setSelectedGradeLevel(e.target.value)}
-              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-xs font-bold focus:outline-none focus:border-indigo-500"
-            >
-              <option value="all">جميع المراحل والصفوف</option>
-              {getGradesForSystem(
-                selectedEducationLevel === 'university' ? 'university' : 'pre_university', 
-                selectedAcademicSystem !== 'all' ? selectedAcademicSystem : 'general_arabic'
-              ).map((g) => (
-                <option key={g} value={g}>{g}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* SEMESTER FILTER */}
-          <div className="space-y-1.5 pt-2 border-t border-gray-100">
-            <label className="text-xs font-black text-gray-700 flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-indigo-600" />
-              الفصل الدراسي
-            </label>
-            <select
-              value={selectedSemester}
-              onChange={(e) => setSelectedSemester(e.target.value)}
-              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-xs font-bold focus:outline-none focus:border-indigo-500"
-            >
-              <option value="all">جميع الفصول الدراسية</option>
-              {SEMESTERS.map((sem) => (
-                <option key={sem} value={sem}>{sem}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* ACADEMIC YEAR FILTER */}
-          <div className="space-y-1.5 pt-2 border-t border-gray-100">
-            <label className="text-xs font-black text-gray-700">السنة الدراسية</label>
-            <select
-              value={selectedAcademicYear}
-              onChange={(e) => setSelectedAcademicYear(e.target.value)}
-              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-xs font-bold focus:outline-none focus:border-indigo-500"
-            >
-              <option value="all">كل السنوات</option>
-              {ACADEMIC_YEARS.map((y) => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* COST FILTER */}
-          <div className="space-y-2 pt-2 border-t border-gray-100">
-            <label className="text-xs font-black text-gray-700">تكلفة المقرر</label>
-            <div className="grid grid-cols-3 gap-1.5 p-1 bg-gray-50 rounded-xl border border-gray-200">
-              {[
-                { id: 'all', label: 'الكل' },
-                { id: 'free', label: 'مجاني' },
-                { id: 'paid', label: 'مدفوع' }
-              ].map(cost => (
-                <button
-                  key={cost.id}
-                  onClick={() => setCostFilter(cost.id as any)}
-                  className={`py-1.5 text-[11px] font-bold rounded-lg transition ${
-                    costFilter === cost.id ? 'bg-white text-indigo-700 shadow-sm border border-gray-200' : 'text-gray-500 hover:text-gray-900'
-                  }`}
-                >
-                  {cost.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* SPECIALTIES & TAGS */}
-          {allTags.length > 0 && (
-            <div className="space-y-2 pt-2 border-t border-gray-100">
-              <label className="text-xs font-black text-gray-700 flex items-center gap-1.5">
-                <Tag className="w-3.5 h-3.5 text-indigo-600" />
-                الوسوم والهاشتاجات
-              </label>
-              <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
-                <button
-                  onClick={() => setSelectedTag('all')}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${
-                    selectedTag === 'all' ? 'bg-indigo-600 text-white' : 'bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                  }`}
-                >
-                  الكل
-                </button>
-                {allTags.map(tag => (
-                  <button
-                    key={tag}
-                    onClick={() => setSelectedTag(tag)}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${
-                      selectedTag === tag ? 'bg-indigo-600 text-white' : 'bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                    }`}
-                  >
-                    #{tag}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* LEFT COLUMN: SEARCH BAR + BOOK CARDS GRID */}
-        <div className="lg:col-span-3 space-y-6">
-          {/* SEARCH & SORT HEADER */}
-          <div className="bg-white border border-gray-200 rounded-2xl p-3 sm:p-4 shadow-sm flex flex-col gap-3">
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="ابحث بالعنوان، المادة، اسم الدكتور، الصف الدراسي..."
-                  className="w-full pl-4 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 text-xs sm:text-sm focus:outline-none focus:border-teal-500 focus:bg-white transition"
-                />
-                <Search className="w-4 h-4 text-gray-400 absolute top-3 right-3" />
-              </div>
-
-              {/* MOBILE FILTER TRIGGER BUTTON */}
-              <button
-                onClick={() => setIsMobileFilterOpen(true)}
-                className="lg:hidden px-3.5 py-2.5 bg-teal-50 border border-teal-200 hover:bg-teal-100 text-teal-800 rounded-xl text-xs font-black flex items-center gap-1.5 transition shrink-0"
-              >
-                <Filter className="w-4 h-4 text-teal-600" />
-                <span>تصفية</span>
-                {((selectedCategory !== 'all' ? 1 : 0) + (selectedEducationLevel !== 'all' ? 1 : 0) + (selectedAcademicSystem !== 'all' ? 1 : 0) + (selectedSubcategory !== 'all' ? 1 : 0) + (selectedGradeLevel !== 'all' ? 1 : 0) + (costFilter !== 'all' ? 1 : 0)) > 0 && (
-                  <span className="w-5 h-5 rounded-full bg-teal-600 text-white text-[10px] flex items-center justify-center font-bold">
-                    {(selectedCategory !== 'all' ? 1 : 0) + (selectedEducationLevel !== 'all' ? 1 : 0) + (selectedAcademicSystem !== 'all' ? 1 : 0) + (selectedSubcategory !== 'all' ? 1 : 0) + (selectedGradeLevel !== 'all' ? 1 : 0) + (costFilter !== 'all' ? 1 : 0)}
-                  </span>
-                )}
-              </button>
-            </div>
-
-            <div className="flex items-center gap-3 w-full justify-between border-t border-gray-100 pt-2.5">
-              <span className="text-xs text-gray-500 font-bold whitespace-nowrap">
-                المعروض: <span className="text-teal-600 font-black">{filteredBooks.length}</span> من {books.length}
-              </span>
-
-              {/* SORT DROPDOWN (Default: Newest first) */}
+            {/* Sort Dropdown */}
+            <div className="relative shrink-0">
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-xs font-black focus:outline-none focus:border-teal-500"
+                className="pl-3 pr-7 py-2 bg-slate-50 border border-slate-200 text-slate-800 text-xs font-black rounded-xl focus:outline-none focus:border-teal-500 cursor-pointer"
               >
                 <option value="newest">📅 الأحدث إضافة</option>
-                <option value="oldest">⌛ الأقدم إضافة</option>
-                <option value="popular">🔥 الأكثر شعبية</option>
+                <option value="popular">🔥 الأكثر طلباً</option>
                 <option value="rating">⭐ الأعلى تقييماً</option>
+                <option value="price_low">🏷️ الأقل سعراً</option>
+                <option value="price_high">💎 الأعلى سعراً</option>
               </select>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute top-2.5 right-2 pointer-events-none" />
             </div>
           </div>
+        </div>
 
-          {/* 💡 FUZZY SEARCH DID-YOU-MEAN SUGGESTION BANNER */}
-          {fuzzySuggestion && (
-            <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs animate-slide-up">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold shrink-0">
-                  <Sparkles className="w-4 h-4 text-amber-100 animate-pulse" />
-                </div>
-                <div>
-                  <span className="text-[11px] font-bold text-amber-800">هل تقصد البحث عن مقرر:</span>
-                  <h4 className="text-sm font-black text-amber-950 font-sans">"{fuzzySuggestion.title}"؟</h4>
-                </div>
-              </div>
+        {/* ROW 3: QUICK ATTRIBUTE PILLS + RESULTS COUNT */}
+        <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 scrollbar-none">
+          <div className="flex items-center gap-1.5">
+            {[
+              { id: 'all', label: 'الكل' },
+              { id: 'free', label: 'المجانية 🆓' },
+              { id: 'paid', label: 'المدفوعة 💎' },
+              { id: 'certified', label: 'معتمد 🛡️' },
+              { id: 'ai_interactive', label: 'تفاعلي بالـ AI ⚡' },
+            ].map((tab) => (
               <button
-                onClick={() => setSearchQuery(fuzzySuggestion.title)}
-                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs rounded-xl shadow-xs transition active:scale-95 cursor-pointer whitespace-nowrap"
+                key={tab.id}
+                onClick={() => setQuickFilter(tab.id as any)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer shrink-0 ${
+                  quickFilter === tab.id
+                    ? 'bg-slate-900 text-white shadow-xs font-black'
+                    : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+                }`}
               >
-                تطبيق هذا العنوان 🔍
+                <span>{tab.label}</span>
               </button>
-            </div>
-          )}
+            ))}
+          </div>
 
-          {/* EMPTY STATE */}
-          {filteredBooks.length === 0 ? (
-            <div className="bg-white border border-gray-200 rounded-3xl p-12 text-center space-y-4">
-              <BookOpen className="w-14 h-14 text-indigo-200 mx-auto" />
-              <h3 className="text-lg font-black text-gray-900">لا توجد كتب أو مقررات مطابقة للبحث أو التصفية</h3>
-              <p className="text-xs text-gray-500 max-w-md mx-auto">
-                {books.length === 0 
-                  ? 'قاعدة البيانات فارغة حالياً. يمكنك توليد كتاب جديد بالذكاء الاصطناعي الآن عبر زر "توليد كتاب بالـ AI".'
-                  : 'جرب تغيير معايير التصفية أو اضغط على "إعادة ضبط" لعرض كافة المقررات.'}
-              </p>
-              {books.length === 0 && (isAdminMode || userRole === 'instructor' || userRole === 'admin') && (
-                <button
-                  onClick={onOpenCreateModal}
-                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl inline-flex items-center gap-2 shadow-sm transition active:scale-95 cursor-pointer"
-                >
-                  <Sparkles className="w-4 h-4 text-amber-300" />
-                  <span>توليد أول مقرر بالذكاء الاصطناعي</span>
-                </button>
-              )}
+          <div className="text-[11px] text-slate-500 font-bold whitespace-nowrap shrink-0">
+            المعروض: <strong className="text-teal-700">{filteredBooks.length}</strong> من {books.length}
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        {/* 💡 FUZZY SEARCH DID-YOU-MEAN SUGGESTION BANNER */}
+        {fuzzySuggestion && (
+          <div className="p-3.5 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs animate-slide-up">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold shrink-0">
+                <Sparkles className="w-4 h-4 text-amber-100 animate-pulse" />
+              </div>
+              <div>
+                <span className="text-[11px] font-bold text-amber-800">هل تقصد البحث عن مقرر:</span>
+                <h4 className="text-sm font-black text-amber-950 font-sans">"{fuzzySuggestion.title}"؟</h4>
+              </div>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <button
+              onClick={() => setSearchQuery(fuzzySuggestion.title)}
+              className="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs rounded-xl shadow-xs transition active:scale-95 cursor-pointer whitespace-nowrap"
+            >
+              تطبيق هذا العنوان 🔍
+            </button>
+          </div>
+        )}
+
+        {/* EMPTY STATE */}
+        {filteredBooks.length === 0 ? (
+          <div className="bg-white border border-gray-200 rounded-3xl p-12 text-center space-y-4">
+            <BookOpen className="w-14 h-14 text-indigo-200 mx-auto" />
+            <h3 className="text-lg font-black text-gray-900">لا توجد كتب أو مقررات مطابقة للبحث أو التصفية</h3>
+            <p className="text-xs text-gray-500 max-w-md mx-auto">
+              {books.length === 0 
+                ? 'قاعدة البيانات فارغة حالياً. يمكنك توليد كتاب جديد بالذكاء الاصطناعي الآن عبر زر "توليد بالـ AI".'
+                : 'جرب تغيير معايير التصفية أو اضغط على "إعادة ضبط" لعرض كافة المقررات.'}
+            </p>
+            {books.length === 0 && (isAdminMode || userRole === 'instructor' || userRole === 'admin') && (
+              <button
+                onClick={onOpenCreateModal}
+                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl inline-flex items-center gap-2 shadow-sm transition active:scale-95 cursor-pointer"
+              >
+                <Sparkles className="w-4 h-4 text-amber-300" />
+                <span>توليد أول مقرر بالذكاء الاصطناعي</span>
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {filteredBooks.map(book => (
                 <div
                   key={book.id}
-                  className={`bg-white border rounded-2xl overflow-hidden shadow-sm flex flex-col justify-between transition hover:border-indigo-300 hover:shadow-lg hover:shadow-indigo-100 ${
-                    !book.is_published ? 'opacity-60 border-dashed border-amber-300' : 'border-gray-200'
+                  onClick={() => onLaunchBook(book)}
+                  className={`bg-white border rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-all duration-300 flex flex-col justify-between cursor-pointer group ${
+                    !book.is_published ? 'opacity-60 border-dashed border-amber-300' : 'border-gray-200 hover:border-teal-400'
                   }`}
                 >
                   <div>
-                    {/* THUMBNAIL */}
-                    <div className="relative h-48 bg-gray-100 overflow-hidden group">
-                      <img
-                        src={book.thumbnail_url || "https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=800&q=80"}
-                        alt={book.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-gray-900/70 via-transparent to-transparent opacity-80" />
+                    {/* THUMBNAIL / DYNAMIC COVER */}
+                    <div className="relative h-44 bg-gray-100 overflow-hidden">
+                      {renderBookCover(book)}
 
-                      {/* TOP LEFT: FAVORITES & READ LATER BUTTONS */}
-                      <div className="absolute top-3 left-3 flex items-center gap-1.5 z-10">
+                      {/* TOP LEFT: FAVORITES BUTTON ONLY (Bookmark icon removed) */}
+                      <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 z-10" onClick={(e) => e.stopPropagation()}>
                         <button
                           type="button"
                           onClick={(e) => toggleFavorite(book.id, e)}
                           title={favorites.includes(book.id) ? "إزالة من المفضلة" : "إضافة للمفضلة"}
-                          className={`p-2 rounded-xl backdrop-blur-md transition shadow-sm ${
+                          className={`p-1.5 rounded-lg backdrop-blur-md transition shadow-xs cursor-pointer ${
                             favorites.includes(book.id)
                               ? 'bg-rose-500 text-white shadow-rose-200'
-                              : 'bg-white/90 text-gray-700 hover:text-rose-600 hover:bg-white'
+                              : 'bg-black/35 hover:bg-black/55 text-white'
                           }`}
                         >
                           <Heart className={`w-3.5 h-3.5 ${favorites.includes(book.id) ? 'fill-current' : ''}`} />
                         </button>
-
-                        <button
-                          type="button"
-                          onClick={(e) => toggleReadLater(book.id, e)}
-                          title={readLater.includes(book.id) ? "إزالة من القراءة لاحقاً" : "حفظ للقراءة لاحقاً"}
-                          className={`p-2 rounded-xl backdrop-blur-md transition shadow-sm ${
-                            readLater.includes(book.id)
-                              ? 'bg-indigo-600 text-white shadow-indigo-200'
-                              : 'bg-white/90 text-gray-700 hover:text-indigo-600 hover:bg-white'
-                          }`}
-                        >
-                          <Bookmark className={`w-3.5 h-3.5 ${readLater.includes(book.id) ? 'fill-current' : ''}`} />
-                        </button>
                       </div>
 
-                      {/* TOP RIGHT: PRICE & EXTERNAL BADGES */}
-                      <div className="absolute top-3 right-3 flex flex-wrap items-center gap-1.5">
+                      {/* TOP RIGHT: CLEAN PRICE BADGE */}
+                      <div className="absolute top-2.5 right-2.5 flex items-center gap-1 z-10" onClick={(e) => e.stopPropagation()}>
                         {!book.price || book.price === 0 ? (
-                          <span className="px-2.5 py-1 bg-emerald-500 text-white font-black text-[10px] rounded-lg shadow-sm">
-                            مجاني
+                          <span className="px-2.5 py-0.5 bg-emerald-500 text-white font-black text-[10px] rounded-lg shadow-sm">
+                            مجاني 🆓
                           </span>
                         ) : (
-                          <span className="px-2.5 py-1 bg-amber-400 text-amber-950 font-black text-[10px] rounded-lg shadow-sm">
-                            {book.price} ج.م
+                          <span className="px-2.5 py-0.5 bg-amber-400 text-amber-950 font-black text-[10px] rounded-lg shadow-sm">
+                            {book.price} ج.م 💎
                           </span>
                         )}
 
                         {book.is_external && (
-                          <span className="px-2.5 py-1 bg-indigo-600 text-white font-bold text-[10px] rounded-lg shadow-sm flex items-center gap-1">
-                            <ExternalLink className="w-3 h-3" />
-                            رابط خارجي
+                          <span className="px-2 py-0.5 bg-indigo-600 text-white font-bold text-[9px] rounded-lg shadow-xs flex items-center gap-1">
+                            <ExternalLink className="w-2.5 h-2.5" />
+                            خارجي
                           </span>
                         )}
                       </div>
-
-                      {/* RATING */}
-                      <div className="absolute bottom-3 left-3 bg-white/95 backdrop-blur-md px-2.5 py-1 rounded-lg border border-gray-200 flex items-center gap-1 text-[11px] font-bold text-amber-600 shadow-sm">
-                        <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-                        <span>{book.rating || 5.0}</span>
-                        <span className="text-gray-500 text-[10px]">({book.reviews_count || 120})</span>
-                      </div>
                     </div>
 
-                    {/* CONTENT */}
-                    <div className="p-5 space-y-3">
-                      <div className="flex items-center justify-between text-[11px] font-bold text-indigo-600">
-                        <span className="bg-indigo-50 px-2.5 py-0.5 rounded-md border border-indigo-100">
+                    {/* CONTENT (Title is already rendered clearly on the cover - showing instructor & tags) */}
+                    <div className="p-3 space-y-2">
+                      <div className="flex items-center justify-between text-[11px] font-bold">
+                        <span className="bg-teal-50 text-teal-800 px-2 py-0.5 rounded-md border border-teal-100 font-black text-[10px]">
                           {book.category === 'digital_book' ? 'كتاب رقمي' : book.category === 'quiz_bank' ? 'بنك أسئلة' : 'مقرر تفاعلي'}
                         </span>
                         <Link
                           to={`/instructor/${encodeURIComponent(book.author_name || 'instructor')}`}
                           onClick={(e) => e.stopPropagation()}
-                          className="text-gray-500 hover:text-teal-600 hover:underline transition font-bold"
+                          className="text-slate-500 hover:text-teal-600 transition font-bold text-[11px] truncate max-w-[120px]"
                           title="عرض بروفايل المعلم والمقررات التابعة له"
                         >
                           {book.author_name || 'خبير المادة'}
                         </Link>
                       </div>
 
-                      <h3 className="font-black text-gray-900 text-base leading-snug line-clamp-2 hover:text-indigo-600 transition">
-                        {book.title}
-                      </h3>
-
-                      <p className="text-xs text-gray-600 leading-relaxed line-clamp-2">
-                        {book.description || "كتاب تفاعلي يتضمن شروحات، خريطة ذهنية، وبنك أسئلة مدمج."}
-                      </p>
-
-                      {/* ACADEMIC METADATA PILLS */}
-                      {(book.grade_level || book.semester || book.subcategory) && (
-                        <div className="flex flex-wrap gap-1 text-[10px] font-bold text-gray-600 pt-1">
+                      {/* Single Clean Academic Line (if available) */}
+                      {(book.grade_level || book.subcategory) && (
+                        <div className="flex items-center gap-1.5 text-[10px] text-gray-600 pt-0.5 font-bold">
                           {book.grade_level && (
-                            <span className="bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-md flex items-center gap-1">
-                              <GraduationCap className="w-3 h-3" />
+                            <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md truncate max-w-[110px]">
                               {book.grade_level}
                             </span>
                           )}
-                          {book.semester && (
-                            <span className="bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-md flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              {book.semester}
-                            </span>
-                          )}
                           {book.subcategory && (
-                            <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-md">
+                            <span className="bg-teal-50 text-teal-700 px-2 py-0.5 rounded-md truncate max-w-[110px]">
                               {book.subcategory}
                             </span>
                           )}
                         </div>
                       )}
-
-                      {/* 🌟 FEATURE READINESS BADGES */}
-                      <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                        <span className="px-2 py-0.5 bg-indigo-50 border border-indigo-100 text-indigo-700 text-[9px] font-black rounded-md flex items-center gap-0.5">
-                          🎙️ بودكاست
-                        </span>
-                        <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-100 text-emerald-700 text-[9px] font-black rounded-md flex items-center gap-0.5">
-                          🧪 معمل تفاعلي
-                        </span>
-                        <span className="px-2 py-0.5 bg-rose-50 border border-rose-100 text-rose-700 text-[9px] font-black rounded-md flex items-center gap-0.5">
-                          📱 ريلز
-                        </span>
-                        <span className="px-2 py-0.5 bg-amber-50 border border-amber-100 text-amber-800 text-[9px] font-black rounded-md flex items-center gap-0.5">
-                          🏆 تقييم بلوم
-                        </span>
-                      </div>
-
-                      {/* TAGS */}
-                      <div className="flex flex-wrap gap-1">
-                        {book.tags?.filter(t => !t.includes(':')).slice(0, 3).map((tag, idx) => (
-                          <span key={idx} className="px-2 py-0.5 bg-gray-100 border border-gray-200 text-gray-600 text-[10px] font-semibold rounded-md">
-                            #{tag}
-                          </span>
-                        ))}
-                      </div>
                     </div>
                   </div>
 
                   {/* BUTTONS & MONETIZATION */}
-                  <div className="p-5 pt-0 space-y-2">
-                    <div className="pt-2 space-y-2 border-t border-gray-100">
+                  <div className="p-4 pt-0 space-y-2">
+                    <div className="pt-2 border-t border-gray-100">
                       {(() => {
                         const isPurchased = purchasedBookIds.includes(book.id);
                         const isFree = !book.price || book.price === 0;
                         const isUnlocked = isFree || isPurchased || isAdminMode;
 
-                        if (book.is_external) {
-                          if (!isUnlocked) {
-                            return (
-                              <div className="grid grid-cols-2 gap-2">
-                                <button
-                                  onClick={() => setPurchasingBook(book)}
-                                  className="py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-amber-950 font-black text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-sm transition active:scale-95 shadow-amber-200"
-                                >
-                                  <ShoppingCart className="w-3.5 h-3.5" />
-                                  <span>شراء ({book.price} ج.م)</span>
-                                </button>
-
-                                <button
-                                  onClick={() => onLaunchBook(book)}
-                                  className="py-2.5 bg-white hover:bg-teal-50 text-teal-700 font-bold text-xs rounded-xl border border-teal-200 flex items-center justify-center gap-1.5 shadow-sm transition active:scale-95"
-                                >
-                                  <Eye className="w-3.5 h-3.5 text-teal-600" />
-                                  <span>معاينة وتفاصيل</span>
-                                </button>
-                              </div>
-                            );
-                          }
-
-                          return (
-                            <button
-                              onClick={() => onLaunchBook(book)}
-                              className="w-full py-2.5 bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 text-white font-black text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-sm transition active:scale-95 shadow-teal-500/20"
-                            >
-                              <Play className="w-3.5 h-3.5 fill-current" />
-                              <span>فتح المقرر التفاعلي 🔒</span>
-                            </button>
-                          );
-                        }
-
                         if (!isUnlocked) {
                           return (
-                            <div className="grid grid-cols-2 gap-2">
+                            <div className="grid grid-cols-2 gap-2" onClick={(e) => e.stopPropagation()}>
                               <button
                                 onClick={() => setPurchasingBook(book)}
-                                className="py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-amber-950 font-black text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-sm transition active:scale-95 shadow-amber-200"
+                                className="py-2 px-3 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-xs transition active:scale-95 cursor-pointer"
                               >
                                 <ShoppingCart className="w-3.5 h-3.5" />
                                 <span>شراء ({book.price} ج.م)</span>
@@ -1082,9 +816,9 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
 
                               <button
                                 onClick={() => onLaunchBook(book)}
-                                className="py-2.5 bg-white hover:bg-teal-50 text-teal-700 font-bold text-xs rounded-xl border border-teal-200 flex items-center justify-center gap-1.5 shadow-sm transition active:scale-95"
+                                className="py-2 px-3 bg-gray-50 hover:bg-gray-100 text-gray-800 font-bold text-xs rounded-xl border border-gray-200 flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
                               >
-                                <Eye className="w-3.5 h-3.5 text-teal-600" />
+                                <Eye className="w-3.5 h-3.5 text-gray-600" />
                                 <span>معاينة مجانية</span>
                               </button>
                             </div>
@@ -1092,28 +826,24 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
                         }
 
                         return (
-                          <div className="grid grid-cols-2 gap-2">
-                            <button
-                              onClick={() => onLaunchBook(book)}
-                              className="py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-black text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-sm transition active:scale-95"
-                            >
-                              <Play className="w-3.5 h-3.5 fill-current" />
-                              <span>{isPurchased && !isFree ? 'متابعة القراءة' : 'تشغيل الكتاب'}</span>
-                            </button>
-
-                            <button
-                              onClick={() => onLaunchQuiz(book)}
-                              className="py-2.5 bg-white hover:bg-teal-50 text-teal-700 font-bold text-xs rounded-xl border border-teal-200 flex items-center justify-center gap-1.5 shadow-sm transition active:scale-95"
-                            >
-                              <HelpCircle className="w-3.5 h-3.5" />
-                              <span>الاختبار التفاعلي</span>
-                            </button>
-                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onLaunchBook(book);
+                            }}
+                            className="w-full py-2.5 px-4 bg-teal-600 hover:bg-teal-700 text-white font-black text-xs rounded-xl flex items-center justify-center gap-2 shadow-xs transition active:scale-95 cursor-pointer"
+                          >
+                            <Play className="w-3.5 h-3.5 fill-current" />
+                            <span>{isPurchased && !isFree ? 'متابعة القراءة 📖' : 'ابدأ القراءة 📖'}</span>
+                          </button>
                         );
                       })()}
 
                       {(isAdminMode || userRole === 'admin' || userRole === 'instructor') && (
-                        <div className="flex flex-wrap items-center justify-between gap-2 pt-2.5 mt-2.5 border-t border-slate-100 text-[11px] bg-slate-50/80 -mx-4 -mb-4 p-3 rounded-b-2xl">
+                        <div 
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex flex-wrap items-center justify-between gap-1.5 pt-2 mt-2 border-t border-slate-100 text-[11px] bg-slate-50/80 -mx-4 -mb-4 p-2.5 rounded-b-2xl"
+                        >
                           <div className="flex items-center gap-1.5">
                             <button
                               onClick={() => setEditingBook(book)}
@@ -1134,7 +864,7 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
                             </Link>
                           </div>
 
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5">
                             <button
                               onClick={() => onTogglePublish(book.id)}
                               className={`flex items-center gap-1 font-bold px-2 py-1 rounded-lg border transition cursor-pointer ${
@@ -1174,7 +904,6 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
             </div>
           )}
         </div>
-      </div>
 
       {/* MOBILE FILTER DRAWER MODAL */}
       {isMobileFilterOpen && (

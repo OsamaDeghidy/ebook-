@@ -243,92 +243,65 @@ export default function FlashcardsSection({ chapter, onUpdateFlashcards }: Flash
   return (
     <div className="space-y-6 animate-fade-in" dir="rtl">
       
-      {/* HEADER WITH LEITNER SYSTEM INSIGHT */}
-      <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 border border-indigo-800/40 rounded-3xl p-6 md:p-8 text-white shadow-xl relative overflow-hidden">
-        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-black">
-              <Layers className="w-3.5 h-3.5 text-indigo-400" />
-              <span>خوارزمية لايتنر للتكرار المتباعد (Leitner 3-Box Engine)</span>
-            </div>
-            <h3 className="text-2xl font-black tracking-tight text-white">بطاقات الاستذكار السريع والتثبيت</h3>
-            <p className="text-xs md:text-sm text-gray-300 leading-relaxed">
-              تنتقل البطاقات بين 3 صناديق ذكية: البطاقات الصعبة تظهر بتكرار مكثف حتى تنقلها بنفسك إلى صندوق الإتقان النهائي.
-            </p>
+      {/* 🗂️ COMPACT LEITNER SYSTEM 3-BOX BAR */}
+      <div className="bg-white border border-gray-200 rounded-2xl p-3 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 flex items-center justify-center font-black text-xs shrink-0">
+            {masteryPercentage}%
           </div>
-
-          {/* Mastery Stats Widget */}
-          <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md border border-white/15 px-5 py-3.5 rounded-2xl shrink-0">
-            <div className="w-12 h-12 rounded-full bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center text-emerald-400 font-black text-sm">
-              {masteryPercentage}%
-            </div>
-            <div className="text-right">
-              <span className="text-[11px] text-gray-300 font-bold block">مستوى الإتقان التراكمي</span>
-              <span className="text-sm font-black text-white">{box3Count} من {cards.length} بطاقات متقنة</span>
-            </div>
+          <div className="text-right">
+            <span className="text-xs font-black text-gray-900 block">بطاقات الاستذكار (نظام لايتنر)</span>
+            <span className="text-[10px] text-gray-500">{box3Count} من {cards.length} بطاقات متقنة</span>
           </div>
         </div>
 
-        {/* 3-BOX LEITNER TABS */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-6 pt-6 border-t border-indigo-800/50">
+        {/* 3-BOX PILLS */}
+        <div className="flex items-center gap-1.5 flex-wrap w-full sm:w-auto justify-start sm:justify-end">
           <button
             onClick={() => { setActiveBoxFilter('all'); setCurrentIndex(0); setIsFlipped(false); setCompleted(false); }}
-            className={`flex items-center justify-between p-3 rounded-2xl text-xs font-bold transition-all border ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border cursor-pointer ${
               activeBoxFilter === 'all'
-                ? 'bg-indigo-600 text-white border-indigo-400 shadow-md ring-2 ring-indigo-400/40'
-                : 'bg-white/5 hover:bg-white/10 text-gray-300 border-white/10'
+                ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
             }`}
           >
-            <span className="flex items-center gap-1.5">
-              <Layers className="w-4 h-4" />
-              <span>جميع البطاقات</span>
-            </span>
-            <span className="px-2 py-0.5 rounded-full bg-white/20 text-[10px] font-black">{cards.length}</span>
+            <span>الكل ({cards.length})</span>
           </button>
 
           <button
             onClick={() => { setActiveBoxFilter('box1'); setCurrentIndex(0); setIsFlipped(false); setCompleted(false); }}
-            className={`flex items-center justify-between p-3 rounded-2xl text-xs font-bold transition-all border ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border cursor-pointer ${
               activeBoxFilter === 'box1'
-                ? 'bg-rose-600 text-white border-rose-400 shadow-md ring-2 ring-rose-400/40'
-                : 'bg-rose-950/30 hover:bg-rose-900/40 text-rose-300 border-rose-800/30'
+                ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
+                : 'bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100'
             }`}
           >
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-400 animate-pulse" />
-              <span>صندوق 1: يحتاج تركيز</span>
-            </span>
-            <span className="px-2 py-0.5 rounded-full bg-rose-500/30 text-[10px] font-black">{box1Count}</span>
+            <span className="w-2 h-2 rounded-full bg-rose-500" />
+            <span>يحتاج تركيز 🔴 ({box1Count})</span>
           </button>
 
           <button
             onClick={() => { setActiveBoxFilter('box2'); setCurrentIndex(0); setIsFlipped(false); setCompleted(false); }}
-            className={`flex items-center justify-between p-3 rounded-2xl text-xs font-bold transition-all border ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border cursor-pointer ${
               activeBoxFilter === 'box2'
-                ? 'bg-amber-600 text-white border-amber-400 shadow-md ring-2 ring-amber-400/40'
-                : 'bg-amber-950/30 hover:bg-amber-900/40 text-amber-300 border-amber-800/30'
+                ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
             }`}
           >
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-              <span>صندوق 2: قيد المراجعة</span>
-            </span>
-            <span className="px-2 py-0.5 rounded-full bg-amber-500/30 text-[10px] font-black">{box2Count}</span>
+            <span className="w-2 h-2 rounded-full bg-amber-500" />
+            <span>قيد المراجعة 🟡 ({box2Count})</span>
           </button>
 
           <button
             onClick={() => { setActiveBoxFilter('box3'); setCurrentIndex(0); setIsFlipped(false); setCompleted(false); }}
-            className={`flex items-center justify-between p-3 rounded-2xl text-xs font-bold transition-all border ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border cursor-pointer ${
               activeBoxFilter === 'box3'
-                ? 'bg-emerald-600 text-white border-emerald-400 shadow-md ring-2 ring-emerald-400/40'
-                : 'bg-emerald-950/30 hover:bg-emerald-900/40 text-emerald-300 border-emerald-800/30'
+                ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
             }`}
           >
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-              <span>صندوق 3: أتقنتها تماماً</span>
-            </span>
-            <span className="px-2 py-0.5 rounded-full bg-emerald-500/30 text-[10px] font-black">{box3Count}</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span>أتقنتها 🟢 ({box3Count})</span>
           </button>
         </div>
       </div>
@@ -501,84 +474,76 @@ export default function FlashcardsSection({ chapter, onUpdateFlashcards }: Flash
             </div>
           </div>
 
-          {/* Quick Tinder Action Control Bar */}
-          <div className="flex items-center justify-center gap-4 py-2">
-            <button
-              onClick={() => handleRate('hard')}
-              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-black shadow-xs transition active:scale-95 cursor-pointer"
-              title="نقل لصندوق التركيز (سحب لليسار)"
-            >
-              <AlertCircle className="w-4 h-4 text-rose-500" />
-              <span>صعب (سحب يساراً)</span>
-            </button>
-
-            <button
-              onClick={() => setIsFlipped(!isFlipped)}
-              className="p-3.5 rounded-2xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 shadow-xs transition active:scale-95 cursor-pointer"
-              title="قلب البطاقة"
-            >
-              <RotateCw className="w-5 h-5 text-indigo-600" />
-            </button>
-
-            <button
-              onClick={() => handleRate('easy')}
-              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-black shadow-xs transition active:scale-95 cursor-pointer"
-              title="نقل لصندوق الإتقان (سحب لليمين)"
-            >
-              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-              <span>أتقنته (سحب يميناً)</span>
-            </button>
-          </div>
-
-          {/* Action buttons (Leitner Rating) */}
+          {/* Action buttons (Leitner Rating & Navigation - Single Unified Controls) */}
           {isFlipped ? (
-            <div className="grid grid-cols-3 gap-3 animate-fade-in">
-              <button
-                onClick={() => handleRate('hard')}
-                className="p-3.5 bg-rose-50 hover:bg-rose-100 border-2 border-rose-200 text-rose-800 rounded-2xl text-xs font-black transition flex flex-col items-center justify-center gap-1 shadow-sm active:scale-95"
-              >
-                <div className="flex items-center gap-1.5">
-                  <AlertCircle className="w-4 h-4 text-rose-600" />
-                  <span>لم أتقنه (صعب)</span>
-                </div>
-                <span className="text-[10px] text-rose-600/80 font-normal">نقل إلى صندوق 1 (تركيز)</span>
-              </button>
+            <div className="space-y-3 animate-fade-in">
+              <div className="grid grid-cols-3 gap-2.5">
+                <button
+                  onClick={() => handleRate('hard')}
+                  className="p-3 bg-rose-50 hover:bg-rose-100 border-2 border-rose-200 text-rose-800 rounded-2xl text-xs font-black transition flex flex-col items-center justify-center gap-1 shadow-xs active:scale-95 cursor-pointer"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <AlertCircle className="w-4 h-4 text-rose-600" />
+                    <span>لم أتقنه (صعب) 🔴</span>
+                  </div>
+                  <span className="text-[10px] text-rose-600/80 font-normal">صندوق 1 (تركيز)</span>
+                </button>
 
-              <button
-                onClick={() => handleRate('medium')}
-                className="p-3.5 bg-amber-50 hover:bg-amber-100 border-2 border-amber-200 text-amber-900 rounded-2xl text-xs font-black transition flex flex-col items-center justify-center gap-1 shadow-sm active:scale-95"
-              >
-                <div className="flex items-center gap-1.5">
-                  <HelpCircle className="w-4 h-4 text-amber-600" />
-                  <span>تذكرته بصعوبة</span>
-                </div>
-                <span className="text-[10px] text-amber-700/80 font-normal">نقل إلى صندوق 2 (مراجعة)</span>
-              </button>
+                <button
+                  onClick={() => handleRate('medium')}
+                  className="p-3 bg-amber-50 hover:bg-amber-100 border-2 border-amber-200 text-amber-900 rounded-2xl text-xs font-black transition flex flex-col items-center justify-center gap-1 shadow-xs active:scale-95 cursor-pointer"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <HelpCircle className="w-4 h-4 text-amber-600" />
+                    <span>تذكرته بصعوبة 🟡</span>
+                  </div>
+                  <span className="text-[10px] text-amber-700/80 font-normal">صندوق 2 (مراجعة)</span>
+                </button>
 
-              <button
-                onClick={() => handleRate('easy')}
-                className="p-3.5 bg-emerald-50 hover:bg-emerald-100 border-2 border-emerald-200 text-emerald-900 rounded-2xl text-xs font-black transition flex flex-col items-center justify-center gap-1 shadow-sm active:scale-95"
-              >
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <span>أتقنته تماماً</span>
-                </div>
-                <span className="text-[10px] text-emerald-700/80 font-normal">نقل إلى صندوق 3 (إتقان)</span>
-              </button>
+                <button
+                  onClick={() => handleRate('easy')}
+                  className="p-3 bg-emerald-50 hover:bg-emerald-100 border-2 border-emerald-200 text-emerald-900 rounded-2xl text-xs font-black transition flex flex-col items-center justify-center gap-1 shadow-xs active:scale-95 cursor-pointer"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span>أتقنته تماماً 🟢</span>
+                  </div>
+                  <span className="text-[10px] text-emerald-700/80 font-normal">صندوق 3 (إتقان)</span>
+                </button>
+              </div>
+
+              <div className="flex items-center justify-center">
+                <button
+                  onClick={() => setIsFlipped(false)}
+                  className="text-xs text-indigo-600 hover:text-indigo-800 font-bold flex items-center gap-1 p-1 cursor-pointer"
+                >
+                  <RotateCw className="w-3.5 h-3.5" />
+                  <span>قلب البطاقة للوجه الأول 🔄</span>
+                </button>
+              </div>
             </div>
           ) : (
             <div className="flex items-center justify-between gap-3">
               <button
                 onClick={handlePrev}
                 disabled={currentIndex === 0}
-                className="px-5 py-3 border border-gray-200 hover:bg-gray-50 disabled:opacity-40 text-gray-700 rounded-2xl text-xs font-bold transition flex items-center gap-2"
+                className="px-4 py-2.5 border border-gray-200 hover:bg-gray-50 disabled:opacity-40 text-gray-700 rounded-2xl text-xs font-bold transition flex items-center gap-2 cursor-pointer"
               >
                 <ArrowRight className="w-4 h-4" />
                 <span>السابق</span>
               </button>
+
+              <button
+                onClick={() => setIsFlipped(true)}
+                className="flex-1 max-w-xs py-2.5 px-4 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-800 rounded-2xl text-xs font-black transition flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+              >
+                <RotateCw className="w-4 h-4 text-indigo-600" />
+                <span>اقلب البطاقة لرؤية الإجابة 🔄</span>
+              </button>
+
               <button
                 onClick={handleNext}
-                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-xs font-black transition flex items-center gap-2 shadow-sm active:scale-95"
+                className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-xs font-black transition flex items-center gap-2 shadow-xs active:scale-95 cursor-pointer"
               >
                 <span>التالي</span>
                 <ArrowLeft className="w-4 h-4" />

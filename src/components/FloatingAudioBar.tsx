@@ -68,57 +68,57 @@ export default function FloatingAudioBar({ onTriggerPlay, chapterTitle }: Floati
 
   return (
     <div
-      className="fixed bottom-16 sm:bottom-5 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-lg bg-slate-950/95 backdrop-blur-xl text-white px-3 py-2 sm:px-4 sm:py-2.5 rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-800 flex flex-col gap-1.5 animate-slide-up"
+      className="fixed bottom-20 sm:bottom-5 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-md bg-slate-950/95 backdrop-blur-xl text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-2xl shadow-2xl border border-slate-800/80 flex flex-col gap-1 animate-slide-up"
       dir="rtl"
     >
       {/* Main Single Row Controls */}
-      <div className="flex items-center justify-between gap-1.5 sm:gap-2">
+      <div className="flex items-center justify-between gap-1.5">
         {/* Playback Controls (-10s, Play/Pause, +10s) */}
         <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={() => seekRelative(-10)}
-            className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-slate-300 hover:text-white hover:bg-white/10 rounded-xl transition cursor-pointer"
+            className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition cursor-pointer"
             title="ترجيع 10 ثوانٍ"
             aria-label="ترجيع 10 ثوانٍ"
           >
-            <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <RotateCcw className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
           </button>
 
           <button
             onClick={togglePlayPause}
             disabled={isLoading}
-            className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl sm:rounded-2xl bg-gradient-to-r from-teal-500 to-indigo-600 hover:from-teal-400 hover:to-indigo-500 text-white flex items-center justify-center shadow-md shadow-teal-500/25 transition active:scale-95 disabled:opacity-50 cursor-pointer shrink-0"
+            className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-gradient-to-r from-teal-500 to-indigo-600 hover:from-teal-400 hover:to-indigo-500 text-white flex items-center justify-center shadow-sm shadow-teal-500/25 transition active:scale-95 disabled:opacity-50 cursor-pointer shrink-0"
             title={isPlaying ? 'إيقاف مؤقت' : 'تشغيل'}
             aria-label={isPlaying ? 'إيقاف مؤقت' : 'تشغيل'}
           >
             {isLoading ? (
-              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              <RefreshCw className="w-3 h-3 animate-spin" />
             ) : isPlaying ? (
-              <Pause className="w-3.5 h-3.5 fill-current" />
+              <Pause className="w-3 h-3 fill-current" />
             ) : (
-              <Play className="w-3.5 h-3.5 fill-current mr-0.5" />
+              <Play className="w-3 h-3 fill-current mr-0.5" />
             )}
           </button>
 
           <button
             onClick={() => seekRelative(10)}
-            className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-slate-300 hover:text-white hover:bg-white/10 rounded-xl transition cursor-pointer"
+            className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition cursor-pointer"
             title="تقديم 10 ثوانٍ"
             aria-label="تقديم 10 ثوانٍ"
           >
-            <RotateCw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <RotateCw className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
           </button>
         </div>
 
         {/* Track Title & Micro Time Counter */}
-        <div className="min-w-0 flex-1 px-1 sm:px-2">
-          <h4 className="text-[11px] sm:text-xs font-bold text-white truncate">{title}</h4>
-          <div className="flex items-center gap-1.5 text-[9px] sm:text-[10px] text-slate-400">
-            <span className="truncate max-w-[80px] sm:max-w-none">
+        <div className="min-w-0 flex-1 px-1.5">
+          <h4 className="text-[11px] sm:text-xs font-bold text-white truncate leading-tight">{title}</h4>
+          <div className="flex items-center gap-1.5 text-[9px] sm:text-[10px] text-slate-400 leading-tight">
+            <span className="truncate max-w-[70px] sm:max-w-none text-teal-400">
               {isLoading ? 'تجهيز...' : isPlaying ? 'تشغيل' : 'مؤقت'}
             </span>
             <span>•</span>
-            <span className="font-mono text-teal-300 font-bold shrink-0">
+            <span className="font-mono text-slate-300 font-medium shrink-0">
               {formatTime(currentTime)} / {formatTime(duration)}
             </span>
           </div>
@@ -129,44 +129,26 @@ export default function FloatingAudioBar({ onTriggerPlay, chapterTitle }: Floati
           {/* Mobile Speed Button (cycles) */}
           <button
             onClick={cycleSpeed}
-            className="sm:hidden px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-teal-300 font-bold text-[10px] transition cursor-pointer"
+            className="px-1.5 py-0.5 rounded-md bg-white/10 hover:bg-white/20 text-teal-300 font-bold text-[10px] transition cursor-pointer"
             title="تغيير السرعة"
           >
             {speed}x
           </button>
 
-          {/* Desktop Speed Selector */}
-          <div className="hidden sm:flex items-center bg-white/5 border border-white/10 rounded-xl p-0.5 text-[10px] font-bold">
-            {[1, 1.25, 1.5].map((s) => (
-              <button
-                key={s}
-                onClick={() => {
-                  setSpeed(s);
-                  setPlaybackRate(s);
-                }}
-                className={`px-1.5 py-0.5 rounded-lg transition cursor-pointer ${
-                  speed === s ? 'bg-teal-500 text-slate-950 font-black' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                {s}x
-              </button>
-            ))}
-          </div>
-
           {/* Close Player */}
           <button
             onClick={stop}
-            className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-white/10 rounded-xl transition cursor-pointer"
+            className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-white/10 rounded-lg transition cursor-pointer"
             title="إغلاق المشغل"
             aria-label="إغلاق المشغل"
           >
-            <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
 
       {/* Slim Integrated Scrubber */}
-      <div className="flex items-center gap-1.5 px-0.5">
+      <div className="flex items-center px-0.5">
         <input
           type="range"
           min={0}

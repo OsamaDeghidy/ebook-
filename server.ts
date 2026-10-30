@@ -5001,13 +5001,56 @@ ${chaptersContext}
       }
     }
 
+    const generatedMCQs = finalMCQs.slice(0, mcqCount);
+    const generatedEssays = finalEssays.slice(0, essayCount);
+
+    // 🌟 PERSIST IN BOOK EXAMS REPOSITORY SO IT AUTOMATICALLY APPEARS IN BOOK DETAILS & PRACTICE TABS
+    const newExamRecord = {
+      id: `exam-${Date.now()}`,
+      book_id: targetBook.id,
+      title: examTitle || "امتحان المراجعة والتكليف المعتمد",
+      scope: chapterIds.length === 1 ? 'lesson' : (chapterIds.length > 1 ? 'unit' : 'full_curriculum'),
+      target_title: selectedChapters.length === 1 ? selectedChapters[0].title : (selectedChapters.length > 1 ? selectedChapters.map((c) => c.title).join('، ') : targetBook.title),
+      target_chapter_ids: chapterIds,
+      teacher_name: teacherName || targetBook.author_name || "معلم المادة المعتمد",
+      duration_minutes: mcqCount <= 5 ? 15 : mcqCount <= 10 ? 30 : 45,
+      total_marks: (generatedMCQs.length * 2) + (generatedEssays.length * 5),
+      passing_marks: Math.round(((generatedMCQs.length * 2) + (generatedEssays.length * 5)) * 0.6),
+      questions: generatedMCQs.map((m, idx) => ({
+        id: m.id || `q-${idx + 1}`,
+        question: m.question,
+        options: m.options,
+        correctOptionIndex: typeof m.correctOptionIndex === 'number' ? m.correctOptionIndex : 0,
+        explanation: m.explanation || 'الإجابة النموذجية المعتمدة وفقاً لمنهج المقرر والتطبيق العملي.'
+      })),
+      essay_questions: generatedEssays,
+      instructions: [
+        "اقرأ الأسئلة بعناية وتأكد من تحديد الإجابة الدقيقة قبل التسليم.",
+        "الامتحان مؤقت بزمن محدد ويتم تصحيحه آلياً فور الانتهاء.",
+        "راجع تحليل الذكاء الاصطناعي لنقاط القوة والضعف بعد ظهور النتيجة."
+      ],
+      created_at: new Date().toISOString()
+    };
+
+    if (!targetBook.exams) targetBook.exams = [];
+    targetBook.exams.unshift(newExamRecord);
+    saveEbooks(ebooks);
+
+    try {
+      await supabase.from('books').update({ exams: targetBook.exams }).eq('id', targetBook.id);
+    } catch (dbErr) {
+      console.warn("Supabase exam sync warning:", dbErr);
+    }
+
     res.json({
       success: true,
       bookTitle: targetBook.title,
       examTitle,
       teacherName,
-      mcq: finalMCQs.slice(0, mcqCount),
-      essay: finalEssays.slice(0, essayCount)
+      exam: newExamRecord,
+      exams: targetBook.exams,
+      mcq: generatedMCQs,
+      essay: generatedEssays
     });
   } catch (err: any) {
     console.error("Exam generator error:", err);

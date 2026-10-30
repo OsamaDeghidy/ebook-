@@ -21,6 +21,7 @@ import { ScreenShieldGuard } from '../components/security/ScreenShieldGuard';
 import { SeoStructuredData } from '../components/seo/SeoStructuredData';
 import { InteractiveLessonExplanation } from '../components/interactive/InteractiveLessonExplanation';
 import { FullCurriculumExplanation } from '../components/interactive/FullCurriculumExplanation';
+import { CurriculumMindMap } from '../components/interactive/CurriculumMindMap';
 import { BookQrCodeModal } from '../components/common/BookQrCodeModal';
 import { showToast } from '../components/common/Toast';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -380,7 +381,24 @@ export default function BookDetailsRoute({
 
   const book = books.find(b => b.id === id);
   const [activeChapterId, setActiveChapterId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'read' | 'reels' | 'interactive_lesson' | 'interactive_curriculum' | 'podcast' | 'flashcards' | 'sandbox' | 'quiz' | 'mindmap' | 'videos' | 'editor'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'read' | 'mindmap' | 'practice' | 'videos' | 'editor'>(() => {
+    if (initialTab === 'quiz' || initialTab === 'flashcards' || initialTab === 'sandbox' || initialTab === 'practice') return 'practice';
+    if (initialTab === 'reels' || initialTab === 'videos') return 'videos';
+    if (initialTab === 'interactive_curriculum' || initialTab === 'interactive_lesson') return 'mindmap';
+    if (initialTab === 'editor') return 'editor';
+    return 'read';
+  });
+  const [practiceSubTab, setPracticeSubTab] = useState<'quiz' | 'flashcards' | 'sandbox'>(() => {
+    if (initialTab === 'flashcards') return 'flashcards';
+    if (initialTab === 'sandbox') return 'sandbox';
+    return 'quiz';
+  });
+  const [videoSubTab, setVideoSubTab] = useState<'reels' | 'videos'>(() => {
+    if (initialTab === 'videos') return 'videos';
+    return 'reels';
+  });
+  const [isTeacherEditMode, setIsTeacherEditMode] = useState(false);
+  const [isFocusMode, setIsFocusMode] = useState(false);
   const [isGeneratingAiQuestions, setIsGeneratingAiQuestions] = useState(false);
   const [isExpandingChapters, setIsExpandingChapters] = useState(false);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
@@ -840,19 +858,44 @@ export default function BookDetailsRoute({
     );
   }
 
+  if (isFocusMode && activeChapter) {
+    return (
+      <div className="min-h-screen bg-white text-gray-900 animate-fade-in p-4 sm:p-8 max-w-4xl mx-auto text-right" dir="rtl">
+        <div className="sticky top-4 z-40 bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl p-3 shadow-md flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <span className="font-black text-sm text-slate-900 truncate">{book.title} - {activeChapter.title}</span>
+          </div>
+          <button
+            onClick={() => setIsFocusMode(false)}
+            className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black flex items-center gap-1.5 transition shadow-xs cursor-pointer"
+          >
+            <Minimize2 className="w-3.5 h-3.5" />
+            <span>خروج من وضع التركيز ⛶</span>
+          </button>
+        </div>
+        <ReadSection
+          chapter={activeChapter}
+          isInstructorOrAdmin={false}
+          isEditMode={false}
+          onSaveChapter={handleSaveChapter}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fade-in pb-24 text-right" dir="rtl">
       <SeoStructuredData type="chapter" book={book} chapter={activeChapter} />
       
-      {/* TOP STATUS & CONTROLS HEADER BAR */}
+      {/* 🌟 1. UNIFIED TOP BAR (Return + Book Title + Chapter Counter + QR + Focus Mode + Teacher Edit Mode Toggle) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-gray-200 shadow-sm rounded-3xl p-4 px-5">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/marketplace')}
-            className="flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-teal-600 transition"
+            className="flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-teal-600 transition cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>العودة لمتجر المقررات</span>
+            <span>العودة للمتجر</span>
           </button>
           <span className="text-gray-300">|</span>
           <div className="flex items-center gap-2 max-w-[200px] sm:max-w-md">
@@ -882,19 +925,8 @@ export default function BookDetailsRoute({
           </div>
         </div>
 
-        {/* TOP BAR ACTIONS: CHAPTERS TOGGLE & PUBLISH BADGE */}
+        {/* TOP BAR ACTIONS */}
         <div className="flex items-center gap-2 flex-wrap justify-between sm:justify-end">
-          {/* REELS EXPLORER BUTTON */}
-          <button
-            onClick={() => navigate(`/book/${book.id}/reels`)}
-            className="px-3.5 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition border bg-purple-50 text-purple-800 border-purple-200 hover:bg-purple-100 shadow-2xs cursor-pointer"
-            title="مشاهدة ريلز وتيك توك فصول المذكرة"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-            <span>🎬 ريلز فصول الكتاب</span>
-          </button>
-
-
           {/* TOGGLE CHAPTERS SIDEBAR BUTTON (DESKTOP & MOBILE) */}
           <button
             onClick={() => setIsDesktopSidebarOpen(!isDesktopSidebarOpen)}
@@ -909,7 +941,7 @@ export default function BookDetailsRoute({
             <span>
               {isDesktopSidebarOpen
                 ? 'إخفاء الفهرس'
-                : `فهرس الفصول (${(book.chapters || []).findIndex(c => c.id === activeChapterId) + 1}/${book.chapters?.length || 0}) 📑`}
+                : `الفصل ${(book.chapters || []).findIndex(c => c.id === activeChapterId) + 1} من ${book.chapters?.length || 0} 📑`}
             </span>
           </button>
 
@@ -918,24 +950,50 @@ export default function BookDetailsRoute({
             className="lg:hidden px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 bg-teal-50 text-teal-800 border border-teal-200 cursor-pointer"
           >
             <Layers className="w-3.5 h-3.5 text-teal-600" />
-            <span>فهرس الفصول ({(book.chapters || []).findIndex(c => c.id === activeChapterId) + 1}/{book.chapters?.length || 0})</span>
+            <span>الفصل ({(book.chapters || []).findIndex(c => c.id === activeChapterId) + 1}/{book.chapters?.length || 0}) 📑</span>
           </button>
 
-          {/* QR CODE GENERATOR BUTTON */}
+          {/* FOCUS MODE BUTTON */}
+          <button
+            onClick={() => setIsFocusMode(true)}
+            className="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition cursor-pointer"
+            title="وضع التركيز والقراءة بدون مشتتات"
+          >
+            <Maximize2 className="w-3.5 h-3.5 text-slate-600" />
+            <span className="hidden sm:inline">وضع التركيز ⛶</span>
+          </button>
+
+          {/* QR CODE BUTTON */}
           <button
             onClick={() => setIsQrModalOpen(true)}
-            className="px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold flex items-center gap-1.5 transition shadow-xs bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 cursor-pointer"
-            title={t('book.qr_code', 'كود QR للكتاب 📲')}
+            className="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 cursor-pointer"
+            title="كود QR لمشاركة الكتاب 📲"
           >
             <QrCode className="w-3.5 h-3.5 text-indigo-600" />
-            <span className="hidden sm:inline">{t('book.qr_code', 'رمز QR')}</span>
+            <span className="hidden sm:inline">كود QR</span>
           </button>
 
-          {/* PUBLISH / DRAFT TOGGLE BADGE (FOR INSTRUCTORS & ADMINS ONLY) */}
-          {(isAdminMode || userRole === 'admin' || userRole === 'instructor') && (
+          {/* TEACHER EDIT MODE TOGGLE (FOR INSTRUCTORS & ADMINS ONLY) */}
+          {isInstructorOrAdmin && (
+            <button
+              onClick={() => setIsTeacherEditMode(!isTeacherEditMode)}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition shadow-xs cursor-pointer border ${
+                isTeacherEditMode
+                  ? 'bg-amber-500 text-slate-950 border-amber-600 shadow-md ring-2 ring-amber-400/50'
+                  : 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100'
+              }`}
+              title="تفعيل / تعطيل أدوات تعديل المعلم"
+            >
+              <Edit className="w-3.5 h-3.5" />
+              <span>{isTeacherEditMode ? 'وضع التعديل نشط ✏️' : 'وضع التعديل ✏️'}</span>
+            </button>
+          )}
+
+          {/* PUBLISH / DRAFT TOGGLE (ONLY IN EDIT MODE FOR INSTRUCTORS) */}
+          {isInstructorOrAdmin && isTeacherEditMode && (
             <button
               onClick={handleTogglePublish}
-              className={`px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold flex items-center gap-1.5 transition shadow-xs cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-xs cursor-pointer ${
                 book.is_published
                   ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
                   : 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
@@ -945,12 +1003,12 @@ export default function BookDetailsRoute({
               {book.is_published ? (
                 <>
                   <Eye className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>{t('book.published', 'منشور للطلاب')}</span>
+                  <span>منشور للطلاب</span>
                 </>
               ) : (
                 <>
                   <EyeOff className="w-3.5 h-3.5 text-amber-600" />
-                  <span>{t('book.draft', 'مسودة خاصة')}</span>
+                  <span>مسودة خاصة</span>
                 </>
               )}
             </button>
@@ -958,16 +1016,16 @@ export default function BookDetailsRoute({
         </div>
       </div>
 
-      {/* 🛠️ INSTRUCTOR & ADMIN QUICK CONTROL BAR */}
-      {isInstructorOrAdmin && (
+      {/* 🛠️ INSTRUCTOR & ADMIN QUICK CONTROL BAR (Only visible when Edit Mode is active) */}
+      {isInstructorOrAdmin && isTeacherEditMode && (
         <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-900/60 rounded-2xl p-3 text-white shadow-md flex flex-wrap items-center justify-between gap-3 animate-fade-in" dir="rtl">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-teal-500/20 text-teal-300 flex items-center justify-center font-bold text-sm border border-teal-500/30 shrink-0">
               ⚡
             </div>
             <div>
-              <span className="text-xs font-black text-white block">أدوات تعديل وإدارة المقرر (خاص بالمعلم والمشرف)</span>
-              <span className="text-[10px] text-teal-300">أضف فصولاً جديدة، ارفع مذكرات واستكمل بالـ AI، أو ولّد أسئلة وريلز للفصل</span>
+              <span className="text-xs font-black text-white block">أدوات تعديل وإدارة المقرر (وضع التعديل مفعل)</span>
+              <span className="text-[10px] text-teal-300">أضف فصولاً جديدة، استكمل المحتوى بالذكاء الاصطناعي، أو عدل نصوص الدروس</span>
             </div>
           </div>
 
@@ -998,15 +1056,6 @@ export default function BookDetailsRoute({
             </button>
 
             <button
-              onClick={handleGenerateCurrentChapterReel}
-              disabled={isGeneratingReel}
-              className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white border border-white/15 rounded-xl text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer disabled:opacity-50"
-            >
-              <Film className="w-3.5 h-3.5 text-purple-300" />
-              <span>{isGeneratingReel ? 'جاري التجهيز...' : 'توليد ريلز فيديو 🎬'}</span>
-            </button>
-
-            <button
               onClick={() => setActiveTab('editor')}
               className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition shadow-xs cursor-pointer ${
                 activeTab === 'editor' ? 'bg-amber-400 text-slate-950' : 'bg-amber-400/20 text-amber-300 hover:bg-amber-400/30 border border-amber-400/40'
@@ -1019,92 +1068,67 @@ export default function BookDetailsRoute({
         </div>
       )}
 
-      {/* 🧭 STICKY COMPACT TABS BAR */}
+      {/* 🧭 STICKY 5-CORE TABS BAR */}
       <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl p-2 shadow-xs">
         <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto scrollbar-none pb-0.5">
-          {/* GROUP 1: STUDY */}
-          {[
-            { id: 'read', label: t('book.read', 'قراءة الدرس 📖'), icon: BookOpen },
-            { id: 'interactive_lesson', label: t('book.interactive_lesson', 'شرح الدرس 💡'), icon: Brain },
-            { id: 'interactive_curriculum', label: t('book.interactive_curriculum', 'خريطة المنهج 🗺️'), icon: Sparkles }
-          ].map(tab => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shrink-0 cursor-pointer ${
-                  isActive ? 'bg-teal-600 text-white font-black shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
+          {/* TAB 1: READ */}
+          <button
+            onClick={() => setActiveTab('read')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shrink-0 cursor-pointer ${
+              activeTab === 'read' ? 'bg-teal-600 text-white font-black shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>قراءة الدرس 📖</span>
+          </button>
 
-          <div className="h-5 w-px bg-slate-200 shrink-0 mx-0.5" />
+          {/* TAB 2: FULL CURRICULUM EXPLANATION & MINDMAP */}
+          <button
+            onClick={() => setActiveTab('mindmap')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shrink-0 cursor-pointer ${
+              activeTab === 'mindmap' ? 'bg-teal-600 text-white font-black shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>شرح وخريطة المنهج 🗺️</span>
+          </button>
 
-          {/* GROUP 2: PRACTICE */}
-          {[
-            { id: 'quiz', label: t('book.quiz', 'اختبارات وتمارين 📝'), icon: HelpCircle, enabled: book.feature_toggles?.show_quiz !== false },
-            { id: 'flashcards', label: t('book.flashcards', 'بطاقات استذكار 📇'), icon: Layers, enabled: book.feature_toggles?.show_flashcards !== false },
-            { id: 'sandbox', label: t('book.sandbox', 'أنشطة وتطبيقات 🧪'), icon: Terminal, enabled: book.feature_toggles?.show_sandbox !== false }
-          ].filter(t => t.enabled).map(tab => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shrink-0 cursor-pointer ${
-                  isActive ? 'bg-indigo-600 text-white font-black shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
+          {/* TAB 3: PRACTICE & ASSESSMENT */}
+          <button
+            onClick={() => setActiveTab('practice')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shrink-0 cursor-pointer ${
+              activeTab === 'practice' ? 'bg-indigo-600 text-white font-black shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <HelpCircle className="w-3.5 h-3.5" />
+            <span>التقييم والمذاكرة 📝</span>
+          </button>
 
-          <div className="h-5 w-px bg-slate-200 shrink-0 mx-0.5" />
+          {/* TAB 4: VIDEOS */}
+          <button
+            onClick={() => setActiveTab('videos')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shrink-0 cursor-pointer ${
+              activeTab === 'videos' ? 'bg-purple-600 text-white font-black shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Film className="w-3.5 h-3.5" />
+            <span>الفيديوهات 🎬</span>
+          </button>
 
-          {/* GROUP 3: MEDIA */}
-          {[
-            { id: 'reels', label: t('book.reels_tab', 'فيديوهات قصيرة 🎬'), icon: Film },
-            { id: 'videos', label: t('book.videos', 'فيديوهات الشرح 🎥'), icon: Youtube, enabled: book.feature_toggles?.show_videos !== false }
-          ].filter(t => t.enabled !== false).map(tab => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shrink-0 cursor-pointer ${
-                  isActive ? 'bg-purple-600 text-white font-black shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-
-          {/* INSTRUCTOR EDIT TAB (FOR INSTRUCTORS ONLY) */}
-          {(isAdminMode || userRole === 'admin' || userRole === 'instructor' || (currentUser?.id && book.author_id === currentUser.id)) && (
+          {/* TAB 6: TEACHER CONTENT EDITOR (Only visible in Teacher Edit Mode) */}
+          {isInstructorOrAdmin && isTeacherEditMode && (
             <>
-              <div className="h-5 w-px bg-slate-200 shrink-0 mx-0.5" />
+              <div className="h-5 w-px bg-slate-200 shrink-0 mx-1" />
               <button
                 onClick={() => setActiveTab('editor')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shrink-0 transition cursor-pointer border ${
+                className={`px-3.5 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 transition shrink-0 cursor-pointer border ${
                   activeTab === 'editor'
-                    ? 'bg-amber-500 text-slate-950 font-black border-amber-600 shadow-xs'
+                    ? 'bg-amber-500 text-slate-950 border-amber-600 shadow-xs'
                     : 'bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100'
                 }`}
               >
                 <Edit className="w-3.5 h-3.5" />
-                <span>{t('book.editor', 'تعديل المحتوى ✏️')}</span>
+                <span>تعديل المحتوى ✏️</span>
               </button>
             </>
           )}
@@ -1129,8 +1153,8 @@ export default function BookDetailsRoute({
               </div>
 
               <div className="space-y-1.5 max-h-[420px] overflow-y-auto pr-1 custom-scrollbar">
-                {/* INSTRUCTOR QUICK CHAPTER ACTIONS */}
-                {isInstructorOrAdmin && (
+                {/* INSTRUCTOR QUICK CHAPTER ACTIONS (Only visible in Teacher Edit Mode) */}
+                {isInstructorOrAdmin && isTeacherEditMode && (
                   <div className="flex items-center gap-1.5 pb-2.5 mb-1.5 border-b border-slate-100">
                     <button
                       onClick={handleAddChapter}
@@ -1200,7 +1224,7 @@ export default function BookDetailsRoute({
                         <span className="truncate">{chapter.title}</span>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0 mr-2">
-                        {(isAdminMode || userRole === 'admin' || userRole === 'instructor') && (book.chapters || []).length > 1 && (
+                        {isInstructorOrAdmin && isTeacherEditMode && (book.chapters || []).length > 1 && (
                           <button
                             onClick={(e) => handleDeleteChapter(chapter.id, e)}
                             className={`p-1 rounded-lg transition ${
@@ -1220,8 +1244,8 @@ export default function BookDetailsRoute({
                 })}
               </div>
 
-              {/* ADMIN ONLY: 1-CLICK BATCH ASSET PRE-GENERATION & EXPAND */}
-              {(isAdminMode || userRole === 'admin' || userRole === 'instructor') && (
+              {/* ADMIN ONLY: 1-CLICK BATCH ASSET PRE-GENERATION & EXPAND (Only in Edit Mode) */}
+              {isInstructorOrAdmin && isTeacherEditMode && (
                 <div className="pt-2 border-t border-gray-100 space-y-2">
                   <button
                     onClick={handlePregenerateAllAssets}
@@ -1282,8 +1306,8 @@ export default function BookDetailsRoute({
               </div>
 
               <div className="space-y-1.5 max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
-                {/* INSTRUCTOR QUICK CHAPTER ACTIONS (MOBILE) */}
-                {isInstructorOrAdmin && (
+                {/* INSTRUCTOR QUICK CHAPTER ACTIONS (MOBILE - Only in Edit Mode) */}
+                {isInstructorOrAdmin && isTeacherEditMode && (
                   <div className="flex items-center gap-2 pb-3 mb-2 border-b border-slate-100">
                     <button
                       onClick={() => {
@@ -1343,7 +1367,7 @@ export default function BookDetailsRoute({
                         <span className="truncate">{chapter.title}</span>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0 mr-2">
-                        {(isAdminMode || userRole === 'admin' || userRole === 'instructor') && (book.chapters || []).length > 1 && (
+                        {isInstructorOrAdmin && isTeacherEditMode && (book.chapters || []).length > 1 && (
                           <button
                             onClick={(e) => handleDeleteChapter(chapter.id, e)}
                             className={`p-1 rounded-lg transition ${
@@ -1363,8 +1387,8 @@ export default function BookDetailsRoute({
                 })}
               </div>
 
-              {/* ADMIN ONLY ON MOBILE: BATCH GENERATION & EXPAND */}
-              {(isAdminMode || userRole === 'admin' || userRole === 'instructor') && (
+              {/* ADMIN ONLY ON MOBILE: BATCH GENERATION & EXPAND (Only in Edit Mode) */}
+              {isInstructorOrAdmin && isTeacherEditMode && (
                 <div className="pt-2 border-t border-gray-100 space-y-2">
                   <button
                     onClick={handlePregenerateAllAssets}
@@ -1429,390 +1453,410 @@ export default function BookDetailsRoute({
               <ReadSection 
                 chapter={activeChapter} 
                 isInstructorOrAdmin={isInstructorOrAdmin}
+                isEditMode={isTeacherEditMode}
                 onSaveChapter={handleSaveChapter}
               />
             </div>
           </ScreenShieldGuard>
         )}
 
-        {/* 🌟 V2 SYNCHRONIZED INTERACTIVE LESSON EXPLANATION */}
-        {activeTab === 'interactive_lesson' && activeChapter && (
-          <InteractiveLessonExplanation
-            book={book}
-            chapter={activeChapter}
-            currentUser={currentUser}
-          />
-        )}
-
-        {/* 🚀 V2 SYNCHRONIZED FULL CURRICULUM EXPLANATION */}
-        {activeTab === 'interactive_curriculum' && (
+        {/* 🚀 FULL CURRICULUM CONNECTED EXPLANATION & MIND MAP */}
+        {activeTab === 'mindmap' && (
           <FullCurriculumExplanation
             book={book}
             currentUser={currentUser}
           />
         )}
 
-        {activeTab === 'reels' && activeChapter && (() => {
-          const currentReel = bookReels.find(r => (r.chapter_id && r.chapter_id === activeChapter.id) || (r.chapter_title && r.chapter_title.trim() === activeChapter.title.trim()));
-          const hasAnyReel = bookReels.length > 0;
-          const totalChaptersCount = book.chapters?.length || 0;
-          const generatedReelsCount = bookReels.length;
+        {/* 📝 UNIFIED PRACTICE & ASSESSMENT (Quiz + Flashcards + Sandbox) */}
+        {activeTab === 'practice' && activeChapter && (
+          <div className="space-y-6 animate-in fade-in duration-200" dir="rtl">
+            {/* SUB-TABS PILLS */}
+            <div className="bg-white border border-gray-200 rounded-2xl p-2 shadow-xs flex items-center gap-2 overflow-x-auto">
+              <button
+                onClick={() => setPracticeSubTab('quiz')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shrink-0 ${
+                  practiceSubTab === 'quiz'
+                    ? 'bg-indigo-600 text-white font-black shadow-xs'
+                    : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <HelpCircle className="w-3.5 h-3.5" />
+                <span>اختبارات وتمارين 📝 ({Array.isArray(activeChapter.quiz) ? activeChapter.quiz.length : 0})</span>
+              </button>
 
-          return (
-            <div className="space-y-6 animate-in fade-in duration-300" dir="rtl">
-              {/* STATUS NOTIFICATION BANNER */}
-              {reelStatusMsg && (
-                <div className="p-4 bg-gradient-to-r from-teal-500/10 via-indigo-500/10 to-purple-500/10 border border-teal-500/30 rounded-2xl flex items-center justify-between shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <Sparkles className="w-5 h-5 text-teal-600 animate-pulse" />
-                    <span className="text-xs sm:text-sm font-black text-slate-800">{reelStatusMsg}</span>
-                  </div>
-                  {isGeneratingReel && <RefreshCw className="w-4 h-4 animate-spin text-teal-600" />}
-                </div>
-              )}
+              <button
+                onClick={() => setPracticeSubTab('flashcards')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shrink-0 ${
+                  practiceSubTab === 'flashcards'
+                    ? 'bg-indigo-600 text-white font-black shadow-xs'
+                    : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>بطاقات استذكار 📇 ({Array.isArray(activeChapter.flashcards) ? activeChapter.flashcards.length : (activeChapter.concepts?.length || 0)})</span>
+              </button>
 
-              {/* REEL PLAYER OR GENERATOR */}
-              {currentReel ? (
-                <div className="space-y-4">
-                  {/* TOP CONTROL BAR */}
-                  <div className="bg-white border border-gray-200 rounded-3xl p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md">
-                        <Film className="w-5 h-5" />
+              <button
+                onClick={() => setPracticeSubTab('sandbox')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shrink-0 ${
+                  practiceSubTab === 'sandbox'
+                    ? 'bg-indigo-600 text-white font-black shadow-xs'
+                    : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <Terminal className="w-3.5 h-3.5" />
+                <span>أنشطة وتطبيقات 🧪</span>
+              </button>
+            </div>
+
+            {practiceSubTab === 'quiz' && (
+              <QuizSection
+                bookId={book.id}
+                bookTitle={book.title}
+                allChapters={book.chapters}
+                chapterTitle={activeChapter.title}
+                questions={Array.isArray(activeChapter.quiz) ? activeChapter.quiz : []}
+                bookExams={book.exams || []}
+                onUpdateQuestions={(updatedQuestions) => {
+                  const updatedChapters = book.chapters.map(ch =>
+                    ch.id === activeChapter.id ? { ...ch, quiz: updatedQuestions } : ch
+                  );
+                  setEbooks(prev => prev.map(b => b.id === book.id ? { ...b, chapters: updatedChapters } : b));
+                  try {
+                    fetch(`/api/ebooks/${book.id}/chapters/save`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ chapters: updatedChapters })
+                    }).catch(() => {});
+                    supabase.from('books').update({ chapters: updatedChapters }).eq('id', book.id);
+                  } catch (e) {}
+                }}
+                onGenerateAiQuestions={handleGenerateAiQuestions}
+                isGeneratingAiQuestions={isGeneratingAiQuestions}
+              />
+            )}
+
+            {practiceSubTab === 'flashcards' && (
+              <FlashcardsSection
+                chapter={activeChapter}
+                onUpdateFlashcards={handleUpdateFlashcards}
+              />
+            )}
+
+            {practiceSubTab === 'sandbox' && (
+              <DynamicDomainSandbox
+                book={book}
+                chapter={activeChapter}
+              />
+            )}
+          </div>
+        )}
+
+        {/* 🎬 UNIFIED VIDEOS TAB (Reels + Curated Video Explanations) */}
+        {activeTab === 'videos' && activeChapter && (
+          <div className="space-y-6 animate-in fade-in duration-200" dir="rtl">
+            {/* SUB-TABS PILLS */}
+            <div className="bg-white border border-gray-200 rounded-2xl p-2 shadow-xs flex items-center gap-2 overflow-x-auto">
+              <button
+                onClick={() => setVideoSubTab('reels')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shrink-0 ${
+                  videoSubTab === 'reels'
+                    ? 'bg-purple-600 text-white font-black shadow-xs'
+                    : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <Film className="w-3.5 h-3.5" />
+                <span>ريلز وفيديوهات قصيرة 🎬 ({bookReels.length})</span>
+              </button>
+
+              <button
+                onClick={() => setVideoSubTab('videos')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shrink-0 ${
+                  videoSubTab === 'videos'
+                    ? 'bg-purple-600 text-white font-black shadow-xs'
+                    : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <Youtube className="w-3.5 h-3.5" />
+                <span>فيديوهات الشرح 🎥 ({Array.isArray(activeChapter.videos) ? activeChapter.videos.length : 0})</span>
+              </button>
+            </div>
+
+            {videoSubTab === 'reels' && (() => {
+              const currentReel = bookReels.find(r => (r.chapter_id && r.chapter_id === activeChapter.id) || (r.chapter_title && r.chapter_title.trim() === activeChapter.title.trim()));
+              const hasAnyReel = bookReels.length > 0;
+              const totalChaptersCount = book.chapters?.length || 0;
+              const generatedReelsCount = bookReels.length;
+
+              return (
+                <div className="space-y-6 animate-in fade-in duration-300" dir="rtl">
+                  {/* STATUS NOTIFICATION BANNER */}
+                  {reelStatusMsg && (
+                    <div className="p-4 bg-gradient-to-r from-teal-500/10 via-indigo-500/10 to-purple-500/10 border border-teal-500/30 rounded-2xl flex items-center justify-between shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <Sparkles className="w-5 h-5 text-teal-600 animate-pulse" />
+                        <span className="text-xs sm:text-sm font-black text-slate-800">{reelStatusMsg}</span>
                       </div>
-                      <div>
-                        <h4 className="font-black text-gray-900 text-sm">{currentReel.title || activeChapter.title}</h4>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[11px] font-bold text-gray-500">ستايل: {currentReel.style || 'cyberpunk'}</span>
-                          <span className="text-[10px] bg-emerald-100 text-emerald-800 font-black px-2 py-0.5 rounded-full">
-                            جاهز بالصوت الطبيعي 🎙️
-                          </span>
+                      {isGeneratingReel && <RefreshCw className="w-4 h-4 animate-spin text-teal-600" />}
+                    </div>
+                  )}
+
+                  {/* REEL PLAYER OR GENERATOR */}
+                  {currentReel ? (
+                    <div className="space-y-4">
+                      {/* TOP CONTROL BAR */}
+                      <div className="bg-white border border-gray-200 rounded-3xl p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md">
+                            <Film className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h4 className="font-black text-gray-900 text-sm">{currentReel.title || activeChapter.title}</h4>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-[11px] font-bold text-gray-500">ستايل: {currentReel.style || 'cyberpunk'}</span>
+                              <span className="text-[10px] bg-emerald-100 text-emerald-800 font-black px-2 py-0.5 rounded-full">
+                                جاهز بالصوت الطبيعي 🎙️
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                          {/* VOICE SELECTOR DROPDOWN */}
+                          <select
+                            value={selectedVoice}
+                            onChange={(e) => setSelectedVoice(e.target.value)}
+                            disabled={isGeneratingReel}
+                            className="px-3 py-2 bg-indigo-50/80 border border-indigo-200 rounded-xl text-xs font-black text-indigo-900 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                            title="اختيار صوت المعلق الصوتي بالذكاء الاصطناعي"
+                          >
+                            <option value="ar-XA-Chirp3-HD-Fenrir">🌟 صوت كريم (طبيعي / هادئ) 🎙️</option>
+                            <option value="ar-XA-Chirp3-HD-Aoede">🌟 صوت فرح (واضح / تعليمي) 🎙️</option>
+                            <option value="ar-XA-Chirp3-HD-Puck">🌟 بوك (Google Chirp 3 HD - حماسي وتفاعلي)</option>
+                            <option value="ar-XA-Chirp3-HD-Kore">🌟 كوري (Google Chirp 3 HD - معلمة واضحة)</option>
+                            <option value="ar-XA-Chirp3-HD-Charon">🌟 شارون (Google Chirp 3 HD - أستاذ رزين)</option>
+                            <option value="ar-SA-HamedNeural">🎙️ 🇸🇦 حامد (سعودي فخم)</option>
+                            <option value="ar-EG-ShakirNeural">🎙️ 🇪🇬 شاكر (مصري دافئ)</option>
+                            <option value="ar-JO-TaimNeural">🎙️ 🇯🇴 تيم (أردني شبابي)</option>
+                            <option value="ar-EG-SalmaNeural">🎙️ 🇪🇬 سلمى (مصرية حيوية)</option>
+                            <option value="ar-SA-ZariyahNeural">🎙️ 🇸🇦 زارية (سعودية هادئة)</option>
+                            <option value="ar-AE-HamdanNeural">🎙️ 🇦🇪 حمدان (إماراتي متزن)</option>
+                          </select>
+
+                          {/* STYLE SELECTOR DROPDOWN */}
+                          <select
+                            value={selectedReelStyle}
+                            onChange={(e) => setSelectedReelStyle(e.target.value as EduReelStyle)}
+                            disabled={isGeneratingReel}
+                            className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-black text-gray-700 outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
+                            title="اختيار الستايل البصري للريل"
+                          >
+                            <option value="chalkboard">📐 سبورة وأكاديمي</option>
+                            <option value="cyberpunk">🚀 سايبر بانك نيون</option>
+                            <option value="cinematic">🎬 سينمائي وثائقي</option>
+                            <option value="gamified">🎮 تفاعلي جيمينج</option>
+                          </select>
+
+                          <button
+                            onClick={handleGenerateCurrentChapterReel}
+                            disabled={isGeneratingReel}
+                            className="px-4 py-2 bg-gradient-to-r from-teal-600 to-indigo-600 text-white font-black text-xs rounded-xl shadow hover:shadow-md transition active:scale-95 flex items-center gap-1.5 disabled:opacity-60 cursor-pointer"
+                            title="إعادة توليد ريل لهذا الفصل بالصوت والستايل المختار"
+                          >
+                            {isGeneratingReel ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                            <span>توليد مجدداً</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleGenerateAllBookReels(true)}
+                            disabled={isGeneratingReel}
+                            className="px-3 py-2 bg-slate-900 text-white font-black text-xs rounded-xl hover:bg-slate-800 transition active:scale-95 flex items-center gap-1.5 disabled:opacity-60 cursor-pointer"
+                            title="توليد كافة فصول المذكرة بالصوت والستايل الجديد"
+                          >
+                            <span>🚀 توليد لكل الفصول ({generatedReelsCount}/{totalChaptersCount})</span>
+                          </button>
+
+                          <button
+                            onClick={() => navigate(`/book/${book.id}/reels`)}
+                            className="px-3 py-2 bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 text-slate-950 font-black text-xs rounded-xl shadow transition active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                            title="مشاهدة ريلز هذا المقرر في وضع ملء الشاشة الكامل"
+                          >
+                            <Smartphone className="w-3.5 h-3.5" />
+                            <span>📱 تجربة TikTok كاملة للمقرر</span>
+                          </button>
+
+                        </div>
+                      </div>
+
+                      {/* 9:16 VERTICAL PLAYER CONTAINER */}
+                      <div className="flex justify-center">
+                        <div className="w-full max-w-[420px] aspect-[9/16] max-h-[680px] rounded-3xl overflow-hidden shadow-2xl border-4 border-slate-900 bg-black relative">
+                          <EduReelPlayer
+                            reel={currentReel}
+                            isActive={activeTab === 'videos' && videoSubTab === 'reels'}
+                            currentUser={currentUser}
+                            onNextReel={() => {
+                              const currentIndex = (book.chapters || []).findIndex(c => c.id === activeChapter.id);
+                              if (currentIndex < (book.chapters?.length || 1) - 1) {
+                                setActiveChapterId(book.chapters[currentIndex + 1].id);
+                              }
+                            }}
+                            onPrevReel={() => {
+                              const currentIndex = (book.chapters || []).findIndex(c => c.id === activeChapter.id);
+                              if (currentIndex > 0) {
+                                setActiveChapterId(book.chapters[currentIndex - 1].id);
+                              }
+                            }}
+                          />
                         </div>
                       </div>
                     </div>
+                  ) : (
+                    /* REEL GENERATION STUDIO CARD */
+                    <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-indigo-500/20 text-center space-y-6">
+                      <div className="max-w-xl mx-auto space-y-3">
+                        <div className="inline-flex items-center justify-center p-3.5 rounded-2xl bg-gradient-to-tr from-pink-500 to-indigo-600 text-white shadow-lg shadow-indigo-500/30">
+                          <Film className="w-8 h-8" />
+                        </div>
+                        <h3 className="text-xl sm:text-2xl font-black text-white">
+                          استوديو ريلز وتيك توك التعلم السريع 🎬
+                        </h3>
+                        <p className="text-xs sm:text-sm text-indigo-200/90 leading-relaxed font-medium">
+                          لم يتم توليد فيديو ريل تفاعلي لفصل <span className="text-yellow-400 font-bold">"{activeChapter.title}"</span> بعد.
+                          يقوم الذكاء الاصطناعي بتحليل النص، صياغة سكريبت شيق، وتوليد تعليق صوتي طبيعي متزامن مع كلمات ملونة وكروت أسئلة منبثقة!
+                        </p>
+                      </div>
 
-                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                      {/* VOICE SELECTOR DROPDOWN */}
-                      <select
-                        value={selectedVoice}
-                        onChange={(e) => setSelectedVoice(e.target.value)}
-                        disabled={isGeneratingReel}
-                        className="px-3 py-2 bg-indigo-50/80 border border-indigo-200 rounded-xl text-xs font-black text-indigo-900 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-                        title="اختيار صوت المعلق الصوتي بالذكاء الاصطناعي"
-                      >
-                        <option value="ar-XA-Chirp3-HD-Fenrir">🌟 فينرير (Google Chirp 3 HD - سينمائي فخم)</option>
-                        <option value="ar-XA-Chirp3-HD-Aoede">🌟 أويدي (Google Chirp 3 HD - نسائي دافئ)</option>
-                        <option value="ar-XA-Chirp3-HD-Puck">🌟 بوك (Google Chirp 3 HD - حماسي وتفاعلي)</option>
-                        <option value="ar-XA-Chirp3-HD-Kore">🌟 كوري (Google Chirp 3 HD - معلمة واضحة)</option>
-                        <option value="ar-XA-Chirp3-HD-Charon">🌟 شارون (Google Chirp 3 HD - أستاذ رزين)</option>
-                        <option value="ar-SA-HamedNeural">🎙️ 🇸🇦 حامد (سعودي فخم)</option>
-                        <option value="ar-EG-ShakirNeural">🎙️ 🇪🇬 شاكر (مصري دافئ)</option>
-                        <option value="ar-JO-TaimNeural">🎙️ 🇯🇴 تيم (أردني شبابي)</option>
-                        <option value="ar-EG-SalmaNeural">🎙️ 🇪🇬 سلمى (مصرية حيوية)</option>
-                        <option value="ar-SA-ZariyahNeural">🎙️ 🇸🇦 زارية (سعودية هادئة)</option>
-                        <option value="ar-AE-HamdanNeural">🎙️ 🇦🇪 حمدان (إماراتي متزن)</option>
-                      </select>
+                      {/* VOICE & STYLE SELECTION CONTROLS */}
+                      <div className="max-w-xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4 text-right">
+                        <div>
+                          <label className="block text-xs font-black text-indigo-300 mb-2">
+                            🎙️ اختر صوت المعلق الصوتي:
+                          </label>
+                          <select
+                            value={selectedVoice}
+                            onChange={(e) => setSelectedVoice(e.target.value)}
+                            className="w-full p-3 bg-white/10 border border-white/20 rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-400 cursor-pointer"
+                          >
+                            <option value="ar-XA-Chirp3-HD-Fenrir" className="bg-slate-900 text-white">🌟 صوت كريم (طبيعي / هادئ) 🎙️</option>
+                            <option value="ar-XA-Chirp3-HD-Aoede" className="bg-slate-900 text-white">🌟 صوت فرح (واضح / تعليمي) 🎙️</option>
+                            <option value="ar-XA-Chirp3-HD-Puck" className="bg-slate-900 text-white">🌟 بوك (Google Chirp 3 HD - حماسي وتفاعلي)</option>
+                            <option value="ar-XA-Chirp3-HD-Kore" className="bg-slate-900 text-white">🌟 كوري (Google Chirp 3 HD - معلمة واضحة)</option>
+                            <option value="ar-XA-Chirp3-HD-Charon" className="bg-slate-900 text-white">🌟 شارون (Google Chirp 3 HD - أستاذ رزين)</option>
+                            <option value="ar-SA-HamedNeural" className="bg-slate-900 text-white">🇸🇦 حامد (سعودي فخم ووقور)</option>
+                            <option value="ar-EG-ShakirNeural" className="bg-slate-900 text-white">🇪🇬 شاكر (مصري دافئ ومفصل)</option>
+                            <option value="ar-JO-TaimNeural" className="bg-slate-900 text-white">🇯🇴 تيم (أردني شبابي وحماسي)</option>
+                            <option value="ar-EG-SalmaNeural" className="bg-slate-900 text-white">🇪🇬 سلمى (مصرية شابة وحيوية)</option>
+                            <option value="ar-SA-ZariyahNeural" className="bg-slate-900 text-white">🇸🇦 زارية (سعودية وثائقية هادئة)</option>
+                            <option value="ar-AE-HamdanNeural" className="bg-slate-900 text-white">🇦🇪 حمدان (إماراتي متزن ورسمي)</option>
+                          </select>
+                        </div>
 
-                      {/* STYLE SELECTOR DROPDOWN */}
-                      <select
-                        value={selectedReelStyle}
-                        onChange={(e) => setSelectedReelStyle(e.target.value as EduReelStyle)}
-                        disabled={isGeneratingReel}
-                        className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-black text-gray-700 outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
-                        title="اختيار الستايل البصري للريل"
-                      >
-                        <option value="chalkboard">📐 سبورة وأكاديمي</option>
-                        <option value="cyberpunk">🚀 سايبر بانك نيون</option>
-                        <option value="cinematic">🎬 سينمائي وثائقي</option>
-                        <option value="gamified">🎮 تفاعلي جيمينج</option>
-                      </select>
+                        <div>
+                          <label className="block text-xs font-black text-indigo-300 mb-2">
+                            🎨 اختر الستايل البصري للريل:
+                          </label>
+                          <select
+                            value={selectedReelStyle}
+                            onChange={(e) => setSelectedReelStyle(e.target.value as EduReelStyle)}
+                            className="w-full p-3 bg-white/10 border border-white/20 rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-400 cursor-pointer"
+                          >
+                            <option value="chalkboard" className="bg-slate-900 text-white">📐 سبورة وأكاديمي</option>
+                            <option value="cyberpunk" className="bg-slate-900 text-white">🚀 سايبر بانك نيون</option>
+                            <option value="cinematic" className="bg-slate-900 text-white">🎬 سينمائي وثائقي</option>
+                            <option value="gamified" className="bg-slate-900 text-white">🎮 تفاعلي جيمينج</option>
+                          </select>
+                        </div>
+                      </div>
 
-                      <button
-                        onClick={handleGenerateCurrentChapterReel}
-                        disabled={isGeneratingReel}
-                        className="px-4 py-2 bg-gradient-to-r from-teal-600 to-indigo-600 text-white font-black text-xs rounded-xl shadow hover:shadow-md transition active:scale-95 flex items-center gap-1.5 disabled:opacity-60 cursor-pointer"
-                        title="إعادة توليد ريل لهذا الفصل بالصوت والستايل المختار"
-                      >
-                        {isGeneratingReel ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                        <span>توليد مجدداً</span>
-                      </button>
-
-                      <button
-                        onClick={() => handleGenerateAllBookReels(true)}
-                        disabled={isGeneratingReel}
-                        className="px-3 py-2 bg-slate-900 text-white font-black text-xs rounded-xl hover:bg-slate-800 transition active:scale-95 flex items-center gap-1.5 disabled:opacity-60 cursor-pointer"
-                        title="توليد كافة فصول المذكرة بالصوت والستايل الجديد"
-                      >
-                        <span>🚀 توليد لكل الفصول ({generatedReelsCount}/{totalChaptersCount})</span>
-                      </button>
-
-                      <button
-                        onClick={() => navigate(`/book/${book.id}/reels`)}
-                        className="px-3 py-2 bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 text-slate-950 font-black text-xs rounded-xl shadow transition active:scale-95 flex items-center gap-1.5 cursor-pointer"
-                        title="مشاهدة ريلز هذا المقرر في وضع ملء الشاشة الكامل"
-                      >
-                        <Smartphone className="w-3.5 h-3.5" />
-                        <span>📱 تجربة TikTok كاملة للمقرر</span>
-                      </button>
-
-                    </div>
-                  </div>
-
-                  {/* 9:16 VERTICAL PLAYER CONTAINER */}
-                  <div className="flex justify-center">
-                    <div className="w-full max-w-[420px] aspect-[9/16] max-h-[680px] rounded-3xl overflow-hidden shadow-2xl border-4 border-slate-900 bg-black relative">
-                      <EduReelPlayer
-                        reel={currentReel}
-                        isActive={activeTab === 'reels'}
-                        currentUser={currentUser}
-                        onNextReel={() => {
-                          const currentIndex = (book.chapters || []).findIndex(c => c.id === activeChapter.id);
-                          if (currentIndex < (book.chapters?.length || 1) - 1) {
-                            setActiveChapterId(book.chapters[currentIndex + 1].id);
-                          }
-                        }}
-                        onPrevReel={() => {
-                          const currentIndex = (book.chapters || []).findIndex(c => c.id === activeChapter.id);
-                          if (currentIndex > 0) {
-                            setActiveChapterId(book.chapters[currentIndex - 1].id);
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                /* REEL GENERATION STUDIO CARD */
-                <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-indigo-500/20 text-center space-y-6">
-                  <div className="max-w-xl mx-auto space-y-3">
-                    <div className="inline-flex items-center justify-center p-3.5 rounded-2xl bg-gradient-to-tr from-pink-500 to-indigo-600 text-white shadow-lg shadow-indigo-500/30">
-                      <Film className="w-8 h-8" />
-                    </div>
-                    <h3 className="text-xl sm:text-2xl font-black text-white">
-                      استوديو ريلز وتيك توك التعلم السريع 🎬
-                    </h3>
-                    <p className="text-xs sm:text-sm text-indigo-200/90 leading-relaxed font-medium">
-                      لم يتم توليد فيديو ريل تفاعلي لفصل <span className="text-yellow-400 font-bold">"{activeChapter.title}"</span> بعد.
-                      يقوم الذكاء الاصطناعي بتحليل النص، صياغة سكريبت شيق، وتوليد تعليق صوتي طبيعي متزامن مع كلمات ملونة وكروت أسئلة منبثقة!
-                    </p>
-                  </div>
-
-                  {/* VOICE & STYLE SELECTION CONTROLS */}
-                  <div className="max-w-xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4 text-right">
-                    <div>
-                      <label className="block text-xs font-black text-indigo-300 mb-2">
-                        🎙️ اختر صوت المعلق الصوتي:
-                      </label>
-                      <select
-                        value={selectedVoice}
-                        onChange={(e) => setSelectedVoice(e.target.value)}
-                        className="w-full p-3 bg-white/10 border border-white/20 rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-400 cursor-pointer"
-                      >
-                        <option value="ar-XA-Chirp3-HD-Fenrir" className="bg-slate-900 text-white">🌟 فينرير (Google Chirp 3 HD - سينمائي فخم)</option>
-                        <option value="ar-XA-Chirp3-HD-Aoede" className="bg-slate-900 text-white">🌟 أويدي (Google Chirp 3 HD - نسائي دافئ)</option>
-                        <option value="ar-XA-Chirp3-HD-Puck" className="bg-slate-900 text-white">🌟 بوك (Google Chirp 3 HD - حماسي وتفاعلي)</option>
-                        <option value="ar-XA-Chirp3-HD-Kore" className="bg-slate-900 text-white">🌟 كوري (Google Chirp 3 HD - معلمة واضحة)</option>
-                        <option value="ar-XA-Chirp3-HD-Charon" className="bg-slate-900 text-white">🌟 شارون (Google Chirp 3 HD - أستاذ رزين)</option>
-                        <option value="ar-SA-HamedNeural" className="bg-slate-900 text-white">🇸🇦 حامد (سعودي فخم ووقور)</option>
-                        <option value="ar-EG-ShakirNeural" className="bg-slate-900 text-white">🇪🇬 شاكر (مصري دافئ ومفصل)</option>
-                        <option value="ar-JO-TaimNeural" className="bg-slate-900 text-white">🇯🇴 تيم (أردني شبابي وحماسي)</option>
-                        <option value="ar-EG-SalmaNeural" className="bg-slate-900 text-white">🇪🇬 سلمى (مصرية شابة وحيوية)</option>
-                        <option value="ar-SA-ZariyahNeural" className="bg-slate-900 text-white">🇸🇦 زارية (سعودية وثائقية هادئة)</option>
-                        <option value="ar-AE-HamdanNeural" className="bg-slate-900 text-white">🇦🇪 حمدان (إماراتي متزن ورسمي)</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-black text-indigo-300 mb-2">
-                        🎨 اختر الستايل البصري للريل:
-                      </label>
-                      <select
-                        value={selectedReelStyle}
-                        onChange={(e) => setSelectedReelStyle(e.target.value as EduReelStyle)}
-                        className="w-full p-3 bg-white/10 border border-white/20 rounded-2xl text-xs font-bold text-white outline-none focus:ring-2 focus:ring-indigo-400 cursor-pointer"
-                      >
-                        <option value="chalkboard" className="bg-slate-900 text-white">📐 سبورة وأكاديمي</option>
-                        <option value="cyberpunk" className="bg-slate-900 text-white">🚀 سايبر بانك نيون</option>
-                        <option value="cinematic" className="bg-slate-900 text-white">🎬 سينمائي وثائقي</option>
-                        <option value="gamified" className="bg-slate-900 text-white">🎮 تفاعلي جيمينج</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* STYLE SELECTION CARDS */}
-                  <div className="max-w-xl mx-auto">
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                      {[
-                        { id: 'chalkboard', label: 'سبورة وأكاديمي', icon: '📐', desc: 'طباشير واقعي ومعادلات' },
-                        { id: 'cyberpunk', label: 'سايبر بانك', icon: '🚀', desc: 'HUD ليزري وشاشات نيون' },
-                        { id: 'cinematic', label: 'سينمائي وثائقي', icon: '🎬', desc: 'تركيز وإضاءة فاخرة' },
-                        { id: 'gamified', label: 'تفاعلي جيمينج', icon: '🎮', desc: 'حماسي وشارات نقاط' }
-                      ].map((st) => (
+                      {/* ACTION BUTTONS */}
+                      <div className="max-w-md mx-auto flex flex-col sm:flex-row gap-3 pt-2">
                         <button
-                          key={st.id}
-                          type="button"
-                          onClick={() => setSelectedReelStyle(st.id as EduReelStyle)}
-                          className={`p-3 rounded-2xl border text-right transition flex flex-col justify-between cursor-pointer ${
-                            selectedReelStyle === st.id
-                              ? 'bg-gradient-to-br from-indigo-600/40 to-teal-600/40 border-teal-400 shadow-md shadow-teal-500/20'
-                              : 'bg-white/5 border-white/10 hover:bg-white/10 text-white/80'
-                          }`}
+                          onClick={handleGenerateCurrentChapterReel}
+                          disabled={isGeneratingReel}
+                          className="flex-1 py-3.5 px-5 bg-gradient-to-r from-teal-500 via-indigo-500 to-purple-600 hover:from-teal-600 hover:to-purple-700 text-white font-black text-xs sm:text-sm rounded-2xl shadow-lg shadow-indigo-500/30 transition active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
                         >
-                          <div className="text-xl mb-1">{st.icon}</div>
-                          <div>
-                            <div className="font-black text-xs text-white">{st.label}</div>
-                            <div className="text-[10px] text-indigo-200/70">{st.desc}</div>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* ACTION BUTTONS */}
-                  <div className="max-w-md mx-auto flex flex-col sm:flex-row gap-3 pt-2">
-                    <button
-                      onClick={handleGenerateCurrentChapterReel}
-                      disabled={isGeneratingReel}
-                      className="flex-1 py-3.5 px-5 bg-gradient-to-r from-teal-500 via-indigo-500 to-purple-600 hover:from-teal-600 hover:to-purple-700 text-white font-black text-xs sm:text-sm rounded-2xl shadow-lg shadow-indigo-500/30 transition active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
-                    >
-                      {isGeneratingReel ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 animate-spin" />
-                          <span>جاري كتابة السكريبت وتوليد الصوت...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-4 h-4 text-yellow-300" />
-                          <span>⚡ توليد ريل لهذا الفصل الآن</span>
-                        </>
-                      )}
-                    </button>
-
-                    <button
-                      onClick={() => handleGenerateAllBookReels(true)}
-                      disabled={isGeneratingReel}
-                      className="py-3.5 px-4 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-black text-xs rounded-2xl transition active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
-                    >
-                      <span>🚀 توليد لكل الفصول</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* CHAPTER REELS BROWSER / QUICK JUMP */}
-              {hasAnyReel && (
-                <div className="bg-white border border-gray-200 rounded-3xl p-5 shadow-sm space-y-3">
-                  <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-                    <h4 className="font-black text-gray-900 text-sm flex items-center gap-2">
-                      <Film className="w-4 h-4 text-teal-600" />
-                      <span>ريلز فصول المذكرة المتوفرة ({bookReels.length})</span>
-                    </h4>
-                    <span className="text-[11px] font-bold text-gray-500">اضغط للمشاهدة فوراً</span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                    {(book.chapters || []).map((ch, idx) => {
-                      const chReel = bookReels.find(r => (r.chapter_id && r.chapter_id === ch.id) || (r.chapter_title && r.chapter_title.trim() === ch.title.trim()));
-                      const isCurrent = ch.id === activeChapter.id;
-
-                      return (
-                        <button
-                          key={ch.id}
-                          onClick={() => setActiveChapterId(ch.id)}
-                          className={`p-3 rounded-2xl border text-right transition flex items-center justify-between cursor-pointer ${
-                            isCurrent
-                              ? 'bg-teal-50 border-teal-300 text-teal-900 shadow-sm'
-                              : 'bg-gray-50/50 border-gray-200 hover:bg-gray-100 text-gray-700'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2 truncate">
-                            <span className="w-5 h-5 rounded-full bg-gray-200 text-gray-700 text-[10px] font-black flex items-center justify-center shrink-0">
-                              {idx + 1}
-                            </span>
-                            <span className="text-xs font-bold truncate">{ch.title}</span>
-                          </div>
-
-                          {chReel ? (
-                            <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black shrink-0 flex items-center gap-1">
-                              <Play className="w-2.5 h-2.5 fill-emerald-800" /> جاهز
-                            </span>
+                          {isGeneratingReel ? (
+                            <>
+                              <RefreshCw className="w-4 h-4 animate-spin" />
+                              <span>جاري كتابة السكريبت وتوليد الصوت...</span>
+                            </>
                           ) : (
-                            <span className="px-2 py-0.5 rounded-full bg-gray-200 text-gray-500 text-[10px] font-bold shrink-0">
-                              غير مولد
-                            </span>
+                            <>
+                              <Sparkles className="w-4 h-4 text-yellow-300" />
+                              <span>⚡ توليد ريل لهذا الفصل الآن</span>
+                            </>
                           )}
                         </button>
-                      );
-                    })}
-                  </div>
+
+                        <button
+                          onClick={() => handleGenerateAllBookReels(true)}
+                          disabled={isGeneratingReel}
+                          className="py-3.5 px-4 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-black text-xs rounded-2xl transition active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
+                        >
+                          <span>🚀 توليد لكل الفصول</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* CHAPTER REELS BROWSER / QUICK JUMP */}
+                  {hasAnyReel && (
+                    <div className="bg-white border border-gray-200 rounded-3xl p-5 shadow-sm space-y-3">
+                      <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                        <h4 className="font-black text-gray-900 text-sm flex items-center gap-2">
+                          <Film className="w-4 h-4 text-teal-600" />
+                          <span>ريلز فصول المذكرة المتوفرة ({bookReels.length})</span>
+                        </h4>
+                        <span className="text-[11px] font-bold text-gray-500">اضغط للمشاهدة فوراً</span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                        {(book.chapters || []).map((ch, idx) => {
+                          const chReel = bookReels.find(r => (r.chapter_id && r.chapter_id === ch.id) || (r.chapter_title && r.chapter_title.trim() === ch.title.trim()));
+                          const isCurrent = ch.id === activeChapter.id;
+
+                          return (
+                            <button
+                              key={ch.id}
+                              onClick={() => setActiveChapterId(ch.id)}
+                              className={`p-3 rounded-2xl border text-right transition flex items-center justify-between cursor-pointer ${
+                                isCurrent
+                                  ? 'bg-teal-50 border-teal-300 text-teal-900 shadow-sm'
+                                  : 'bg-gray-50/50 border-gray-200 hover:bg-gray-100 text-gray-700'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 truncate">
+                                <span className="w-5 h-5 rounded-full bg-gray-200 text-gray-700 text-[10px] font-black flex items-center justify-center shrink-0">
+                                  {idx + 1}
+                                </span>
+                                <span className="text-xs font-bold truncate">{ch.title}</span>
+                              </div>
+
+                              {chReel ? (
+                                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black shrink-0 flex items-center gap-1">
+                                  <Play className="w-2.5 h-2.5 fill-emerald-800" /> جاهز
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded-full bg-gray-200 text-gray-500 text-[10px] font-bold shrink-0">
+                                  غير مولد
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          );
-        })()}
-
-        {activeTab === 'podcast' && activeChapter && (
-          <PodcastLounge
-            bookId={book.id}
-            chapterId={activeChapter.id}
-            chapterTitle={activeChapter.title}
-            chapterContent={activeChapter.content}
-            hasGeminiKey={hasGeminiKey}
-          />
-        )}
-
-        {activeTab === 'flashcards' && activeChapter && (
-          <FlashcardsSection
-            chapter={activeChapter}
-            onUpdateFlashcards={handleUpdateFlashcards}
-          />
-        )}
-
-        {activeTab === 'sandbox' && activeChapter && (
-          <DynamicDomainSandbox
-            book={book}
-            chapter={activeChapter}
-          />
-        )}
-
-        {activeTab === 'quiz' && activeChapter && (
-          <QuizSection
-            bookId={book.id}
-            bookTitle={book.title}
-            allChapters={book.chapters}
-            chapterTitle={activeChapter.title}
-            questions={Array.isArray(activeChapter.quiz) ? activeChapter.quiz : []}
-            onUpdateQuestions={(updatedQuestions) => {
-              const updatedChapters = book.chapters.map(ch =>
-                ch.id === activeChapter.id ? { ...ch, quiz: updatedQuestions } : ch
               );
-              setEbooks(prev => prev.map(b => b.id === book.id ? { ...b, chapters: updatedChapters } : b));
-              try {
-                fetch(`/api/ebooks/${book.id}/chapters/save`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ chapters: updatedChapters })
-                }).catch(() => {});
-                supabase.from('books').update({ chapters: updatedChapters }).eq('id', book.id);
-              } catch (e) {}
-            }}
-            onGenerateAiQuestions={handleGenerateAiQuestions}
-            isGeneratingAiQuestions={isGeneratingAiQuestions}
-          />
-        )}
+            })()}
 
-        {activeTab === 'mindmap' && activeChapter && (
-          <MindMap
-            nodes={Array.isArray(activeChapter.mindMap) ? activeChapter.mindMap : []}
-            ebookId={book.id}
-            chapterId={activeChapter.id}
-            chapterContent={activeChapter.content}
-            onUpdateNodes={handleUpdateChapterMindMap}
-          />
-        )}
-
-        {activeTab === 'videos' && activeChapter && (
-          <VideoSection videos={Array.isArray(activeChapter.videos) ? activeChapter.videos : []} />
+            {videoSubTab === 'videos' && (
+              <VideoSection videos={Array.isArray(activeChapter.videos) ? activeChapter.videos : []} />
+            )}
+          </div>
         )}
 
         {activeTab === 'editor' && activeChapter && (
@@ -1907,9 +1951,9 @@ export default function BookDetailsRoute({
         isOwned={isBookUnlocked}
       />
 
-      {/* 📱 MOBILE STICKY BOTTOM QUICK BAR (Easy Thumb Navigation) */}
+      {/* 📱 MOBILE STICKY BOTTOM QUICK BAR (Easy Thumb Navigation - 5 Core Study Modes) */}
       <div 
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 py-2.5 flex items-center justify-around shadow-lg print:hidden"
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-3 py-2 flex items-center justify-around shadow-lg print:hidden"
         dir="rtl"
       >
         <button
@@ -1919,27 +1963,37 @@ export default function BookDetailsRoute({
           }`}
         >
           <BookOpen className="w-4 h-4" />
-          <span>قراءة</span>
+          <span>قراءة 📖</span>
         </button>
 
         <button
-          onClick={() => setActiveTab('interactive_lesson')}
+          onClick={() => setActiveTab('mindmap')}
           className={`flex flex-col items-center gap-1 text-[11px] font-bold transition cursor-pointer ${
-            activeTab === 'interactive_lesson' ? 'text-teal-600 font-black' : 'text-slate-500 hover:text-slate-900'
+            activeTab === 'mindmap' ? 'text-teal-600 font-black' : 'text-slate-500 hover:text-slate-900'
           }`}
         >
-          <Brain className="w-4 h-4" />
-          <span>شرح الدرس</span>
+          <Sparkles className="w-4 h-4" />
+          <span>الشرح والخريطة 🗺️</span>
         </button>
 
         <button
-          onClick={() => setActiveTab('quiz')}
+          onClick={() => setActiveTab('practice')}
           className={`flex flex-col items-center gap-1 text-[11px] font-bold transition cursor-pointer ${
-            activeTab === 'quiz' ? 'text-teal-600 font-black' : 'text-slate-500 hover:text-slate-900'
+            activeTab === 'practice' ? 'text-indigo-600 font-black' : 'text-slate-500 hover:text-slate-900'
           }`}
         >
           <HelpCircle className="w-4 h-4" />
-          <span>اختبارات</span>
+          <span>التقييم 📝</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('videos')}
+          className={`flex flex-col items-center gap-1 text-[11px] font-bold transition cursor-pointer ${
+            activeTab === 'videos' ? 'text-purple-600 font-black' : 'text-slate-500 hover:text-slate-900'
+          }`}
+        >
+          <Film className="w-4 h-4" />
+          <span>الفيديوهات 🎬</span>
         </button>
 
         <button
@@ -1947,7 +2001,7 @@ export default function BookDetailsRoute({
           className="flex flex-col items-center gap-1 text-[11px] font-bold text-slate-500 hover:text-slate-900 cursor-pointer"
         >
           <Layers className="w-4 h-4" />
-          <span>الفهرس</span>
+          <span>الفهرس 📑</span>
         </button>
       </div>
     </div>

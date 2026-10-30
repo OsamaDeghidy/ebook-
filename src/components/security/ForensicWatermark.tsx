@@ -63,19 +63,19 @@ export const ForensicWatermark: React.FC<ForensicWatermarkProps> = ({
 
       {/* 2. Dynamic Floating Forensic Badge (Moves randomly every 5 seconds) */}
       <div
-        className="absolute transition-all duration-1000 ease-in-out pointer-events-none"
+        className="absolute transition-all duration-1000 ease-in-out pointer-events-none opacity-25"
         style={{
           top: `${position.top}%`,
           left: `${position.left}%`,
           transform: 'translate(-50%, -50%)',
         }}
       >
-        <div className="flex flex-col items-center justify-center px-3 py-1.5 rounded-xl bg-slate-900/10 backdrop-blur-[1px] border border-slate-900/10 shadow-xs text-slate-800/25 dark:text-white/20 select-none">
-          <div className="text-[11px] sm:text-xs font-black tracking-wide">
+        <div className="flex flex-col items-center justify-center px-2 py-0.5 rounded-lg border border-slate-400/20 text-slate-500 text-[10px] select-none">
+          <div className="font-mono font-bold tracking-tight">
             🔒 {identifier} • {secondaryId}
           </div>
-          <div className="text-[9px] font-mono font-bold opacity-80">
-            {customText || 'مرخص للاستخدام الشخصي فقط'} • {currentTime}
+          <div className="text-[8px] font-mono opacity-70">
+            {customText || 'مرخص للاستخدام الشخصي'} • {currentTime}
           </div>
         </div>
       </div>

@@ -102,10 +102,10 @@ export const ContextualAiTutor: React.FC<ContextualAiTutorProps> = ({ chapterTit
         >
           <button
             onClick={() => handleAskAi('simplify')}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 text-white rounded-full text-xs font-black shadow-xl shadow-teal-600/30 transition cursor-pointer active:scale-95 border border-white/20"
+            className="flex items-center gap-1.5 px-3 py-1 bg-slate-900/90 hover:bg-slate-900 text-white rounded-full text-xs font-bold shadow-lg border border-slate-700/80 backdrop-blur-md transition-all cursor-pointer active:scale-95"
           >
-            <Brain className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
-            <span>🧠 اسأل المعلم الذكي عن دي!</span>
+            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+            <span>اشرح لي هذا الجزء 💡</span>
           </button>
         </div>
       )}

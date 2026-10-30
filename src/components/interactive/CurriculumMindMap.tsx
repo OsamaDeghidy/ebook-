@@ -10,11 +10,13 @@ import { fireConfetti } from '../../utils/confetti';
 
 interface CurriculumMindMapProps {
   book: MarketplaceBook;
+  onNavigateToChapter?: (chapterId: string) => void;
   onMindMapUpdated?: (updatedMindMap: CurriculumMindMapPayload) => void;
 }
 
 export const CurriculumMindMap: React.FC<CurriculumMindMapProps> = ({
   book,
+  onNavigateToChapter,
   onMindMapUpdated
 }) => {
   const [mindmapData, setMindmapData] = useState<CurriculumMindMapPayload | null>(
@@ -487,6 +489,20 @@ export const CurriculumMindMap: React.FC<CurriculumMindMapProps> = ({
                         </div>
 
                         <div className="flex items-center gap-1.5 shrink-0">
+                          {onNavigateToChapter && (
+                            <button
+                              onClick={() => {
+                                const matchedChapter = (book.chapters || []).find((c, i) => i + 1 === group.index || c.title.trim() === group.chapterNode.label.trim());
+                                if (matchedChapter) onNavigateToChapter(matchedChapter.id);
+                              }}
+                              className="px-2.5 py-1 bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 border border-teal-500/30 rounded-xl text-[11px] font-black transition flex items-center gap-1 cursor-pointer"
+                              title="الانتقال لقراءة هذا الفصل"
+                            >
+                              <BookOpen className="w-3.5 h-3.5 text-teal-400" />
+                              <span className="hidden sm:inline">قراءة الفصل 📖</span>
+                            </button>
+                          )}
+
                           <button
                             onClick={() => setSelectedNode(group.chapterNode)}
                             className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700/60 rounded-xl text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"

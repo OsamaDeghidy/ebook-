@@ -863,10 +863,11 @@ function ChapterWorkedExampleAndComparison({ chapter }: { chapter: Chapter }) {
 interface ReadSectionProps {
   chapter: Chapter;
   isInstructorOrAdmin?: boolean;
+  isEditMode?: boolean;
   onSaveChapter?: (updatedChapter: Chapter) => Promise<void>;
 }
 
-export function ReadSection({ chapter, isInstructorOrAdmin, onSaveChapter }: ReadSectionProps) {
+export function ReadSection({ chapter, isInstructorOrAdmin, isEditMode, onSaveChapter }: ReadSectionProps) {
   const { t, language, dir } = useLanguage();
   const { isItemPlaying, isItemLoading, play, stop } = useGlobalAudio();
   const [showOriginalSource, setShowOriginalSource] = useState(false);
@@ -1201,49 +1202,9 @@ export function ReadSection({ chapter, isInstructorOrAdmin, onSaveChapter }: Rea
 
 
 
-      {/* 🧭 LESSON PILLARS QUICK JUMP ANCHORS BAR */}
-      <div className="bg-slate-50 p-2 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center gap-1.5 overflow-x-auto scrollbar-none">
-        <button
-          onClick={() => scrollToSection('learning-objectives')}
-          className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold shrink-0 transition flex items-center gap-1.5 border border-slate-200"
-        >
-          <Target className="w-3.5 h-3.5 text-teal-600" />
-          <span>🎯 نواتج التعلّم</span>
-        </button>
-
-        {conceptsArr.length > 0 && (
-          <button
-            onClick={() => scrollToSection('core-concepts')}
-            className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold shrink-0 transition flex items-center gap-1.5 border border-slate-200"
-          >
-            <Lightbulb className="w-3.5 h-3.5 text-amber-500" />
-            <span>💡 المفاهيم والقواعد</span>
-          </button>
-        )}
-
-        <button
-          onClick={() => scrollToSection('detailed-content')}
-          className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold shrink-0 transition flex items-center gap-1.5 border border-slate-200"
-        >
-          <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
-          <span>📖 الشرح والمحتوى</span>
-        </button>
-
-        {normalizedOriginal && (
-          <button
-            onClick={() => {
-              setShowOriginalSource(true);
-              setTimeout(() => scrollToSection('original-source'), 100);
-            }}
-            className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold shrink-0 transition flex items-center gap-1.5 border border-slate-200"
-          >
-            <FileText className="w-3.5 h-3.5 text-slate-600" />
-            <span>📜 النص الأصلي</span>
-          </button>
-        )}
-
-        {/* INLINE WORD-LIKE EDITOR BUTTON FOR INSTRUCTORS */}
-        {isInstructorOrAdmin && (
+      {/* INLINE WORD-LIKE EDITOR BUTTON (VISIBLE ONLY WHEN TEACHER EDIT MODE IS ACTIVE) */}
+      {isInstructorOrAdmin && isEditMode && (
+        <div className="flex items-center justify-end">
           <button
             onClick={() => {
               setIsInlineEditing(!isInlineEditing);
@@ -1253,17 +1214,17 @@ export function ReadSection({ chapter, isInstructorOrAdmin, onSaveChapter }: Rea
                 setEditedContent(chapter.content || '');
               }
             }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-black shrink-0 transition flex items-center gap-1.5 border shadow-xs cursor-pointer ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-black transition flex items-center gap-1.5 border shadow-xs cursor-pointer ${
               isInlineEditing
                 ? 'bg-amber-400 text-slate-950 border-amber-500'
                 : 'bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-700'
             }`}
           >
             <Edit3 className="w-3.5 h-3.5" />
-            <span>{isInlineEditing ? 'إغلاق التحرير' : 'تحرير الدرس فوراً (Word Editor) ✏️'}</span>
+            <span>{isInlineEditing ? 'إغلاق التحرير' : 'تحرير نص الدرس فوراً (Word Editor) ✏️'}</span>
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* ✏️ INLINE WORD-LIKE EDITOR (INSTRUCTORS ONLY) */}
       {isInlineEditing && (
@@ -1512,18 +1473,22 @@ export function ReadSection({ chapter, isInstructorOrAdmin, onSaveChapter }: Rea
         </div>
       )}
 
-      {/* 💡 3. CORE CONCEPTS INTERACTIVE GRID WITH INTERACTIVE POPUP CARDS */}
+      {/* 💡 3. CORE CONCEPTS INTERACTIVE GRID WITH AUDIO PRONUNCIATION */}
       {conceptsArr.length > 0 && (
-        <div id="core-concepts" className="space-y-3 scroll-mt-16">
+        <div id="core-concepts" className="space-y-3.5 scroll-mt-16">
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-2">
-              <Lightbulb className="w-4 h-4 text-amber-500" />
-              <span className="text-xs font-black text-gray-900">المفاهيم المحورية والمصطلحات الأساسية للدرس</span>
+              <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
+                <Lightbulb className="w-4 h-4 text-amber-600" />
+              </div>
+              <span className="text-xs sm:text-sm font-black text-gray-900">المفاهيم المحورية والمصطلحات الأساسية للدرس ({conceptsArr.length})</span>
             </div>
-            <span className="text-[11px] font-bold text-gray-400">انقر على المفهوم لعرض الشرح المفصل 👆</span>
+            <span className="text-[11px] text-gray-400 font-bold hidden sm:inline">
+              انقر للاستماع للنطق أو عرض الشرح المعرفي 💡
+            </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          <div className={`grid gap-3.5 ${conceptsArr.length === 1 ? 'grid-cols-1 max-w-2xl mx-auto' : 'grid-cols-1 md:grid-cols-2'}`}>
             {conceptsArr.map((concept: any, idx: number) => {
               const rawName = typeof concept === 'string' ? concept : (concept.concept || concept.title || `مفهوم ${idx+1}`);
               const rawDesc = typeof concept === 'string' ? '' : (concept.explanation || concept.description || '');
@@ -1531,23 +1496,42 @@ export function ReadSection({ chapter, isInstructorOrAdmin, onSaveChapter }: Rea
               const cName = rawName.replace(/\s*\([a-zA-Z\s\-_0-9\/\.\:]+\)/g, '').trim();
               const cDesc = sanitizeEducationalMarkdown(rawDesc).replace(/\s*\([a-zA-Z\s\-_0-9\/\.\:]+\)/g, '').trim();
 
+              const handleSpeakConcept = (e: React.MouseEvent) => {
+                e.stopPropagation();
+                if ('speechSynthesis' in window) {
+                  window.speechSynthesis.cancel();
+                  const fullSpeech = `${cName}. ${cDesc}`;
+                  const utter = new SpeechSynthesisUtterance(fullSpeech);
+                  utter.lang = 'ar-SA';
+                  utter.rate = 0.95;
+                  window.speechSynthesis.speak(utter);
+                }
+              };
+
               return (
                 <div 
                   key={idx} 
-                  onClick={() => setSelectedConcept({ title: cName, desc: cDesc || 'شرح المفهوم وتطبيقه في هذا الدرس.' })}
-                  className="group bg-white p-5 rounded-2xl border-2 border-indigo-50 hover:border-indigo-300 hover:shadow-md transition-all space-y-2 flex flex-col justify-between cursor-pointer"
+                  className="bg-white p-4 sm:p-5 rounded-2xl border-2 border-indigo-50 hover:border-indigo-200 shadow-xs hover:shadow-sm transition-all space-y-2.5 flex flex-col justify-between"
                 >
-                  <div className="flex items-center justify-between gap-2.5">
+                  <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500 group-hover:scale-125 transition-transform shrink-0" />
-                      <h5 className="font-black text-gray-900 text-sm sm:text-base group-hover:text-indigo-700 transition-colors">{cName}</h5>
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
+                      <h5 className="font-black text-gray-900 text-sm sm:text-base text-indigo-950">{cName}</h5>
                     </div>
-                    <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                      تفاصيل 📇
-                    </span>
+
+                    <button
+                      type="button"
+                      onClick={handleSpeakConcept}
+                      className="p-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 transition flex items-center gap-1 text-[11px] font-bold cursor-pointer"
+                      title="استمع لنطق المفهوم وشرحه"
+                    >
+                      <Volume2 className="w-3.5 h-3.5 text-amber-600" />
+                      <span className="hidden sm:inline">نطق</span>
+                    </button>
                   </div>
+
                   {cDesc && (
-                    <p className="text-gray-600 text-xs sm:text-sm leading-relaxed font-medium bg-gray-50/70 p-3 rounded-xl border border-gray-100 line-clamp-2">
+                    <p className="text-gray-700 text-xs sm:text-sm leading-relaxed font-medium bg-gray-50/90 p-3 rounded-xl border border-gray-100">
                       {cDesc}
                     </p>
                   )}
